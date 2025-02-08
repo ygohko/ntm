@@ -1,6 +1,9 @@
 mod object_store;
 
 use std::fs;
+use hex_string::HexString;
+use sha2::Digest;
+use sha2::Sha256;
 
 use crate::object_store::ObjectStore;
 
@@ -20,7 +23,23 @@ fn main() -> std::io::Result<()> {
     bytes.push(0x05);
     bytes.push(0x06);
     bytes.push(0x07);
-    store.add("01234567", &bytes);
+    let mut id_bytes = b"b,".to_vec();
+    id_bytes = [id_bytes, bytes.clone()].concat();
+    println!("id_bytes.len(): {}", id_bytes.len());
+
+    let id = object_id(&id_bytes);
+    store.add(&id, &bytes);
 
     Ok(())
+}
+
+fn object_id(bytes: &Vec<u8>) -> String {
+    let mut sha256 = Sha256::new();
+    sha256.update(bytes.clone());
+    let hash = sha256.finalize();
+    let hash_values = hash.to_vec();
+    let hex = HexString::from_bytes(&hash_values);
+    let result = hex.as_string();
+
+    result
 }
