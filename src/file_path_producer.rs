@@ -54,7 +54,7 @@ impl FilePathProducer {
             if scan {
                 let read_dir = match fs::read_dir(directory_path) {
                     Ok(read_dir) => read_dir,
-                    Err(_) => return Err(Error::new(0)),
+                    Err(_) => return Err(Error::new(error::CODE_GENERAL)),
                 };
                 for result in read_dir {
                     if result.is_ok() {
@@ -63,7 +63,7 @@ impl FilePathProducer {
                         let metadata = match fs::metadata(entry.path()) {
                             Ok(metadata) => metadata,
                             Err(_) => {
-                                return Err(Error::new(0))
+                                return Err(Error::new(error::CODE_GENERAL))
                             }
                         };
                         let path = entry.path().to_string_lossy().to_string();

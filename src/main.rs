@@ -21,8 +21,7 @@ fn main() -> std::io::Result<()> {
     let mut producer = FilePathProducer::new(".".to_string());
     let mut done = false;
     while !done {
-        let mut path = "".to_string();
-        path = match producer.next() {
+        let path = match producer.next() {
             Ok(path) => path,
             Err(error) => {
                 if error.code == error::CODE_PRODUCING_FINISHED {
@@ -31,6 +30,7 @@ fn main() -> std::io::Result<()> {
                 else {
                     panic!();
                 }
+
                 "".to_string()
             },
         };
@@ -49,34 +49,6 @@ fn main() -> std::io::Result<()> {
             store.add(&id, &bytes);
         }
     }
-    
-    /*
-    let path = "src/main.rs";
-    let bytes = match fs::read(path) {
-        Ok(bytes) => bytes,
-        Err(_) => panic!(),
-    };
-    */
-
-    /*
-    let mut bytes: Vec<u8> = Vec::new();
-    bytes.push(0x00);
-    bytes.push(0x01);
-    bytes.push(0x02);
-    bytes.push(0x03);
-    bytes.push(0x04);
-    bytes.push(0x05);
-    bytes.push(0x06);
-    bytes.push(0x07);
-     */
-    /*
-    let mut id_bytes = b"b,".to_vec();
-    id_bytes = [id_bytes, bytes.clone()].concat();
-    println!("id_bytes.len(): {}", id_bytes.len());
-
-    let id = object_id(&id_bytes);
-    store.add(&id, &bytes);
-    */
 
     Ok(())
 }
