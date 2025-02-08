@@ -27,11 +27,16 @@ impl ObjectStore {
         path.push(path3);
         path.push(path4);
         println!("path: {}", path.display());
-        match fs::create_dir_all(path) {
+        match fs::create_dir_all(path.clone()) {
             Ok(_) => (),
             Err(_) => panic!(),
         }
 
         // TODO: Write bytes.
+        path.push(id);
+        match fs::write(path, bytes) {
+            Ok(_) => (),
+            Err(_) => panic!(),
+        }
     }
 }
