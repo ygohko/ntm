@@ -59,9 +59,7 @@ impl FilePathProducer {
 
                         let metadata = match fs::metadata(entry.path()) {
                             Ok(metadata) => metadata,
-                            Err(_) => {
-                                return Err(Error::new(error::CODE_GENERAL))
-                            }
+                            Err(_) => return Err(Error::new(error::CODE_GENERAL)),
                         };
                         let path = entry.path().to_string_lossy().to_string();
                         if metadata.is_file() {

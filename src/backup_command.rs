@@ -1,22 +1,20 @@
-use std::fs;
-use std::path;
-use std::path::PathBuf;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
+use std::fs;
+use std::path;
+use std::path::PathBuf;
 
 use crate::error;
 use crate::error::Error;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
 
-pub struct BackupCommand {
-}
+pub struct BackupCommand {}
 
 impl BackupCommand {
     pub fn new() -> Self {
-        BackupCommand {
-        }
+        BackupCommand {}
     }
 
     pub fn execute(&self) -> Result<(), Error> {
@@ -39,13 +37,12 @@ impl BackupCommand {
                 Err(error) => {
                     if error.code == error::CODE_PRODUCING_FINISHED {
                         done = true;
-                    }
-                    else {
+                    } else {
                         panic!();
                     }
 
                     "".to_string()
-                },
+                }
             };
 
             if !done {

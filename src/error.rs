@@ -8,8 +8,6 @@ pub struct Error {
 
 impl Error {
     pub fn new(code: i32) -> Error {
-        Error {
-            code,
-        }
+        Error { code }
     }
 }
