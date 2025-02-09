@@ -45,7 +45,6 @@ fn main() -> std::io::Result<()> {
                 Ok(bytes) => bytes,
                 Err(_) => panic!(),
             };
-            
 
             let mut id_bytes = b"b,".to_vec();
             id_bytes = [id_bytes, bytes.clone()].concat();
@@ -54,8 +53,6 @@ fn main() -> std::io::Result<()> {
             let id = object_id(&id_bytes);
             store.add(&id, &bytes);
 
-            
-            
             // TODO: Write reference files.
             let mut reference_path = PathBuf::new();
             reference_path.push("NTM/Backups");
@@ -73,8 +70,6 @@ fn main() -> std::io::Result<()> {
                 Ok(_) => (),
                 Err(_) => panic!(),
             };
-            
-
         }
     }
 
