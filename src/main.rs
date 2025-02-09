@@ -1,3 +1,4 @@
+mod backup_command;
 mod error;
 mod file_path_producer;
 mod object_store;
@@ -9,12 +10,17 @@ use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
 
+use crate::backup_command::BackupCommand;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
 
 fn main() -> std::io::Result<()> {
     println!("Hello, world!");
 
+    let command = BackupCommand::new();
+    command.execute();
+
+    /*
     // ADHOC
     fs::create_dir_all("NTM/Backups")?;
     fs::create_dir_all("NTM/Objects")?;
@@ -72,6 +78,7 @@ fn main() -> std::io::Result<()> {
             };
         }
     }
+    */
 
     Ok(())
 }
