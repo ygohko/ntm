@@ -1,3 +1,5 @@
+use chrono::DateTime;
+use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
@@ -28,8 +30,8 @@ impl BackupCommand {
             Err(_) => return Err(Error::new(error::CODE_GENERAL)),
         };
         let store = ObjectStore::new(&"NTM/Objects");
-        let date_time = "YYYYMMDDhhmm".to_string();
-
+        let now: DateTime<Local> = Local::now();
+        let date_time = now.format("%Y%m%d%H%M%S").to_string();
         let bytes = match fs::read("NTM/config.toml") {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::new(error::CODE_GENERAL)),
