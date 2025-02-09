@@ -1,29 +1,15 @@
 use hex_string::HexString;
-use serde::Deserialize;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
 use std::path;
 use std::path::PathBuf;
 
+use crate::config::Config;
 use crate::error;
 use crate::error::Error;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
-
-// TODO: Move to config.rs.
-#[derive(Deserialize)]
-struct Config {
-    source_path: String,
-}
-
-impl Config {
-    fn new() -> Self {
-        Self {
-            source_path: "".to_string(),
-        }
-    }
-}
 
 pub struct BackupCommand {}
 
