@@ -93,9 +93,10 @@ fn object_id(bytes: &Vec<u8>) -> String {
 
 fn reference_directories(path: &str) -> String {
     let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
-    if split.len() > 1 {
-        split.pop();
+    if split.len() < 1 {
+        return "".to_string();
     }
+    split.pop();
 
     split.join(path::MAIN_SEPARATOR_STR)
 }
