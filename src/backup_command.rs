@@ -1,3 +1,5 @@
+use chrono::DateTime;
+use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
@@ -5,6 +7,7 @@ use std::fs;
 use std::path;
 use std::path::PathBuf;
 
+use crate::config::Config;
 use crate::error;
 use crate::error::Error;
 use crate::file_path_producer::FilePathProducer;
@@ -27,9 +30,27 @@ impl BackupCommand {
             Err(_) => return Err(Error::new(error::CODE_GENERAL)),
         };
         let store = ObjectStore::new(&"NTM/Objects");
-        let date_time = "YYYYMMDDhhmm".to_string();
+        let now: DateTime<Local> = Local::now();
+        let date_time = now.format("%Y%m%d%H%M%S").to_string();
+        let bytes = match fs::read("NTM/config.toml") {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(Error::new(error::CODE_GENERAL)),
+        };
+        let string = match String::from_utf8(bytes) {
+            Ok(string) => string,
+            Err(_) => return Err(Error::new(error::CODE_GENERAL)),
+        };
+        let result = toml::from_str(&string);
+        let config: Config;
+        if result.is_ok() {
+            config = result.unwrap();
+            println!("config.source_path: {}", config.source_path);
+        }
+        else {
+            config = Config::new();
+        }
 
-        let mut producer = FilePathProducer::new(".".to_string());
+        let mut producer = FilePathProducer::new(config.source_path.clone());
         let mut done = false;
         while !done {
             let path = match producer.next() {
@@ -47,8 +68,11 @@ impl BackupCommand {
 
             if !done {
                 println!("path: {}", path);
+                let mut path_buf = PathBuf::new();
+                path_buf.push(&config.source_path);
+                path_buf.push(path.clone());
 
-                let bytes = match fs::read(path.clone()) {
+                let bytes = match fs::read(path_buf) {
                     Ok(bytes) => bytes,
                     Err(_) => panic!(),
                 };
