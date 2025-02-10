@@ -21,14 +21,6 @@ impl BackupCommand {
     }
 
     pub fn execute(&self) -> Result<(), Error> {
-        match fs::create_dir_all("NTM/Backups") {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(error::CODE_GENERAL)),
-        };
-        match fs::create_dir_all("NTM/Objects") {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(error::CODE_GENERAL)),
-        };
         let store = ObjectStore::new(&"NTM/Objects");
         let now: DateTime<Local> = Local::now();
         let date_time = now.format("%Y%m%d%H%M%S").to_string();
