@@ -2,7 +2,6 @@ use std::fs;
 use std::path;
 use std::path::PathBuf;
 
-use crate::error;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
