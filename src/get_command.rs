@@ -62,6 +62,7 @@ impl GetCommand {
             };
 
             if !done {
+                println!("path: {}", path);
                 let bytes = match fs::read(path.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED)),
