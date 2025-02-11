@@ -1,4 +1,5 @@
 use std::backtrace::Backtrace;
+use std::fmt;
 
 pub const ERROR_ID: &str = "error";
 
@@ -11,6 +12,16 @@ pub struct Error {
     pub code: i32,
     pub backtrace: String,
     pub details: String,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Error. id: {}, code: {}, backtrace: {}, details: {}",
+            self.id, self.code, self.backtrace, self.details
+        )
+    }
 }
 
 impl Error {
