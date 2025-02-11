@@ -26,11 +26,11 @@ impl BackupCommand {
         let date_time = now.format("%Y%m%d%H%M%S").to_string();
         let bytes = match fs::read("NTM/config.toml") {
             Ok(bytes) => bytes,
-            Err(_) => return Err(Error::new(error::CODE_GENERAL)),
+            Err(_) => return Err(Error::new(error::ERROR_ID, error::ERROR_CODE_GENERAL)),
         };
         let string = match String::from_utf8(bytes) {
             Ok(string) => string,
-            Err(_) => return Err(Error::new(error::CODE_GENERAL)),
+            Err(_) => return Err(Error::new(error::ERROR_ID, error::ERROR_CODE_GENERAL)),
         };
         let result = toml::from_str(&string);
         let config: Config;
@@ -48,7 +48,7 @@ impl BackupCommand {
             let path = match producer.next() {
                 Ok(path) => path,
                 Err(error) => {
-                    if error.code == error::CODE_PRODUCING_FINISHED {
+                    if error.code == error::ERROR_CODE_PRODUCING_FINISHED {
                         done = true;
                     } else {
                         panic!();
