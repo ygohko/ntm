@@ -1,4 +1,5 @@
 use std::fs;
+use std::path;
 use std::path::PathBuf;
 
 use crate::error;
@@ -33,9 +34,11 @@ impl GetCommand {
     pub fn execute(&self) -> Result<()> {
         // TODO: Implement this.
         let store = ObjectStore::new(&"NTM/Objects");
+        let mut backup_path = PathBuf::new();
+        backup_path.push("NTM/Backups/");
+        backup_path.push(&self.backup);
         let mut path = PathBuf::new();
-        path.push("NTM/Backups/");
-        path.push(&self.backup);
+        path.push(&backup_path);
         let exists = match path.try_exists() {
             Ok(exists) => exists,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND)),
@@ -62,8 +65,11 @@ impl GetCommand {
             };
 
             if !done {
-                println!("path: {}", path);
-                let bytes = match fs::read(path.clone()) {
+                let mut entry_path = PathBuf::new();
+                entry_path.push(&backup_path);
+                entry_path.push(&path);
+                println!("entry_path: {}", entry_path.display());
+                let bytes = match fs::read(entry_path.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED)),
                 };
@@ -81,6 +87,13 @@ impl GetCommand {
                 let mut destination_path = PathBuf::new();
                 destination_path.push(&self.backup);
                 destination_path.push(&path);
+                println!("destination_path: {}", destination_path.display());
+                let directries = directories_from_path(&destination_path.to_string_lossy().to_string());
+                match fs::create_dir_all(&directries) {
+                    Ok(_) => (),
+                    // TODO: Skipping file that writing is failed may be needed.
+                    Err(_) => return  Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                }                
                 match fs::write(destination_path, bytes) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
@@ -89,6 +102,17 @@ impl GetCommand {
             }
         }
 
-        Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
+        Ok(())
     }
+}
+
+// TODO: Move to commons.
+fn directories_from_path(path: &str) -> String {
+    let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
+    if split.len() < 1 {
+        return "".to_string();
+    }
+    split.pop();
+
+    split.join(path::MAIN_SEPARATOR_STR)
 }
