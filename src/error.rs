@@ -4,7 +4,6 @@ use std::fmt;
 pub const ERROR_ID: &str = "error";
 
 pub const ERROR_CODE_GENERAL: i32 = 0;
-pub const ERROR_CODE_PRODUCING_FINISHED: i32 = 1;
 
 #[derive(Debug)]
 pub struct Error {
@@ -18,7 +17,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Error. id: {}, code: {}, backtrace: {}, details: {}",
+            "id: {}\ncode: {}\nbacktrace: \n{}details: {}\n",
             self.id, self.code, self.backtrace, self.details
         )
     }

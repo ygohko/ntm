@@ -2,7 +2,13 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
-// TODO: Add Error type.
+use crate::error::Error;
+
+pub const ERROR_ID: &'static str = "object_store";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: i32 = 0;
+pub const ERROR_CODE_WRITING_OBJECT_FAILED: i32 = 1;
 
 pub struct ObjectStore {
     path: PathBuf,
@@ -15,8 +21,7 @@ impl ObjectStore {
         ObjectStore { path: path_buf }
     }
 
-    pub fn add(&self, id: &str, bytes: &Vec<u8>) {
-        // TODO: Implement this.
+    pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<(), Error> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -29,14 +34,15 @@ impl ObjectStore {
         println!("path: {}", path.display());
         match fs::create_dir_all(path.clone()) {
             Ok(_) => (),
-            Err(_) => panic!(),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         }
 
-        // TODO: Write bytes.
         path.push(id);
         match fs::write(path, bytes) {
             Ok(_) => (),
-            Err(_) => panic!(),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         }
+
+        Ok(())
     }
 }

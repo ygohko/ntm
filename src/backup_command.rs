@@ -8,10 +8,18 @@ use std::path;
 use std::path::PathBuf;
 
 use crate::config::Config;
-use crate::error;
 use crate::error::Error;
+use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
+
+pub const ERROR_ID: &'static str = "backup_command";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: i32 = 0;
+pub const ERROR_CODE_READING_CONFIG_FAILED: i32 = 1;
+pub const ERROR_CODE_READING_SOURCE_FAILED: i32 = 2;
+pub const ERROR_CODE_WRITING_DESTINATION_FAILED: i32 = 3;
 
 pub struct BackupCommand {}
 
@@ -26,11 +34,11 @@ impl BackupCommand {
         let date_time = now.format("%Y%m%d%H%M%S").to_string();
         let bytes = match fs::read("NTM/config.toml") {
             Ok(bytes) => bytes,
-            Err(_) => return Err(Error::new(error::ERROR_ID, error::ERROR_CODE_GENERAL)),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
         };
         let string = match String::from_utf8(bytes) {
             Ok(string) => string,
-            Err(_) => return Err(Error::new(error::ERROR_ID, error::ERROR_CODE_GENERAL)),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
         };
         let result = toml::from_str(&string);
         let config: Config;
@@ -48,10 +56,10 @@ impl BackupCommand {
             let path = match producer.next() {
                 Ok(path) => path,
                 Err(error) => {
-                    if error.code == error::ERROR_CODE_PRODUCING_FINISHED {
+                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
                         done = true;
                     } else {
-                        panic!();
+                        return Err(error);
                     }
 
                     "".to_string()
@@ -66,7 +74,7 @@ impl BackupCommand {
 
                 let bytes = match fs::read(path_buf) {
                     Ok(bytes) => bytes,
-                    Err(_) => panic!(),
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
 
                 let mut id_bytes = b"b,".to_vec();
@@ -74,16 +82,18 @@ impl BackupCommand {
                 println!("id_bytes.len(): {}", id_bytes.len());
 
                 let id = object_id(&id_bytes);
-                store.add(&id, &bytes);
+                match store.add(&id, &bytes) {
+                    Ok(_) => (),
+                    Err(error) => return Err(error),
+                };
 
-                // TODO: Write reference files.
                 let mut reference_path = PathBuf::new();
                 reference_path.push("NTM/Backups");
                 reference_path.push(date_time.clone());
                 reference_path.push(reference_directories(&path));
                 match fs::create_dir_all(reference_path.clone()) {
                     Ok(_) => (),
-                    Err(_) => panic!(),
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
                 };
                 reference_path.push(reference_file(&path));
 
@@ -91,7 +101,7 @@ impl BackupCommand {
 
                 match fs::write(reference_path, id) {
                     Ok(_) => (),
-                    Err(_) => panic!(),
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
                 };
             }
         }
