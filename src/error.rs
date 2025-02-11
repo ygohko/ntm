@@ -1,9 +1,15 @@
 use std::backtrace::Backtrace;
 use std::fmt;
 
-pub const ERROR_ID: &str = "error";
+pub type ErrorId = &'static str;
+pub type ErrorCode = i32;
+pub type Result<T> = std::result::Result<T, Error>;
 
-pub const ERROR_CODE_GENERAL: i32 = 0;
+#[allow(dead_code)]
+pub const ERROR_ID: ErrorId = "error";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 
 #[derive(Debug)]
 pub struct Error {
@@ -24,7 +30,7 @@ impl fmt::Display for Error {
 }
 
 impl Error {
-    pub fn new(id: &'static str, code: i32) -> Error {
+    pub fn new(id: &'static str, code: i32) -> Self {
         let backtrace = Backtrace::capture();
         let string = format!("{}", backtrace);
         Error {

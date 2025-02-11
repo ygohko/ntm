@@ -9,17 +9,20 @@ use std::path::PathBuf;
 
 use crate::config::Config;
 use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
+use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
 
-pub const ERROR_ID: &'static str = "backup_command";
+pub const ERROR_ID: ErrorId = "backup_command";
 
 #[allow(dead_code)]
-pub const ERROR_CODE_GENERAL: i32 = 0;
-pub const ERROR_CODE_READING_CONFIG_FAILED: i32 = 1;
-pub const ERROR_CODE_READING_SOURCE_FAILED: i32 = 2;
-pub const ERROR_CODE_WRITING_DESTINATION_FAILED: i32 = 3;
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
+pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 pub struct BackupCommand {}
 
@@ -28,7 +31,7 @@ impl BackupCommand {
         BackupCommand {}
     }
 
-    pub fn execute(&self) -> Result<(), Error> {
+    pub fn execute(&self) -> Result<()> {
         let store = ObjectStore::new(&"NTM/Objects");
         let now: DateTime<Local> = Local::now();
         let date_time = now.format("%Y%m%d%H%M%S").to_string();

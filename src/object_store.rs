@@ -3,12 +3,15 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
+use crate::error::Result;
 
-pub const ERROR_ID: &'static str = "object_store";
+pub const ERROR_ID: ErrorId = "object_store";
 
 #[allow(dead_code)]
-pub const ERROR_CODE_GENERAL: i32 = 0;
-pub const ERROR_CODE_WRITING_OBJECT_FAILED: i32 = 1;
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 1;
 
 pub struct ObjectStore {
     path: PathBuf,
@@ -21,7 +24,7 @@ impl ObjectStore {
         ObjectStore { path: path_buf }
     }
 
-    pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<(), Error> {
+    pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
