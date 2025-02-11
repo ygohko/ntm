@@ -10,6 +10,7 @@ pub const ERROR_ID: ErrorId = "error";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_NOT_IMPLEMENTED: ErrorCode = 1;
 
 #[derive(Debug)]
 pub struct Error {
