@@ -53,7 +53,7 @@ impl BackupCommand {
             config = Config::new();
         }
 
-        let mut producer = FilePathProducer::new(config.source_path.clone());
+        let mut producer = FilePathProducer::new(&config.source_path);
         let mut done = false;
         while !done {
             let path = match producer.next() {

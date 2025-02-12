@@ -3,11 +3,14 @@ use std::fs;
 use std::path::Path;
 
 use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
+use crate::error::Result;
 
-pub const ERROR_ID: &'static str = "file_path_producer";
+pub const ERROR_ID: ErrorId = "file_path_producer";
 
-pub const ERROR_CODE_GENERAL: i32 = 0;
-pub const ERROR_CODE_PRODUCING_FINISHED: i32 = 1;
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_PRODUCING_FINISHED: ErrorCode = 1;
 
 pub struct FilePathProducer {
     file_paths: Vec<String>,
@@ -17,16 +20,16 @@ pub struct FilePathProducer {
 
 impl FilePathProducer {
     // TODO: This argument should be AsRef<Path>?
-    pub fn new(path: String) -> FilePathProducer {
+    pub fn new(path: &str) -> FilePathProducer {
         let prefix_length = path.len() + 1;
         return FilePathProducer {
             file_paths: Vec::new(),
-            directory_paths: vec![path],
+            directory_paths: vec![path.to_string()],
             prefix_length: prefix_length,
         };
     }
 
-    pub fn next(&mut self) -> Result<String, Error> {
+    pub fn next(&mut self) -> Result<String> {
         let done = false;
         while !done {
             if self.file_paths.len() > 0 {

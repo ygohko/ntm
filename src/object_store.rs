@@ -11,7 +11,8 @@ pub const ERROR_ID: ErrorId = "object_store";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 
 pub struct ObjectStore {
     path: PathBuf,
@@ -25,6 +26,7 @@ impl ObjectStore {
     }
 
     pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<()> {
+        // TODO: Do not write bytes if it already written.
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -47,5 +49,24 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    pub fn bytes(&self, id: &str) -> Result<Vec<u8>> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = self.path.clone();
+        path.push(path1);
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+        path.push(id);
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
+        };
+
+        Ok(bytes)
     }
 }
