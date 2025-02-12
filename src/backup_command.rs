@@ -28,7 +28,7 @@ pub struct BackupCommand {}
 
 impl BackupCommand {
     pub fn new() -> Self {
-        BackupCommand {}
+        Self {}
     }
 
     pub fn execute(&self) -> Result<()> {
@@ -102,6 +102,14 @@ impl BackupCommand {
 
                 println!("reference_path: {}", reference_path.display());
 
+                let entry = Entry {
+                    id: id,
+                    last_modified: 0,
+                    permission: 0,
+                    uid: 0,
+                    gid: 0,
+                };
+                let string = serde_json::to_string(entry);
                 match fs::write(reference_path, id) {
                     Ok(_) => (),
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
