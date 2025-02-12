@@ -30,7 +30,7 @@ fn main() -> ExitCode {
             Err(error) => {
                 println!("Error caused.\n\n{}", error);
 
-                 return ExitCode::FAILURE;
+                return ExitCode::FAILURE;
             },
         };
     }
