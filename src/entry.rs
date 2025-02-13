@@ -10,6 +10,7 @@ pub struct Entry {
     pub gid: i32,
 }
 
+// TODO: Remove this if it is not needed.
 impl Entry {
     pub fn new() -> Self {
         Self {

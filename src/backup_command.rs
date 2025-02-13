@@ -8,6 +8,7 @@ use std::path;
 use std::path::PathBuf;
 
 use crate::config::Config;
+use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -109,8 +110,11 @@ impl BackupCommand {
                     uid: 0,
                     gid: 0,
                 };
-                let string = serde_json::to_string(entry);
-                match fs::write(reference_path, id) {
+                let string = match serde_json::to_string(&entry) {
+                    Ok(string) => string,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+                };
+                match fs::write(reference_path, string.as_bytes()) {
                     Ok(_) => (),
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
                 };
