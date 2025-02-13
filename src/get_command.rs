@@ -2,6 +2,7 @@ use std::fs;
 use std::path;
 use std::path::PathBuf;
 
+use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -68,17 +69,19 @@ impl GetCommand {
                 entry_path.push(&backup_path);
                 entry_path.push(&path);
                 println!("entry_path: {}", entry_path.display());
-                let bytes = match fs::read(entry_path.clone()) {
+                let string = match fs::read_to_string(entry_path.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED)),
                 };
-                let id = match String::from_utf8(bytes) {
-                    Ok(id) => id,
+
+                let entry: Entry = match serde_json::from_str(&string) {
+                    Ok(entry) => entry,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED)),
                 };
-                println!("id: {}", id);
 
-                let bytes = match store.bytes(&id) {
+                println!("entry.id: {}", entry.id);
+
+                let bytes = match store.bytes(&entry.id) {
                     Ok(bytes) => bytes,
                     // TODO: Skipping file that object is not found may be needed.
                     Err(error) => return Err(error),

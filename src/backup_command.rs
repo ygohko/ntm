@@ -103,6 +103,7 @@ impl BackupCommand {
 
                 println!("reference_path: {}", reference_path.display());
 
+                // TODO: Set other fields.
                 let entry = Entry {
                     id: id,
                     last_modified: 0,
