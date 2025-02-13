@@ -53,15 +53,16 @@ impl GetCommand {
             let path = match producer.next() {
                 Ok(path) => path,
                 Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
                         done = true;
-                    }
-                    else {
+                    } else {
                         return Err(error);
                     }
 
                     "".to_string()
-                },
+                }
             };
 
             if !done {
@@ -71,12 +72,16 @@ impl GetCommand {
                 println!("entry_path: {}", entry_path.display());
                 let string = match fs::read_to_string(entry_path.clone()) {
                     Ok(bytes) => bytes,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED)),
+                    Err(_) => {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED))
+                    }
                 };
 
                 let entry: Entry = match serde_json::from_str(&string) {
                     Ok(entry) => entry,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED)),
+                    Err(_) => {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED))
+                    }
                 };
 
                 println!("entry.id: {}", entry.id);
@@ -90,16 +95,17 @@ impl GetCommand {
                 destination_path.push(&self.backup);
                 destination_path.push(&path);
                 println!("destination_path: {}", destination_path.display());
-                let directries = directories_from_path(&destination_path.to_string_lossy().to_string());
+                let directries =
+                    directories_from_path(&destination_path.to_string_lossy().to_string());
                 match fs::create_dir_all(&directries) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => return  Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                }                
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                }
                 match fs::write(destination_path, bytes) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => return  Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
             }
         }

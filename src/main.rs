@@ -32,10 +32,9 @@ fn main() -> ExitCode {
                 println!("Error caused.\n\n{}", error);
 
                 return ExitCode::FAILURE;
-            },
+            }
         };
-    }
-    else if command_name == "backup".to_string() {
+    } else if command_name == "backup".to_string() {
         let command = BackupCommand::new();
         match command.execute() {
             Ok(_) => (),
@@ -43,10 +42,9 @@ fn main() -> ExitCode {
                 println!("Error caused.\n\n{}", error);
 
                 return ExitCode::FAILURE;
-            },
+            }
         };
-    }
-    else if command_name == "get".to_string() {
+    } else if command_name == "get".to_string() {
         if arguments.len() < 3 {
             println!("Missing BACKUP argument.");
 

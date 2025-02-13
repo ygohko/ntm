@@ -49,8 +49,7 @@ impl BackupCommand {
         if result.is_ok() {
             config = result.unwrap();
             println!("config.source_path: {}", config.source_path);
-        }
-        else {
+        } else {
             config = Config::new();
         }
 
@@ -60,7 +59,9 @@ impl BackupCommand {
             let path = match producer.next() {
                 Ok(path) => path,
                 Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
                         done = true;
                     } else {
                         return Err(error);
@@ -97,7 +98,9 @@ impl BackupCommand {
                 reference_path.push(reference_directories(&path));
                 match fs::create_dir_all(reference_path.clone()) {
                     Ok(_) => (),
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+                    Err(_) => {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
+                    }
                 };
                 reference_path.push(reference_file(&path));
 
@@ -113,11 +116,15 @@ impl BackupCommand {
                 };
                 let string = match serde_json::to_string(&entry) {
                     Ok(string) => string,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+                    Err(_) => {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
+                    }
                 };
                 match fs::write(reference_path, string.as_bytes()) {
                     Ok(_) => (),
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+                    Err(_) => {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
+                    }
                 };
             }
         }

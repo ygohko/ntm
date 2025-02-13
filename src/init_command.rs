@@ -11,13 +11,11 @@ pub const ERROR_ID: ErrorId = "init_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
 
-pub struct InitCommand {
-}
+pub struct InitCommand {}
 
 impl InitCommand {
     pub fn new() -> Self {
-        InitCommand {
-        }
+        InitCommand {}
     }
 
     pub fn execute(&self) -> Result<()> {
