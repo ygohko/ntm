@@ -8,6 +8,7 @@ use std::path;
 use std::path::PathBuf;
 
 use crate::config::Config;
+use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -28,7 +29,7 @@ pub struct BackupCommand {}
 
 impl BackupCommand {
     pub fn new() -> Self {
-        BackupCommand {}
+        Self {}
     }
 
     pub fn execute(&self) -> Result<()> {
@@ -102,7 +103,19 @@ impl BackupCommand {
 
                 println!("reference_path: {}", reference_path.display());
 
-                match fs::write(reference_path, id) {
+                // TODO: Set other fields.
+                let entry = Entry {
+                    id: id,
+                    last_modified: 0,
+                    permission: 0,
+                    uid: 0,
+                    gid: 0,
+                };
+                let string = match serde_json::to_string(&entry) {
+                    Ok(string) => string,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+                };
+                match fs::write(reference_path, string.as_bytes()) {
                     Ok(_) => (),
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
                 };
