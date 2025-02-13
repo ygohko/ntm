@@ -9,16 +9,3 @@ pub struct Entry {
     pub uid: i32,
     pub gid: i32,
 }
-
-// TODO: Remove this if it is not needed.
-impl Entry {
-    pub fn new() -> Self {
-        Self {
-            id: "".to_string(),
-            last_modified: 0,
-            permission: 0,
-            uid: 0,
-            gid: 0,
-        }
-    }
-}
