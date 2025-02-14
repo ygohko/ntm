@@ -33,9 +33,9 @@ impl GetCommand {
 
     pub fn execute(&self) -> Result<()> {
         // TODO: Implement this.
-        let store = ObjectStore::new(&"NTM/Objects");
+        let store = ObjectStore::new(&"Objects");
         let mut backup_path = PathBuf::new();
-        backup_path.push("NTM/Backups/");
+        backup_path.push("Backups");
         backup_path.push(&self.backup);
         let mut path = PathBuf::new();
         path.push(&backup_path);
