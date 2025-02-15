@@ -43,6 +43,13 @@ impl ObjectStore {
         }
 
         path.push(id);
+        let exists = match path.try_exists() {
+            Ok(exists) => exists,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+        };
+        if exists {
+            return Ok(());
+        }
         match fs::write(path, bytes) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
