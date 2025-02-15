@@ -63,7 +63,6 @@ impl FilePathProducer {
                 for result in read_dir {
                     if result.is_ok() {
                         let entry = result.unwrap();
-
                         let metadata = match fs::metadata(entry.path()) {
                             Ok(metadata) => metadata,
                             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),

@@ -33,10 +33,10 @@ impl BackupCommand {
     }
 
     pub fn execute(&self) -> Result<()> {
-        let store = ObjectStore::new(&"NTM/Objects");
+        let store = ObjectStore::new(&"Objects");
         let now: DateTime<Local> = Local::now();
         let date_time = now.format("%Y%m%d%H%M%S").to_string();
-        let bytes = match fs::read("NTM/config.toml") {
+        let bytes = match fs::read("ntm.toml") {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
         };
@@ -82,6 +82,7 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
 
+                // TODO: Make ids from path, file size, and time stamp is ths file is large.
                 let mut id_bytes = b"b,".to_vec();
                 id_bytes = [id_bytes, bytes.clone()].concat();
                 println!("id_bytes.len(): {}", id_bytes.len());
@@ -93,7 +94,7 @@ impl BackupCommand {
                 };
 
                 let mut reference_path = PathBuf::new();
-                reference_path.push("NTM/Backups");
+                reference_path.push("Backups");
                 reference_path.push(date_time.clone());
                 reference_path.push(reference_directories(&path));
                 match fs::create_dir_all(reference_path.clone()) {

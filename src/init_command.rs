@@ -19,14 +19,15 @@ impl InitCommand {
     }
 
     pub fn execute(&self) -> Result<()> {
-        match fs::create_dir_all("NTM/Backups") {
+        match fs::create_dir_all("Backups") {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
-        match fs::create_dir_all("NTM/Objects") {
+        match fs::create_dir_all("Objects") {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
+        // TODO: Create ntm.toml.
 
         Ok(())
     }
