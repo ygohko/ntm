@@ -82,6 +82,7 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
 
+                // TODO: Make ids from path, file size, and time stamp is ths file is large.
                 let mut id_bytes = b"b,".to_vec();
                 id_bytes = [id_bytes, bytes.clone()].concat();
                 println!("id_bytes.len(): {}", id_bytes.len());
