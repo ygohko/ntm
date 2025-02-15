@@ -6,6 +6,7 @@ use sha2::Sha256;
 use std::fs;
 use std::path;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use crate::config::Config;
 use crate::entry::Entry;
@@ -77,17 +78,34 @@ impl BackupCommand {
                 path_buf.push(&config.source_path);
                 path_buf.push(path.clone());
 
-                let bytes = match fs::read(path_buf) {
+                let metadata = match path_buf.metadata() {
+                    Ok(metadata) => metadata,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+                };
+                let bytes = match fs::read(path_buf.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
+                let id: String;
+                let file_size = metadata.len();
+                if file_size < 100 * 1024 * 1024 {
+                    let mut id_bytes = b"b,".to_vec();
+                    id_bytes = [id_bytes, bytes.clone()].concat();
+                    println!("id_bytes.len(): {}", id_bytes.len());
+                    id = object_id(&id_bytes);
+                } else {
+                    let mut modified: u64 = 0;
+                    let result = metadata.modified();
+                    if result.is_ok() {
+                        let result = result.unwrap().duration_since(SystemTime::UNIX_EPOCH);
+                        if result.is_ok() {
+                            modified = result.unwrap().as_secs();
+                        }
+                    }
+                    let string = format!("p,{},{},{}", path_buf.to_string_lossy().to_string(), modified, file_size);
+                    id = object_id(&string.as_bytes().to_vec());
+                }
 
-                // TODO: Make ids from path, file size, and time stamp is ths file is large.
-                let mut id_bytes = b"b,".to_vec();
-                id_bytes = [id_bytes, bytes.clone()].concat();
-                println!("id_bytes.len(): {}", id_bytes.len());
-
-                let id = object_id(&id_bytes);
                 match store.add(&id, &bytes) {
                     Ok(_) => (),
                     Err(error) => return Err(error),
