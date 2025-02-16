@@ -85,14 +85,10 @@ impl FilePathProducer {
                 for result in read_dir {
                     if result.is_ok() {
                         let entry = result.unwrap();
-
-                        println!("entry: {}", entry.path().display());
-                        
                         let mut is_file = false;
                         let mut is_dir = false;
                         match fs::symlink_metadata(entry.path()) {
                             Ok(metadata) => {
-                                println!("is_file: {}, is_dir: {}, is_symlink: {}", metadata.is_file(), metadata.is_dir(), metadata.is_symlink());
                                 is_file = metadata.is_file();
                                 is_dir = metadata.is_dir() && !metadata.is_symlink();
                             },
