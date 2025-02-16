@@ -58,7 +58,7 @@ impl BackupCommand {
     pub fn execute(&self) -> Result<()> {
         let store = ObjectStore::new(&"Objects");
         let now: DateTime<Local> = Local::now();
-        let date_time = now.format("%Y%m%d%H%M%S").to_string();
+        let date_time = now.format("%Y%m%d-%H%M").to_string();
         let bytes = match fs::read("ntm.toml") {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
