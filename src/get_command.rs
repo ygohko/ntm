@@ -38,7 +38,7 @@ pub const ERROR_ID: ErrorId = "get_command";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_BACKUP_NOT_FOUND: ErrorCode = 1;
-pub const ERROR_CODE_READING_REFERENCE_FAILED: ErrorCode = 2;
+pub const ERROR_CODE_READING_ENTRY_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 
 pub struct GetCommand {
@@ -95,14 +95,14 @@ impl GetCommand {
                 let string = match fs::read_to_string(entry_path.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED))
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
                     }
                 };
 
                 let entry: Entry = match serde_json::from_str(&string) {
                     Ok(entry) => entry,
                     Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_REFERENCE_FAILED))
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
                     }
                 };
 

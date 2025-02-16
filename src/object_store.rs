@@ -58,7 +58,7 @@ impl ObjectStore {
         path.push(path2);
         path.push(path3);
         path.push(path4);
-        println!("path: {}", path.display());
+        // println!("path: {}", path.display());
         match fs::create_dir_all(path.clone()) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
