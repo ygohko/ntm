@@ -93,7 +93,7 @@ impl FilePathProducer {
                         if metadata.is_file() {
                             let path = path[self.prefix_length..].to_string();
                             self.file_paths.push(path);
-                        } else {
+                        } else if metadata.is_dir() {
                             self.directory_paths.push(path);
                         }
                     }
