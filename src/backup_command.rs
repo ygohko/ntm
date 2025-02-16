@@ -133,19 +133,19 @@ impl BackupCommand {
                     Err(error) => return Err(error),
                 };
 
-                let mut reference_path = PathBuf::new();
-                reference_path.push("Backups");
-                reference_path.push(date_time.clone());
-                reference_path.push(reference_directories(&path));
-                match fs::create_dir_all(reference_path.clone()) {
+                let mut entry_path = PathBuf::new();
+                entry_path.push("Backups");
+                entry_path.push(date_time.clone());
+                entry_path.push(entry_directories(&path));
+                match fs::create_dir_all(entry_path.clone()) {
                     Ok(_) => (),
                     Err(_) => {
                         return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
                     }
                 };
-                reference_path.push(reference_file(&path));
+                entry_path.push(entry_file(&path));
 
-                println!("reference_path: {}", reference_path.display());
+                println!("entry_path: {}", entry_path.display());
 
                 // TODO: Set other fields.
                 let entry = Entry {
@@ -161,7 +161,7 @@ impl BackupCommand {
                         return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
                     }
                 };
-                match fs::write(reference_path, string.as_bytes()) {
+                match fs::write(entry_path, string.as_bytes()) {
                     Ok(_) => (),
                     Err(_) => {
                         return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
@@ -184,7 +184,7 @@ fn object_id(bytes: &Vec<u8>) -> String {
     hex.as_string()
 }
 
-fn reference_directories(path: &str) -> String {
+fn entry_directories(path: &str) -> String {
     let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
     if split.len() < 1 {
         return "".to_string();
@@ -194,7 +194,7 @@ fn reference_directories(path: &str) -> String {
     split.join(path::MAIN_SEPARATOR_STR)
 }
 
-fn reference_file(path: &str) -> String {
+fn entry_file(path: &str) -> String {
     let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
     if split.len() < 1 {
         return "".to_string();
