@@ -43,6 +43,7 @@ pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 
 pub struct GetCommand {
     backup: String,
+    path: String,
 }
 
 impl GetCommand {
@@ -50,6 +51,7 @@ impl GetCommand {
     pub fn new(backup: &str) -> Self {
         GetCommand {
             backup: backup.to_string(),
+            path: "".to_string(),
         }
     }
 
@@ -88,51 +90,69 @@ impl GetCommand {
             };
 
             if !done {
-                let mut entry_path = PathBuf::new();
-                entry_path.push(&backup_path);
-                entry_path.push(&path);
-                println!("entry_path: {}", entry_path.display());
-                let string = match fs::read_to_string(entry_path.clone()) {
-                    Ok(bytes) => bytes,
-                    Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
+
+                let mut found = false;
+                if self.path != "".to_string() {
+                    let option = path.find(&self.path);
+                    if option.is_some() && option.unwrap() == 0 {
+                        found = true;
                     }
-                };
-
-                let entry: Entry = match serde_json::from_str(&string) {
-                    Ok(entry) => entry,
-                    Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
-                    }
-                };
-
-                println!("entry.id: {}", entry.id);
-
-                let bytes = match store.bytes(&entry.id) {
-                    Ok(bytes) => bytes,
-                    // TODO: Skipping file that object is not found may be needed.
-                    Err(error) => return Err(error),
-                };
-                let mut destination_path = PathBuf::new();
-                destination_path.push(&self.backup);
-                destination_path.push(&path);
-                println!("destination_path: {}", destination_path.display());
-                let directries =
-                    directories_from_path(&destination_path.to_string_lossy().to_string());
-                match fs::create_dir_all(&directries) {
-                    Ok(_) => (),
-                    // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                } else {
+                    found = true;
                 }
-                match fs::write(destination_path, bytes) {
-                    Ok(_) => (),
-                    // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                };
+
+                if found {
+                    
+                    let mut entry_path = PathBuf::new();
+                    entry_path.push(&backup_path);
+                    entry_path.push(&path);
+                    println!("entry_path: {}", entry_path.display());
+                    let string = match fs::read_to_string(entry_path.clone()) {
+                        Ok(bytes) => bytes,
+                        Err(_) => {
+                            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
+                        }
+                    };
+
+                    let entry: Entry = match serde_json::from_str(&string) {
+                        Ok(entry) => entry,
+                        Err(_) => {
+                            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
+                        }
+                    };
+
+                    println!("entry.id: {}", entry.id);
+
+                    let bytes = match store.bytes(&entry.id) {
+                        Ok(bytes) => bytes,
+                        // TODO: Skipping file that object is not found may be needed.
+                        Err(error) => return Err(error),
+                    };
+                    let mut destination_path = PathBuf::new();
+                    destination_path.push(&self.backup);
+                    destination_path.push(&path);
+                    println!("destination_path: {}", destination_path.display());
+                    let directries =
+                        directories_from_path(&destination_path.to_string_lossy().to_string());
+                    match fs::create_dir_all(&directries) {
+                        Ok(_) => (),
+                        // TODO: Skipping file that writing is failed may be needed.
+                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                    }
+                    match fs::write(destination_path, bytes) {
+                        Ok(_) => (),
+                        // TODO: Skipping file that writing is failed may be needed.
+                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                    };
+                }
             }
         }
 
         Ok(())
+    }
+
+    pub fn set_path(&mut self, path: &str) -> () {
+        self.path = path.to_string();
     }
 }
 
