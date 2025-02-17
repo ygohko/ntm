@@ -24,6 +24,7 @@ use std::fs;
 use std::path;
 use std::path::PathBuf;
 
+use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
@@ -133,7 +134,7 @@ impl GetCommand {
                     destination_path.push(&path);
                     println!("destination_path: {}", destination_path.display());
                     let directries =
-                        directories_from_path(&destination_path.to_string_lossy().to_string());
+                        (&destination_path.to_string_lossy().to_string()).directories();
                     match fs::create_dir_all(&directries) {
                         Ok(_) => (),
                         // TODO: Skipping file that writing is failed may be needed.

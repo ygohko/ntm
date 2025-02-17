@@ -34,6 +34,7 @@ use std::env;
 use std::process::ExitCode;
 
 use crate::backup_command::BackupCommand;
+use crate::commons::OperatePath;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 

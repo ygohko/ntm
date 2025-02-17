@@ -22,7 +22,7 @@
 
 use std::path;
 
-trait OperatePath {
+pub trait OperatePath {
     fn directories(&self) -> String;
 }
 
