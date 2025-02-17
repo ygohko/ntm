@@ -101,8 +101,6 @@ impl GetCommand {
                     found = true;
                 }
 
-                // kokokara----
-
                 if found {
                     
                     let mut entry_path = PathBuf::new();
