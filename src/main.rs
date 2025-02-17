@@ -67,13 +67,18 @@ fn main() -> ExitCode {
             }
         };
     } else if command_name == "get".to_string() {
-        if arguments.len() < 3 {
+        let count = arguments.len();
+        if count < 3 {
             println!("Missing BACKUP argument.");
 
             return ExitCode::FAILURE;
         }
         let backup = arguments[2].clone();
-        let command = GetCommand::new(&backup);
+        let mut command = GetCommand::new(&backup);
+        if count >= 4 {
+            let path = arguments[3].clone();
+            command.set_path(&path);
+        }
         match command.execute() {
             Ok(_) => (),
             Err(error) => {

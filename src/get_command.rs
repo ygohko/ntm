@@ -43,6 +43,7 @@ pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 
 pub struct GetCommand {
     backup: String,
+    path: String,
 }
 
 impl GetCommand {
@@ -50,6 +51,7 @@ impl GetCommand {
     pub fn new(backup: &str) -> Self {
         GetCommand {
             backup: backup.to_string(),
+            path: "".to_string(),
         }
     }
 
@@ -88,6 +90,17 @@ impl GetCommand {
             };
 
             if !done {
+
+                let mut found = false;
+                if self.path != "".to_string() {
+                    let option = path.find(&self.path);
+                    if option.is_some() && option.unwrap() == 0 {
+                        found = true;
+                    }
+                }
+
+                // kokokara----
+                
                 let mut entry_path = PathBuf::new();
                 entry_path.push(&backup_path);
                 entry_path.push(&path);
@@ -133,6 +146,10 @@ impl GetCommand {
         }
 
         Ok(())
+    }
+
+    pub fn set_path(&mut self, path: &str) -> () {
+        self.path = path.to_string();
     }
 }
 
