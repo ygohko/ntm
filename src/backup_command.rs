@@ -30,6 +30,7 @@ use std::path;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
+use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
 use crate::error::Error;
@@ -151,7 +152,7 @@ fn process_file(path: &String, store: &ObjectStore, source_path: &String, date_t
     let mut entry_path = PathBuf::new();
     entry_path.push("Backups");
     entry_path.push(date_time.clone());
-    entry_path.push(entry_directories(&path));
+    entry_path.push(path.directories());
     match fs::create_dir_all(entry_path.clone()) {
         Ok(_) => (),
         Err(_) => {
