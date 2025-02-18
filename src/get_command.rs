@@ -23,6 +23,7 @@
 use std::fs;
 use std::path::PathBuf;
 
+use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
@@ -71,7 +72,7 @@ impl GetCommand {
             return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
         }
 
-        let mut producer = FilePathProducer::new(&path.to_string_lossy());
+        let mut producer = FilePathProducer::new(&String::from_path(&path));
         let mut done = false;
         while !done {
             let path = match producer.next() {
@@ -133,7 +134,7 @@ impl GetCommand {
                     destination_path.push(&path);
                     println!("destination_path: {}", destination_path.display());
                     let directories =
-                        destination_path.to_string_lossy().to_string().directories();
+                        String::from_path(&destination_path).directories();
                     match fs::create_dir_all(&directories) {
                         Ok(_) => (),
                         // TODO: Skipping file that writing is failed may be needed.
