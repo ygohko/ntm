@@ -194,16 +194,6 @@ fn object_id(bytes: &Vec<u8>) -> String {
     hex.as_string()
 }
 
-fn entry_directories(path: &str) -> String {
-    let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
-    if split.len() < 1 {
-        return "".to_string();
-    }
-    split.pop();
-
-    split.join(path::MAIN_SEPARATOR_STR)
-}
-
 fn entry_file(path: &str) -> String {
     let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
     if split.len() < 1 {
