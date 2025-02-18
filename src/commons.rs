@@ -21,9 +21,12 @@
  */
 
 use std::path;
+use std::path::Path;
+use std::path::PathBuf;
 
 pub trait OperatePath {
     fn directories(&self) -> String;
+    fn to_path_buf(&self) -> PathBuf;
 }
 
 impl OperatePath for str {
@@ -35,5 +38,22 @@ impl OperatePath for str {
         split.pop();
 
         split.join(path::MAIN_SEPARATOR_STR)
+    }
+
+    fn to_path_buf(&self) -> PathBuf {
+        let mut result = PathBuf::new();
+        result.push(self);
+
+        result
+    }
+}
+
+pub trait ConvertPath {
+    fn from_path(path: &dyn AsRef<Path>) -> String;
+}
+
+impl ConvertPath for String {
+    fn from_path(path: &dyn AsRef<Path>) -> String {
+        path.as_ref().to_string_lossy().to_string()
     }
 }
