@@ -159,7 +159,7 @@ fn process_file(path: &String, store: &ObjectStore, source_path: &String, date_t
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
         }
     };
-    entry_path.push(entry_file(&path));
+    entry_path.push(&path.file_name());
     // TODO: Set other fields.
     let entry = Entry {
         id: id,
