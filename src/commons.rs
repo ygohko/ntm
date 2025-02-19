@@ -27,6 +27,7 @@ use std::path::PathBuf;
 pub trait OperatePath {
     fn directories(&self) -> String;
     fn file_name(&self) -> String;
+    #[allow(dead_code)]
     fn to_path_buf(&self) -> PathBuf;
 }
 

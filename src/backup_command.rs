@@ -26,7 +26,6 @@ use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
-use std::path;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -192,13 +191,4 @@ fn object_id(bytes: &Vec<u8>) -> String {
     let hex = HexString::from_bytes(&hash_values);
 
     hex.as_string()
-}
-
-fn entry_file(path: &str) -> String {
-    let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
-    if split.len() < 1 {
-        return "".to_string();
-    }
-
-    split.pop().unwrap().to_string()
 }
