@@ -26,6 +26,7 @@ use std::path::PathBuf;
 
 pub trait OperatePath {
     fn directories(&self) -> String;
+    fn file_name(&self) -> String;
     fn to_path_buf(&self) -> PathBuf;
 }
 
@@ -38,6 +39,15 @@ impl OperatePath for str {
         split.pop();
 
         split.join(path::MAIN_SEPARATOR_STR)
+    }
+
+    fn file_name(&self) -> String {
+        let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
+        if split.len() < 1 {
+            return "".to_string();
+        }
+
+        split.pop().unwrap().to_string()
     }
 
     fn to_path_buf(&self) -> PathBuf {
