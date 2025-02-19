@@ -26,10 +26,10 @@ use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
-use std::path;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
+use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
 use crate::error::Error;
@@ -151,14 +151,14 @@ fn process_file(path: &String, store: &ObjectStore, source_path: &String, date_t
     let mut entry_path = PathBuf::new();
     entry_path.push("Backups");
     entry_path.push(date_time.clone());
-    entry_path.push(entry_directories(&path));
+    entry_path.push(path.directories());
     match fs::create_dir_all(entry_path.clone()) {
         Ok(_) => (),
         Err(_) => {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
         }
     };
-    entry_path.push(entry_file(&path));
+    entry_path.push(&path.file_name());
     // TODO: Set other fields.
     let entry = Entry {
         id: id,
@@ -191,23 +191,4 @@ fn object_id(bytes: &Vec<u8>) -> String {
     let hex = HexString::from_bytes(&hash_values);
 
     hex.as_string()
-}
-
-fn entry_directories(path: &str) -> String {
-    let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
-    if split.len() < 1 {
-        return "".to_string();
-    }
-    split.pop();
-
-    split.join(path::MAIN_SEPARATOR_STR)
-}
-
-fn entry_file(path: &str) -> String {
-    let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
-    if split.len() < 1 {
-        return "".to_string();
-    }
-
-    split.pop().unwrap().to_string()
 }

@@ -21,9 +21,10 @@
  */
 
 use std::fs;
-use std::path;
 use std::path::PathBuf;
 
+use crate::commons::ConvertPath;
+use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
@@ -71,7 +72,7 @@ impl GetCommand {
             return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
         }
 
-        let mut producer = FilePathProducer::new(&path.to_string_lossy());
+        let mut producer = FilePathProducer::new(&String::from_path(&path));
         let mut done = false;
         while !done {
             let path = match producer.next() {
@@ -132,9 +133,9 @@ impl GetCommand {
                     destination_path.push(&self.backup);
                     destination_path.push(&path);
                     println!("destination_path: {}", destination_path.display());
-                    let directries =
-                        directories_from_path(&destination_path.to_string_lossy().to_string());
-                    match fs::create_dir_all(&directries) {
+                    let directories =
+                        String::from_path(&destination_path).directories();
+                    match fs::create_dir_all(&directories) {
                         Ok(_) => (),
                         // TODO: Skipping file that writing is failed may be needed.
                         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
@@ -154,15 +155,4 @@ impl GetCommand {
     pub fn set_path(&mut self, path: &str) -> () {
         self.path = path.to_string();
     }
-}
-
-// TODO: Move to commons.
-fn directories_from_path(path: &str) -> String {
-    let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
-    if split.len() < 1 {
-        return "".to_string();
-    }
-    split.pop();
-
-    split.join(path::MAIN_SEPARATOR_STR)
 }

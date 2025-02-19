@@ -21,6 +21,7 @@
  */
 
 mod backup_command;
+mod commons;
 mod config;
 mod entry;
 mod error;
