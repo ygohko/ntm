@@ -20,6 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::fs;
+use std::path::PathBuf;
+
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -28,6 +31,7 @@ use crate::error::Result;
 pub const ERROR_ID: ErrorId = "gc_command";
 
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 
 pub struct GcCommand {
 }
@@ -40,6 +44,17 @@ impl GcCommand {
 
     pub fn execute(&self) -> Result<()> {
         // TODO: Iterate backup entries.
+
+        let path = PathBuf::from("Backups");
+        let read_dir = match fs::read_dir("Backups") {
+            Ok(read_dir) => read_dir,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED)),
+        };
+        for result in read_dir {
+            
+        }
+
+
         // TODO: Mark object files.
         // TODO: Remove not marked objects.
         // TODO: Remove mark files.
