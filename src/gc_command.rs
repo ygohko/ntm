@@ -44,28 +44,6 @@ impl GcCommand {
     }
 
     pub fn execute(&self) -> Result<()> {
-        // TODO: Iterate backup entries.
-        /*
-        let path = PathBuf::from("Backups");
-        let read_dir = match fs::read_dir("Backups") {
-            Ok(read_dir) => read_dir,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED)),
-        };
-        let mut backup_paths: Vec<String> = Vec::new();
-        for result in read_dir {
-            if result.is_ok() {
-                let entry = result.unwrap();
-                let path = entry.path();
-                let result = entry.metadata();
-                if result.is_ok() {
-                    let metadata = result.unwrap();
-                    if metadata.is_dir() && !metadata.is_symlink() {
-                        backup_paths.push(String::from_path(&path));
-                    }
-                }
-            }
-        }
-        */
         let backup_paths = match backup_paths() {
             Ok(backup_paths) => backup_paths,
             Err(error) => return Err(error),
@@ -103,4 +81,11 @@ fn backup_paths() -> Result<Vec<String>> {
     }
 
     Ok(backup_paths)
+}
+
+fn process_backup(path: &str) -> Result<()> {
+    // TODO: Iterate for entries.
+    // TODO: Mark objects.
+
+    Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))    
 }
