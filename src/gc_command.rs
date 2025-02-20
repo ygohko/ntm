@@ -29,12 +29,21 @@ pub const ERROR_ID: ErrorId = "gc_command";
 
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 
-struct GcCommand {
+pub struct GcCommand {
 }
 
 impl GcCommand {
-    fn execute() -> Result<()> {
-        // TODO: Implement this.
+    pub fn new() ->Self {
+        Self {
+        }
+    }
+
+    pub fn execute(&self) -> Result<()> {
+        // TODO: Iterate backup entries.
+        // TODO: Mark object files.
+        // TODO: Remove not marked objects.
+        // TODO: Remove mark files.
+
         Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
     }
 }
