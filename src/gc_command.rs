@@ -23,6 +23,7 @@
 use std::fs;
 use std::path::PathBuf;
 
+use crate::commons::ConvertPath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -50,8 +51,19 @@ impl GcCommand {
             Ok(read_dir) => read_dir,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED)),
         };
+        let mut backup_paths: Vec<String> = Vec::new();
         for result in read_dir {
-            
+            if result.is_ok() {
+                let entry = result.unwrap();
+                let path = entry.path();
+                let result = entry.metadata();
+                if result.is_ok() {
+                    let metadata = result.unwrap();
+                    if metadata.is_dir() && !metadata.is_symlink() {
+                        backup_paths.push(String::from_path(&path));
+                    }
+                }
+            }
         }
 
 
