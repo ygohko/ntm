@@ -24,15 +24,19 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::commons::ConvertPath;
+use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::file_path_producer;
+use crate::file_path_producer::FilePathProducer;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
 
 pub struct GcCommand {
 }
@@ -87,5 +91,38 @@ fn process_backup(path: &str) -> Result<()> {
     // TODO: Iterate for entries.
     // TODO: Mark objects.
 
+    let producer = FilePathProducer::new(&path);
+    let mut done = false;
+    while !done {
+        let option = match producer.next() {
+            Ok(path) => Some(path),
+            Err(error) => {
+                if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                    done = true;
+                }
+                // TODO: Displaying errors would be needed.
+
+                None
+            },
+        };
+        if let Some(path) = option {
+            process_entry(path);
+            // TODO: Displaying errors would be needed.
+        }
+    }
+    
     Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))    
+}
+
+fn process_entry(path: &str) -> Result<()> {
+    let string = match fs::read_to_string(path) {
+        Ok(string) => string,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
+    };
+    let entry: Entry = match serde_json::from_string(&string) {
+        Ok(entry) => entry,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
+    };
+
+    Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
 }
