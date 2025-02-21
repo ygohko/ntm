@@ -31,6 +31,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
@@ -39,11 +40,13 @@ pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
 
 pub struct GcCommand {
+    store: ObjectStore,
 }
 
 impl GcCommand {
     pub fn new() ->Self {
         Self {
+            store: ObjectStore::new(&"Objects"),
         }
     }
 
@@ -91,7 +94,7 @@ fn process_backup(path: &str) -> Result<()> {
     // TODO: Iterate for entries.
     // TODO: Mark objects.
 
-    let producer = FilePathProducer::new(&path);
+    let mut producer = FilePathProducer::new(&path);
     let mut done = false;
     while !done {
         let option = match producer.next() {
@@ -106,7 +109,7 @@ fn process_backup(path: &str) -> Result<()> {
             },
         };
         if let Some(path) = option {
-            process_entry(path);
+            process_entry(&path);
             // TODO: Displaying errors would be needed.
         }
     }
@@ -119,10 +122,11 @@ fn process_entry(path: &str) -> Result<()> {
         Ok(string) => string,
         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
     };
-    let entry: Entry = match serde_json::from_string(&string) {
+    let entry: Entry = match serde_json::from_str(&string) {
         Ok(entry) => entry,
         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
     };
+    // TODO: Mark object.
 
     Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
 }
