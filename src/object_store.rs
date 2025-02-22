@@ -24,8 +24,8 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::commons::OperatePath;
 use crate::commons::ConvertPath;
-use crate::error;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -145,12 +145,14 @@ impl ObjectStore {
             if let Some(path) = option {
                 if path.rfind(".marked").is_none() {
                     let mark_path = path.clone() + ".marked";
+                    let mark_path = String::from_path(&self.path).pushed(&mark_path);
                     let exists = PathBuf::from(&mark_path).exists();
                     if exists {
                         // Do nothing.
                     } else {
-                        if let Err(_) = fs::remove_file(&path) {
-                            println!("Warning: removing object {} failed.", path);
+                        let object_path = String::from_path(&self.path).pushed(&path);
+                        if let Err(_) = fs::remove_file(&object_path) {
+                            println!("Warning: removing object {} failed.", object_path);
                         }
                     }
                 }
@@ -172,13 +174,14 @@ impl ObjectStore {
             };
             if let Some(path) = option {
                 if path.rfind(".marked").is_some() {
-                    if let Err(_) = fs::remove_file(&path) {
+                    let mark_path = String::from_path(&self.path).pushed(&path);
+                    if let Err(_) = fs::remove_file(&mark_path) {
                         println!("Warning: removing mark file {} failed.", path);
                     }          
                 }
             }
         }
         
-        Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
+        Ok(())
     }
 }

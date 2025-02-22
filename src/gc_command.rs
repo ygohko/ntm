@@ -23,6 +23,7 @@
 use std::fs;
 
 use crate::commons::ConvertPath;
+use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
@@ -81,9 +82,10 @@ impl GcCommand {
                     None
                 },
             };
-            if let Some(path) = option {
-                if let Err(error) = self.process_entry(&path) {
-                    println!("Processing entry {} failed. error: {}", path, error);
+            if let Some(produced_path) = option {
+                let entry_path = path.pushed(&produced_path);
+                if let Err(error) = self.process_entry(&entry_path) {
+                    println!("Processing entry {} failed. error: {}", entry_path, error);
                 }
             }
         }
@@ -92,6 +94,9 @@ impl GcCommand {
     }
     
     fn process_entry(&self, path: &str) -> Result<()> {
+        
+        println!("path: {}", path);
+
         let string = match fs::read_to_string(path) {
             Ok(string) => string,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
