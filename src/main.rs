@@ -26,6 +26,7 @@ mod config;
 mod entry;
 mod error;
 mod file_path_producer;
+mod gc_command;
 mod get_command;
 mod init_command;
 mod object_store;
@@ -34,6 +35,7 @@ use std::env;
 use std::process::ExitCode;
 
 use crate::backup_command::BackupCommand;
+use crate::gc_command::GcCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 
@@ -80,6 +82,16 @@ fn main() -> ExitCode {
             let path = arguments[3].clone();
             command.set_path(&path);
         }
+        match command.execute() {
+            Ok(_) => (),
+            Err(error) => {
+                println!("Error caused.\n\n{}", error);
+
+                return ExitCode::FAILURE;
+            }
+        }
+    } else if command_name == "gc".to_string() {
+        let command = GcCommand::new();
         match command.execute() {
             Ok(_) => (),
             Err(error) => {

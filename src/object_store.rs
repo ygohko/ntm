@@ -24,10 +24,14 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::commons::OperatePath;
+use crate::commons::ConvertPath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::file_path_producer;
+use crate::file_path_producer::FilePathProducer;
 
 pub const ERROR_ID: ErrorId = "object_store";
 
@@ -35,6 +39,7 @@ pub const ERROR_ID: ErrorId = "object_store";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
+pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
 pub struct ObjectStore {
     path: PathBuf,
@@ -97,5 +102,86 @@ impl ObjectStore {
         };
 
         Ok(bytes)
+    }
+
+    pub fn mark(&self, id: &str) -> Result<()> {
+        // TODO: Check cached IDs.
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = self.path.clone();
+        path.push(path1);
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+        let file_name = id.to_string() + ".marked";
+        path.push(&file_name);        
+
+        if path.exists() {
+            return Ok(());
+        }
+        if let Err(_) = fs::write(path, "") {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
+        }
+
+        Ok(())
+    }
+
+    pub fn sweep(&self) -> Result<()> {
+        let mut producer = FilePathProducer::new(&String::from_path(&self.path));
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                        done = true;
+                    }
+
+                    None
+                },
+            };
+            if let Some(path) = option {
+                if path.rfind(".marked").is_none() {
+                    let mark_path = path.clone() + ".marked";
+                    let mark_path = String::from_path(&self.path).pushed(&mark_path);
+                    let exists = PathBuf::from(&mark_path).exists();
+                    if exists {
+                        // Do nothing.
+                    } else {
+                        let object_path = String::from_path(&self.path).pushed(&path);
+                        if let Err(_) = fs::remove_file(&object_path) {
+                            println!("Warning: removing object {} failed.", object_path);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut producer = FilePathProducer::new(&String::from_path(&self.path));
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                        done = true;
+                    }
+                    
+                    None
+                },
+            };
+            if let Some(path) = option {
+                if path.rfind(".marked").is_some() {
+                    let mark_path = String::from_path(&self.path).pushed(&path);
+                    if let Err(_) = fs::remove_file(&mark_path) {
+                        println!("Warning: removing mark file {} failed.", path);
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }
