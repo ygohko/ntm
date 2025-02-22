@@ -24,6 +24,7 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::error;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -122,5 +123,14 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    pub fn sweep(&self) -> Result<()> {
+        // TODO: Iterate objects.
+        // TODO: If object is marked. keep it.
+        // TODO: If object is not marked. remoed it.
+        // TODO: Remove mark files.
+
+        Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
     }
 }

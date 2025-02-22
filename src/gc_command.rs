@@ -21,7 +21,6 @@
  */
 
 use std::fs;
-use std::path::PathBuf;
 
 use crate::commons::ConvertPath;
 use crate::entry::Entry;
@@ -35,6 +34,7 @@ use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
+#[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
@@ -57,19 +57,16 @@ impl GcCommand {
         };
         for path in backup_paths {
             println!("path: {}", path);
+            if let Err(error) = self.process_backup(&path) {
+                println!("Processing backup {} failed. error: {}", path, error);
+            }
         }
+        self.store.sweep()?;
 
-        // TODO: Mark object files.
-        // TODO: Remove not marked objects.
-        // TODO: Remove mark files.
-
-        Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
+        Ok(())
     }
 
     fn process_backup(&self, path: &str) -> Result<()> {
-        // TODO: Iterate for entries.
-        // TODO: Mark objects.
-
         let mut producer = FilePathProducer::new(&path);
         let mut done = false;
         while !done {
@@ -85,12 +82,13 @@ impl GcCommand {
                 },
             };
             if let Some(path) = option {
-                self.process_entry(&path);
-                // TODO: Displaying errors would be needed.
+                if let Err(error) = self.process_entry(&path) {
+                    println!("Processing entry {} failed. error: {}", path, error);
+                }
             }
         }
         
-        Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))    
+        Ok(())
     }
     
     fn process_entry(&self, path: &str) -> Result<()> {
@@ -102,9 +100,11 @@ impl GcCommand {
             Ok(entry) => entry,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
         };
-        self.store.mark(&entry.id);
-
-        Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
+        if let Err(error) = self.store.mark(&entry.id) {
+            return Err(error);
+        }
+   
+        Ok(())
     }
 }
 
