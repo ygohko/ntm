@@ -65,6 +65,47 @@ impl GcCommand {
 
         Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
     }
+
+    fn process_backup(&self, path: &str) -> Result<()> {
+        // TODO: Iterate for entries.
+        // TODO: Mark objects.
+
+        let mut producer = FilePathProducer::new(&path);
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                        done = true;
+                    }
+                    // TODO: Displaying errors would be needed.
+
+                    None
+                },
+            };
+            if let Some(path) = option {
+                self.process_entry(&path);
+                // TODO: Displaying errors would be needed.
+            }
+        }
+        
+        Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))    
+    }
+    
+    fn process_entry(&self, path: &str) -> Result<()> {
+        let string = match fs::read_to_string(path) {
+            Ok(string) => string,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
+        };
+        let entry: Entry = match serde_json::from_str(&string) {
+            Ok(entry) => entry,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
+        };
+        self.store.mark(&entry.id);
+
+        Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
+    }
 }
 
 fn backup_paths() -> Result<Vec<String>> {
@@ -88,45 +129,4 @@ fn backup_paths() -> Result<Vec<String>> {
     }
 
     Ok(backup_paths)
-}
-
-fn process_backup(path: &str) -> Result<()> {
-    // TODO: Iterate for entries.
-    // TODO: Mark objects.
-
-    let mut producer = FilePathProducer::new(&path);
-    let mut done = false;
-    while !done {
-        let option = match producer.next() {
-            Ok(path) => Some(path),
-            Err(error) => {
-                if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
-                    done = true;
-                }
-                // TODO: Displaying errors would be needed.
-
-                None
-            },
-        };
-        if let Some(path) = option {
-            process_entry(&path);
-            // TODO: Displaying errors would be needed.
-        }
-    }
-    
-    Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))    
-}
-
-fn process_entry(path: &str) -> Result<()> {
-    let string = match fs::read_to_string(path) {
-        Ok(string) => string,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
-    };
-    let entry: Entry = match serde_json::from_str(&string) {
-        Ok(entry) => entry,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
-    };
-    // TODO: Mark object.
-
-    Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
 }
