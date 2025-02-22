@@ -89,12 +89,11 @@ impl GcCommand {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     fn process_entry(&self, path: &str) -> Result<()> {
-        
         println!("path: {}", path);
 
         let string = match fs::read_to_string(path) {
@@ -108,7 +107,7 @@ impl GcCommand {
         if let Err(error) = self.store.mark(&entry.id) {
             return Err(error);
         }
-   
+
         Ok(())
     }
 }

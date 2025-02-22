@@ -138,7 +138,7 @@ impl ObjectStore {
                     if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
                         done = true;
                     }
-                    
+
                     None
                 },
             };
@@ -177,11 +177,11 @@ impl ObjectStore {
                     let mark_path = String::from_path(&self.path).pushed(&path);
                     if let Err(_) = fs::remove_file(&mark_path) {
                         println!("Warning: removing mark file {} failed.", path);
-                    }          
+                    }
                 }
             }
         }
-        
+
         Ok(())
     }
 }
