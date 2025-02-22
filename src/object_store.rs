@@ -24,11 +24,14 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::commons::ConvertPath;
 use crate::error;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::file_path_producer;
+use crate::file_path_producer::FilePathProducer;
 
 pub const ERROR_ID: ErrorId = "object_store";
 
@@ -126,11 +129,56 @@ impl ObjectStore {
     }
 
     pub fn sweep(&self) -> Result<()> {
-        // TODO: Iterate objects.
-        // TODO: If object is marked. keep it.
-        // TODO: If object is not marked. remoed it.
-        // TODO: Remove mark files.
+        let mut producer = FilePathProducer::new(&String::from_path(&self.path));
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                        done = true;
+                    }
+                    
+                    None
+                },
+            };
+            if let Some(path) = option {
+                if path.rfind(".marked").is_none() {
+                    let mark_path = path.clone() + ".marked";
+                    let exists = PathBuf::from(&mark_path).exists();
+                    if exists {
+                        // Do nothing.
+                    } else {
+                        if let Err(_) = fs::remove_file(&path) {
+                            println!("Warning: removing object {} failed.", path);
+                        }
+                    }
+                }
+            }
+        }
 
+        let mut producer = FilePathProducer::new(&String::from_path(&self.path));
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                        done = true;
+                    }
+                    
+                    None
+                },
+            };
+            if let Some(path) = option {
+                if path.rfind(".marked").is_some() {
+                    if let Err(_) = fs::remove_file(&path) {
+                        println!("Warning: removing mark file {} failed.", path);
+                    }          
+                }
+            }
+        }
+        
         Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
     }
 }
