@@ -91,7 +91,7 @@ fn main() -> ExitCode {
             }
         }
     } else if command_name == "gc".to_string() {
-        let command = GcCommand::new();
+        let mut command = GcCommand::new();
         match command.execute() {
             Ok(_) => (),
             Err(error) => {
