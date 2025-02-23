@@ -217,8 +217,24 @@ impl ObjectStore {
     fn shrink_marked_objects(&mut self) {
         let count = self.marked_objects.len();
         let mut sum: i64 = 0;
+        for (_, value) in &self.marked_objects {
+            sum += value;
+        }
+        let average = sum / (count as i64);
         
-
-        // TODO: Implement this.
+        let mut removing_count = MARKED_OBJECTS_MAX / 2;
+        let mut keys: Vec<String> = Vec::new();
+        for key in self.marked_objects.keys() {
+            keys.push(key.clone());
+        }
+        for key in keys {
+            if self.marked_objects[&key] <= average {
+                self.marked_objects.remove(&key);
+                removing_count -= 1;
+                if removing_count <= 0 {
+                    break;
+                }
+            }
+        }
     }
 }
