@@ -42,6 +42,8 @@ pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
+const MARKED_OBJECTS_MAX:usize = 40000000;
+
 pub struct ObjectStore {
     path: PathBuf,
     marked_objects: HashMap<String, i64>,
@@ -110,8 +112,6 @@ impl ObjectStore {
     }
 
     pub fn mark(&mut self, id: &str) -> Result<()> {
-        const MARKED_OBJECTS_MAX:usize = 40000000;
-
         if self.marked_objects.contains_key(id) {
             *self.marked_objects.get_mut(id).unwrap() += 1;
 
@@ -215,6 +215,10 @@ impl ObjectStore {
     }
 
     fn shrink_marked_objects(&mut self) {
+        let count = self.marked_objects.len();
+        let mut sum: i64 = 0;
+        
+
         // TODO: Implement this.
     }
 }
