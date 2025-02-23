@@ -60,7 +60,6 @@ impl ObjectStore {
     }
 
     pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<()> {
-        // TODO: Do not write bytes if it already written.
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
