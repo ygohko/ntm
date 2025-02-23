@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -43,13 +44,17 @@ pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
 pub struct ObjectStore {
     path: PathBuf,
+    marked_objects: HashMap<String, i64>,
 }
 
 impl ObjectStore {
     pub fn new(path: &dyn AsRef<Path>) -> Self {
         let mut path_buf = PathBuf::new();
         path_buf.push(path);
-        ObjectStore { path: path_buf }
+        ObjectStore {
+            path: path_buf,
+            marked_objects: HashMap::new(),
+        }
     }
 
     pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<()> {
@@ -104,7 +109,15 @@ impl ObjectStore {
         Ok(bytes)
     }
 
-    pub fn mark(&self, id: &str) -> Result<()> {
+    pub fn mark(&mut self, id: &str) -> Result<()> {
+        const MARKED_OBJECTS_MAX:usize = 40000000;
+
+        if self.marked_objects.contains_key(id) {
+            *self.marked_objects.get_mut(id).unwrap() += 1;
+
+            return Ok(());
+        }
+
         // TODO: Check cached IDs.
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -124,6 +137,11 @@ impl ObjectStore {
         if let Err(_) = fs::write(path, "") {
             return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
         }
+
+        if self.marked_objects.len() > MARKED_OBJECTS_MAX {
+            self.shrink_marked_objects();
+        }
+        self.marked_objects.insert(id.to_string(), 1);
 
         Ok(())
     }
@@ -194,5 +212,9 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    fn shrink_marked_objects(&mut self) {
+        // TODO: Implement this.
     }
 }
