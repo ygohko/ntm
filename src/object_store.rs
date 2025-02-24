@@ -221,7 +221,7 @@ impl ObjectStore {
             sum += value;
         }
         let average = sum / (count as i64);
-        
+
         let mut removing_count = MARKED_OBJECTS_MAX / 2;
         let mut keys: Vec<String> = Vec::new();
         for key in self.marked_objects.keys() {
@@ -236,5 +236,7 @@ impl ObjectStore {
                 }
             }
         }
+
+        println!("marked_objects shrinked. len: {}", self.marked_objects.len());
     }
 }
