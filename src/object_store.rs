@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -41,19 +42,24 @@ pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
+const MARKED_OBJECTS_MAX:usize = 40000000;
+
 pub struct ObjectStore {
     path: PathBuf,
+    marked_objects: HashMap<String, i64>,
 }
 
 impl ObjectStore {
     pub fn new(path: &dyn AsRef<Path>) -> Self {
         let mut path_buf = PathBuf::new();
         path_buf.push(path);
-        ObjectStore { path: path_buf }
+        ObjectStore {
+            path: path_buf,
+            marked_objects: HashMap::new(),
+        }
     }
 
     pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<()> {
-        // TODO: Do not write bytes if it already written.
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -104,7 +110,13 @@ impl ObjectStore {
         Ok(bytes)
     }
 
-    pub fn mark(&self, id: &str) -> Result<()> {
+    pub fn mark(&mut self, id: &str) -> Result<()> {
+        if self.marked_objects.contains_key(id) {
+            *self.marked_objects.get_mut(id).unwrap() += 1;
+
+            return Ok(());
+        }
+
         // TODO: Check cached IDs.
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -125,10 +137,16 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
         }
 
+        if self.marked_objects.len() > MARKED_OBJECTS_MAX {
+            self.shrink_marked_objects();
+        }
+        self.marked_objects.insert(id.to_string(), 1);
+
         Ok(())
     }
 
     pub fn sweep(&self) -> Result<()> {
+        let mut count: i32 = 0;
         let mut producer = FilePathProducer::new(&String::from_path(&self.path));
         let mut done = false;
         while !done {
@@ -146,6 +164,11 @@ impl ObjectStore {
                 if path.rfind(".marked").is_none() {
                     let mark_path = path.clone() + ".marked";
                     let mark_path = String::from_path(&self.path).pushed(&mark_path);
+                    count += 1;
+                    count %= 100;
+                    if count == 0 {
+                        println!("Checking: {}", mark_path);
+                    }
                     let exists = PathBuf::from(&mark_path).exists();
                     if exists {
                         // Do nothing.
@@ -159,6 +182,7 @@ impl ObjectStore {
             }
         }
 
+        // TODO: Remove mark files when sweeping.
         let mut producer = FilePathProducer::new(&String::from_path(&self.path));
         let mut done = false;
         while !done {
@@ -175,6 +199,11 @@ impl ObjectStore {
             if let Some(path) = option {
                 if path.rfind(".marked").is_some() {
                     let mark_path = String::from_path(&self.path).pushed(&path);
+                    count += 1;
+                    count %= 100;
+                    if count == 0 {
+                        println!("Cleaning: {}", mark_path);
+                    }
                     if let Err(_) = fs::remove_file(&mark_path) {
                         println!("Warning: removing mark file {} failed.", path);
                     }
@@ -183,5 +212,29 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    fn shrink_marked_objects(&mut self) {
+        let count = self.marked_objects.len();
+        let mut sum: i64 = 0;
+        for (_, value) in &self.marked_objects {
+            sum += value;
+        }
+        let average = sum / (count as i64);
+        
+        let mut removing_count = MARKED_OBJECTS_MAX / 2;
+        let mut keys: Vec<String> = Vec::new();
+        for key in self.marked_objects.keys() {
+            keys.push(key.clone());
+        }
+        for key in keys {
+            if self.marked_objects[&key] <= average {
+                self.marked_objects.remove(&key);
+                removing_count -= 1;
+                if removing_count <= 0 {
+                    break;
+                }
+            }
+        }
     }
 }

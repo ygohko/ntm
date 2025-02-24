@@ -42,22 +42,24 @@ pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
 
 pub struct GcCommand {
     store: ObjectStore,
+    count: i32,
 }
 
 impl GcCommand {
     pub fn new() ->Self {
         Self {
             store: ObjectStore::new(&"Objects"),
+            count: 0,
         }
     }
 
-    pub fn execute(&self) -> Result<()> {
+    pub fn execute(&mut self) -> Result<()> {
         let backup_paths = match backup_paths() {
             Ok(backup_paths) => backup_paths,
             Err(error) => return Err(error),
         };
         for path in backup_paths {
-            println!("path: {}", path);
+            println!("Processing backup: {}", path);
             if let Err(error) = self.process_backup(&path) {
                 println!("Processing backup {} failed. error: {}", path, error);
             }
@@ -67,7 +69,7 @@ impl GcCommand {
         Ok(())
     }
 
-    fn process_backup(&self, path: &str) -> Result<()> {
+    fn process_backup(&mut self, path: &str) -> Result<()> {
         let mut producer = FilePathProducer::new(&path);
         let mut done = false;
         while !done {
@@ -93,9 +95,12 @@ impl GcCommand {
         Ok(())
     }
 
-    fn process_entry(&self, path: &str) -> Result<()> {
-        println!("path: {}", path);
-
+    fn process_entry(&mut self, path: &str) -> Result<()> {
+        self.count += 1;
+        self.count %= 100;
+        if self.count == 0 {
+            println!("Processing entry: {}", path);
+        }
         let string = match fs::read_to_string(path) {
             Ok(string) => string,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
