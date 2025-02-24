@@ -34,3 +34,14 @@ impl Config {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::config::Config;
+
+    #[test]
+    fn is_creatable() {
+        let config = Config::new();
+        assert_eq!(config.source_path, "".to_string());
+    }
+}
