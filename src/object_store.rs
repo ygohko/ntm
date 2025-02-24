@@ -171,7 +171,9 @@ impl ObjectStore {
                     }
                     let exists = PathBuf::from(&mark_path).exists();
                     if exists {
-                        // Do nothing.
+                        if let Err(_) = fs::remove_file(&mark_path) {
+                            println!("Warning: removing mark file {} failed.", path);
+                        }
                     } else {
                         let object_path = String::from_path(&self.path).pushed(&path);
                         if let Err(_) = fs::remove_file(&object_path) {
@@ -183,6 +185,7 @@ impl ObjectStore {
         }
 
         // TODO: Remove mark files when sweeping.
+        /*
         let mut producer = FilePathProducer::new(&String::from_path(&self.path));
         let mut done = false;
         while !done {
@@ -210,6 +213,7 @@ impl ObjectStore {
                 }
             }
         }
+        */
 
         Ok(())
     }
