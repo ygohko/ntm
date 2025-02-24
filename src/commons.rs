@@ -75,3 +75,46 @@ impl ConvertPath for String {
         path.as_ref().to_string_lossy().to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::commons::OperatePath;
+    use crate::commons::ConvertPath;
+
+    #[test]
+    fn is_pushable() {
+        let path = "a";
+        let path = path.pushed("b");
+        assert_eq!(path, "a/b".to_string());
+    }
+
+    #[test]
+    fn directories_are_gettable() {
+        let path = "a/b/c/d.txt";
+        let directories = path.directories();
+        assert_eq!(directories, "a/b/c".to_string());
+    }
+
+    #[test]
+    fn file_name_is_gettable() {
+        let path = "a/b/c/d.txt";
+        let directories = path.file_name();
+        assert_eq!(directories, "d.txt".to_string());
+    }
+
+    #[test]
+    fn path_buf_is_gettable() {
+        let path = "a/b/c/d.txt";
+        let path_buf: PathBuf = path.to_path_buf();
+        assert_eq!(path_buf, PathBuf::from("a/b/c/d.txt"));
+    }
+
+    #[test]
+    fn string_is_gettable_from_path() {
+        let path_buf = PathBuf::from("a/b/c/d.txt");
+        let path: String = String::from_path(&path_buf);
+        assert_eq!(path, "a/b/c/d.txt".to_string());
+    }
+}
