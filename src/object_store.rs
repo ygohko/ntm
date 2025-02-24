@@ -183,6 +183,7 @@ impl ObjectStore {
             }
         }
 
+        // TODO: Remove mark files when sweeping.
         let mut producer = FilePathProducer::new(&String::from_path(&self.path));
         let mut done = false;
         while !done {
