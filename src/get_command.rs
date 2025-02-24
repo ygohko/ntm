@@ -57,7 +57,7 @@ impl GetCommand {
     }
 
     pub fn execute(&self) -> Result<()> {
-        // TODO: Implement this.
+        // TODO: Return error if path is invalid.
         let store = ObjectStore::new(&"Objects");
         let mut backup_path = PathBuf::new();
         backup_path.push("Backups");
