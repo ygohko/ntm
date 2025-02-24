@@ -171,41 +171,14 @@ impl ObjectStore {
                     }
                     let exists = PathBuf::from(&mark_path).exists();
                     if exists {
-                        // Do nothing.
+                        if let Err(_) = fs::remove_file(&mark_path) {
+                            println!("Warning: removing mark file {} failed.", path);
+                        }
                     } else {
                         let object_path = String::from_path(&self.path).pushed(&path);
                         if let Err(_) = fs::remove_file(&object_path) {
                             println!("Warning: removing object {} failed.", object_path);
                         }
-                    }
-                }
-            }
-        }
-
-        // TODO: Remove mark files when sweeping.
-        let mut producer = FilePathProducer::new(&String::from_path(&self.path));
-        let mut done = false;
-        while !done {
-            let option = match producer.next() {
-                Ok(path) => Some(path),
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
-                        done = true;
-                    }
-                    
-                    None
-                },
-            };
-            if let Some(path) = option {
-                if path.rfind(".marked").is_some() {
-                    let mark_path = String::from_path(&self.path).pushed(&path);
-                    count += 1;
-                    count %= 100;
-                    if count == 0 {
-                        println!("Cleaning: {}", mark_path);
-                    }
-                    if let Err(_) = fs::remove_file(&mark_path) {
-                        println!("Warning: removing mark file {} failed.", path);
                     }
                 }
             }
@@ -221,7 +194,7 @@ impl ObjectStore {
             sum += value;
         }
         let average = sum / (count as i64);
-        
+
         let mut removing_count = MARKED_OBJECTS_MAX / 2;
         let mut keys: Vec<String> = Vec::new();
         for key in self.marked_objects.keys() {
@@ -236,5 +209,7 @@ impl ObjectStore {
                 }
             }
         }
+
+        println!("marked_objects shrinked. len: {}", self.marked_objects.len());
     }
 }
