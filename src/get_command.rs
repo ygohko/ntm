@@ -91,7 +91,6 @@ impl GetCommand {
             };
 
             if !done {
-
                 let mut found = false;
                 if self.path != "".to_string() {
                     let option = path.find(&self.path);
