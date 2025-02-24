@@ -184,37 +184,6 @@ impl ObjectStore {
             }
         }
 
-        // TODO: Remove mark files when sweeping.
-        /*
-        let mut producer = FilePathProducer::new(&String::from_path(&self.path));
-        let mut done = false;
-        while !done {
-            let option = match producer.next() {
-                Ok(path) => Some(path),
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
-                        done = true;
-                    }
-                    
-                    None
-                },
-            };
-            if let Some(path) = option {
-                if path.rfind(".marked").is_some() {
-                    let mark_path = String::from_path(&self.path).pushed(&path);
-                    count += 1;
-                    count %= 100;
-                    if count == 0 {
-                        println!("Cleaning: {}", mark_path);
-                    }
-                    if let Err(_) = fs::remove_file(&mark_path) {
-                        println!("Warning: removing mark file {} failed.", path);
-                    }
-                }
-            }
-        }
-        */
-
         Ok(())
     }
 
