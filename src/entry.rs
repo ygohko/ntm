@@ -31,3 +31,46 @@ pub struct Entry {
     pub uid: i32,
     pub gid: i32,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::entry::Entry;
+
+    #[test]
+    fn is_serializable() {
+        let entry = Entry {
+            id: "abc123".to_string(),
+            last_modified: 123,
+            permission: 456,
+            uid: 789,
+            gid: 123,
+        };
+        let _serialized = match serde_json::to_string(&entry) {
+            Ok(serialized) => serialized,
+            Err(_) => {
+                assert!(false);
+
+                "".to_string()
+            },
+        };
+    }
+
+    #[test]
+    fn is_deserializable() {
+        let serialized = "{ id: \"abc123\", last_modified: 123, permission: 456, uid: 789, gid: 123 }".to_string();
+        let entry = match serde_json::from_str(&serialized) {
+            Ok(entry) => entry,
+            Err(_) => {
+                assert!(false);
+
+                Entry {
+                    id: "abc123".to_string(),
+                    last_modified: 123,
+                    permission: 456,
+                    uid: 789,
+                    gid: 123,
+                }       
+            },
+        };
+    }
+}
