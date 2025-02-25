@@ -45,32 +45,17 @@ mod tests {
             uid: 789,
             gid: 123,
         };
-        let _serialized = match serde_json::to_string(&entry) {
-            Ok(serialized) => serialized,
-            Err(_) => {
-                assert!(false);
-
-                "".to_string()
-            },
+        let Ok(_serialized) = serde_json::to_string(&entry) else {
+            panic!();
         };
     }
 
     #[test]
     fn is_deserializable() {
-        let serialized = "{ id: \"abc123\", last_modified: 123, permission: 456, uid: 789, gid: 123 }".to_string();
-        let entry = match serde_json::from_str(&serialized) {
+        let serialized = "{ \"id\": \"abc123\", \"last_modified\": 123, \"permission\": 456, \"uid\": 789, \"gid\": 123 }".to_string();
+        let _entry: Entry = match serde_json::from_str(&serialized) {
             Ok(entry) => entry,
-            Err(_) => {
-                assert!(false);
-
-                Entry {
-                    id: "abc123".to_string(),
-                    last_modified: 123,
-                    permission: 456,
-                    uid: 789,
-                    gid: 123,
-                }       
-            },
+            Err(_) => panic!(),
         };
     }
 }
