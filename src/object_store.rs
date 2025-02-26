@@ -42,7 +42,7 @@ pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
-const MARKED_OBJECTS_MAX:usize = 40000000;
+const MARKED_OBJECTS_MAX:usize = 4000000;
 
 pub struct ObjectStore {
     path: PathBuf,
@@ -117,7 +117,6 @@ impl ObjectStore {
             return Ok(());
         }
 
-        // TODO: Check cached IDs.
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -211,5 +210,153 @@ impl ObjectStore {
         }
 
         println!("marked_objects shrinked. len: {}", self.marked_objects.len());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::object_store;
+    use crate::object_store::ObjectStore;
+
+    #[test]
+    fn is_creatable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let _store = ObjectStore::new(&path);
+    }
+
+    #[test]
+    fn objetc_is_addable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let Ok(_) = store.add(&id, &bytes) else {
+            panic!();
+        };
+    }
+
+    #[test]
+    fn bytes_are_gettable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let Ok(_) = store.add(&id, &bytes) else {
+            panic!();
+        };
+
+        let Ok(bytes1) = store.bytes(&id) else {
+            panic!();
+        };
+        assert_eq!(bytes.len(), bytes1.len());
+        for i in 0..bytes.len() {
+            assert_eq!(bytes[i], bytes1[i]);
+        }
+    }
+
+    #[test]
+    fn object_is_markable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let mut store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let Ok(_) = store.add(&id, &bytes) else {
+            panic!();
+        };
+
+        let Ok(_) = store.mark(&id) else {
+            panic!();
+        };
+    }
+
+    #[test]
+    fn object_is_sweepable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let mut store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let Ok(_) = store.add(&id, &bytes) else {
+            panic!();
+        };
+
+        let Ok(_) = store.mark(&id) else {
+            panic!();
+        };
+
+        let Ok(_) = store.sweep() else {
+            panic!();
+        };
+        let Ok(_) = store.bytes(&id) else {
+            panic!();
+        }; 
+
+        let Ok(_) = store.sweep() else {
+            panic!();
+        };
+        let Err(_) = store.bytes(&id) else {
+            panic!();
+        };
+    }
+
+    #[test]
+    fn marked_objects_are_shrinkable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let mut store = ObjectStore::new(&path);
+
+        store.marked_objects.insert("ffffffffffffffff".to_string(), 1);
+        assert_eq!(store.marked_objects.len(), 1);
+        store.shrink_marked_objects();
+        assert_eq!(store.marked_objects.len(), 0);
+
+        for i in 0..object_store::MARKED_OBJECTS_MAX {
+            let id = format!("{:x}", i);
+            store.marked_objects.insert(id, 1);
+        }
+        assert_eq!(store.marked_objects.len(), object_store::MARKED_OBJECTS_MAX);
+        store.shrink_marked_objects();
+        assert_eq!(store.marked_objects.len(), object_store::MARKED_OBJECTS_MAX / 2);
     }
 }

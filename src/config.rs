@@ -34,3 +34,28 @@ impl Config {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::config::Config;
+
+    #[test]
+    fn is_creatable() {
+        let config = Config::new();
+        assert_eq!(config.source_path, "".to_string());
+    }
+
+    #[test]
+    fn is_deserializable() {
+        let serialized = "{ \"source_path\": \"/a/b/c\" }";
+        let config: Config = match serde_json::from_str(&serialized) {
+            Ok(config) => config,
+            Err(_) => {
+                assert!(false);
+
+                Config::new()
+            },
+        };
+        assert_eq!(config.source_path, "/a/b/c".to_string());
+    }
+}
