@@ -232,4 +232,22 @@ mod tests {
         }
         let _store = ObjectStore::new(&path);
     }
+
+    #[test]
+    fn objetc_is_addable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let Ok(_) = store.add(&id, &bytes) else {
+            panic!();
+        };
+    }
 }
