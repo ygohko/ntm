@@ -216,10 +216,20 @@ impl ObjectStore {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
     use crate::object_store::ObjectStore;
 
     #[test]
     fn is_creatable() {
-        // TODO: Implement this.
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let _store = ObjectStore::new(&path);
     }
 }
