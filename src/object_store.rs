@@ -213,3 +213,13 @@ impl ObjectStore {
         println!("marked_objects shrinked. len: {}", self.marked_objects.len());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::object_store::ObjectStore;
+
+    #[test]
+    fn is_creatable() {
+        // TODO: Implement this.
+    }
+}
