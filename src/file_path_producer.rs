@@ -119,6 +119,7 @@ mod tests {
 
     use crate::commons::OperatePath;
     use crate::commons::ConvertPath;
+    use crate::file_path_producer;
     use crate::file_path_producer::FilePathProducer;
 
     #[test]
@@ -137,9 +138,32 @@ mod tests {
         };
         let path = String::from_path(&temp_dir.path());
         let path = path.pushed("a.txt");
-        fs::write(&path, "ABCDE");
+        let Ok(_) = fs::write(&path, "ABCDE") else {
+            panic!();
+        };
         let path = String::from_path(&temp_dir.path());
-
-        // kokokara------
+        let path = path.pushed("b");
+        let Ok(_) = fs::create_dir_all(&path) else {
+            panic!();
+        };
+        let path = path.pushed("c.txt");
+        let Ok(_) = fs::write(&path, "FGHIJ") else {
+            panic!();
+        };
+        let path = String::from_path(&temp_dir.path());
+        let mut producer = FilePathProducer::new(&path);
+        let Ok(path) = producer.next() else {
+            panic!();
+        };
+        assert_eq!(path, "a.txt".to_string());
+        let Ok(path) = producer.next() else {
+            panic!();
+        };
+        assert_eq!(path, "b/c.txt".to_string());
+        let Err(error) = producer.next() else {
+            panic!();
+        };
+        assert_eq!(error.id, file_path_producer::ERROR_ID);
+        assert_eq!(error.code, file_path_producer::ERROR_CODE_PRODUCING_FINISHED);
     }
 }
