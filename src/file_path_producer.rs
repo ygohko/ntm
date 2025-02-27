@@ -111,3 +111,35 @@ impl FilePathProducer {
         Err(Error::new(ERROR_ID, ERROR_CODE_PRODUCING_FINISHED))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::commons::OperatePath;
+    use crate::commons::ConvertPath;
+    use crate::file_path_producer::FilePathProducer;
+
+    #[test]
+    fn is_creatable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = String::from_path(&temp_dir.path());
+        let _producer = FilePathProducer::new(&path);
+    }
+
+    #[test]
+    fn paths_are_producable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = String::from_path(&temp_dir.path());
+        let path = path.pushed("a.txt");
+        fs::write(&path, "ABCDE");
+        let path = String::from_path(&temp_dir.path());
+
+        // kokokara------
+    }
+}
