@@ -57,6 +57,9 @@ impl InitCommand {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
     use crate::init_command::InitCommand;
 
     #[test]
@@ -67,5 +70,6 @@ mod tests {
     #[test]
     fn is_executable() {
         // TODO: Implement this.
+        let temp_dir = TempDir::new("test").unwrap();
     }
 }
