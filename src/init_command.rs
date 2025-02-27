@@ -54,3 +54,18 @@ impl InitCommand {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::init_command::InitCommand;
+
+    #[test]
+    fn is_creatable() {
+        let _command = InitCommand::new();
+    }
+
+    #[test]
+    fn is_executable() {
+        // TODO: Implement this.
+    }
+}
