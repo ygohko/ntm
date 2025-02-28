@@ -57,6 +57,7 @@ impl InitCommand {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
     use std::fs;
     use tempdir::TempDir;
 
@@ -71,5 +72,14 @@ mod tests {
     fn is_executable() {
         // TODO: Implement this.
         let temp_dir = TempDir::new("test").unwrap();
+        let previous_current_dir = env::current_dir().unwrap();
+        let mut current_dir = previous_current_dir.clone();
+        current_dir.push(&temp_dir.path());
+        env::set_current_dir(&current_dir).unwrap();
+
+        let command = InitCommand::new();
+        command.execute().unwrap();
+
+        env::set_current_dir(&previous_current_dir).unwrap();
     }
 }
