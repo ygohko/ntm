@@ -78,6 +78,7 @@ impl FilePathProducer {
             }
 
             if scan {
+                // TODO: Skip this if read_dir() failed.
                 let read_dir = match fs::read_dir(directory_path) {
                     Ok(read_dir) => read_dir,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
