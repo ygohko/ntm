@@ -31,6 +31,7 @@ use crate::error::Result;
 
 pub const ERROR_ID: ErrorId = "file_path_producer";
 
+#[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_PRODUCING_FINISHED: ErrorCode = 1;
 
@@ -78,31 +79,29 @@ impl FilePathProducer {
             }
 
             if scan {
-                // TODO: Skip this if read_dir() failed.
-                let read_dir = match fs::read_dir(directory_path) {
-                    Ok(read_dir) => read_dir,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
-                };
-                for result in read_dir {
-                    if result.is_ok() {
-                        let entry = result.unwrap();
-                        let mut is_file = false;
-                        let mut is_dir = false;
-                        match fs::symlink_metadata(entry.path()) {
-                            Ok(metadata) => {
-                                is_file = metadata.is_file();
-                                is_dir = metadata.is_dir() && !metadata.is_symlink();
-                            },
-                            Err(error) => {
-                                println!("error: {}", error);
-                            },
-                        };
-                        let path = entry.path().to_string_lossy().to_string();
-                        if is_file {
-                            let path = path[self.prefix_length..].to_string();
-                            self.file_paths.push(path);
-                        } else if is_dir {
-                            self.directory_paths.push(path);
+                // TODO: Show warnings when read_dir() failed.
+                if let Ok(read_dir) = fs::read_dir(directory_path) {
+                    for result in read_dir {
+                        if result.is_ok() {
+                            let entry = result.unwrap();
+                            let mut is_file = false;
+                            let mut is_dir = false;
+                            match fs::symlink_metadata(entry.path()) {
+                                Ok(metadata) => {
+                                    is_file = metadata.is_file();
+                                    is_dir = metadata.is_dir() && !metadata.is_symlink();
+                                },
+                                Err(error) => {
+                                    println!("error: {}", error);
+                                },
+                            };
+                            let path = entry.path().to_string_lossy().to_string();
+                            if is_file {
+                                let path = path[self.prefix_length..].to_string();
+                                self.file_paths.push(path);
+                            } else if is_dir {
+                                self.directory_paths.push(path);
+                            }
                         }
                     }
                 }

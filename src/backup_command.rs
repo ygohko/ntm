@@ -48,14 +48,18 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
-pub struct BackupCommand {}
+pub struct BackupCommand {
+    count: i32,
+}
 
 impl BackupCommand {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            count: 0,
+        }
     }
 
-    pub fn execute(&self) -> Result<()> {
+    pub fn execute(&mut self) -> Result<()> {
         let store = ObjectStore::new(&"Objects");
         let now: DateTime<Local> = Local::now();
         let date_time = now.format("%Y%m%d-%H%M").to_string();
@@ -95,7 +99,7 @@ impl BackupCommand {
             };
 
             if !done {
-                match process_file(&path, &store, &config.source_path, &date_time) {
+                match self.process_file(&path, &store, &config.source_path, &date_time) {
                     Ok(_) => (),
                     Err(error) => {
                         println!("process_file() failed: error: {}", error);
@@ -108,79 +112,83 @@ impl BackupCommand {
 
         Ok(())
     }
-}
 
-fn process_file(path: &String, store: &ObjectStore, source_path: &String, date_time: &String) -> Result<()> {
-    println!("path: {}", path);
-    let mut path_buf = PathBuf::new();
-    path_buf.push(&source_path);
-    path_buf.push(path.clone());
-    let metadata = match path_buf.metadata() {
-        Ok(metadata) => metadata,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-    };
-    let bytes = match fs::read(path_buf.clone()) {
-        Ok(bytes) => bytes,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-    };
-    let id: String;
-    let file_size = metadata.len();
-    if file_size < 100 * 1024 * 1024 {
-        let mut id_bytes = b"b,".to_vec();
-        id_bytes = [id_bytes, bytes.clone()].concat();
-        // println!("id_bytes.len(): {}", id_bytes.len());
-        id = object_id(&id_bytes);
-    } else {
-        let mut modified: u64 = 0;
-        let result = metadata.modified();
-        if result.is_ok() {
-            let result = result.unwrap().duration_since(SystemTime::UNIX_EPOCH);
+    fn process_file(&mut self, path: &String, store: &ObjectStore, source_path: &String, date_time: &String) -> Result<()> {
+        self.count += 1;
+        self.count %= 100;
+        if self.count == 0 {
+            println!("path: {}", path);
+        }
+        let mut path_buf = PathBuf::new();
+        path_buf.push(&source_path);
+        path_buf.push(path.clone());
+        let metadata = match path_buf.metadata() {
+            Ok(metadata) => metadata,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+        };
+        let bytes = match fs::read(path_buf.clone()) {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+        };
+        let id: String;
+        let file_size = metadata.len();
+        if file_size < 100 * 1024 * 1024 {
+            let mut id_bytes = b"b,".to_vec();
+            id_bytes = [id_bytes, bytes.clone()].concat();
+            // println!("id_bytes.len(): {}", id_bytes.len());
+            id = object_id(&id_bytes);
+        } else {
+            let mut modified: u64 = 0;
+            let result = metadata.modified();
             if result.is_ok() {
-                modified = result.unwrap().as_secs();
+                let result = result.unwrap().duration_since(SystemTime::UNIX_EPOCH);
+                if result.is_ok() {
+                    modified = result.unwrap().as_secs();
+                }
             }
+            let string = format!("p,{},{},{}", path_buf.to_string_lossy().to_string(), modified, file_size);
+            id = object_id(&string.as_bytes().to_vec());
         }
-        let string = format!("p,{},{},{}", path_buf.to_string_lossy().to_string(), modified, file_size);
-        id = object_id(&string.as_bytes().to_vec());
+
+        match store.add(&id, &bytes) {
+            Ok(_) => (),
+            Err(error) => return Err(error),
+        };
+
+        let mut entry_path = PathBuf::new();
+        entry_path.push("Backups");
+        entry_path.push(date_time.clone());
+        entry_path.push(path.directories());
+        match fs::create_dir_all(entry_path.clone()) {
+            Ok(_) => (),
+            Err(_) => {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
+            }
+        };
+        entry_path.push(&path.file_name());
+        // TODO: Set other fields.
+        let entry = Entry {
+            id: id,
+            last_modified: 0,
+            permission: 0,
+            uid: 0,
+            gid: 0,
+        };
+        let string = match serde_json::to_string(&entry) {
+            Ok(string) => string,
+            Err(_) => {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
+            }
+        };
+        match fs::write(entry_path, string.as_bytes()) {
+            Ok(_) => (),
+            Err(_) => {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
+            }
+        };
+
+        Ok(())
     }
-
-    match store.add(&id, &bytes) {
-        Ok(_) => (),
-        Err(error) => return Err(error),
-    };
-
-    let mut entry_path = PathBuf::new();
-    entry_path.push("Backups");
-    entry_path.push(date_time.clone());
-    entry_path.push(path.directories());
-    match fs::create_dir_all(entry_path.clone()) {
-        Ok(_) => (),
-        Err(_) => {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
-        }
-    };
-    entry_path.push(&path.file_name());
-    // TODO: Set other fields.
-    let entry = Entry {
-        id: id,
-        last_modified: 0,
-        permission: 0,
-        uid: 0,
-        gid: 0,
-    };
-    let string = match serde_json::to_string(&entry) {
-        Ok(string) => string,
-        Err(_) => {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
-        }
-    };
-    match fs::write(entry_path, string.as_bytes()) {
-        Ok(_) => (),
-        Err(_) => {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
-        }
-    };
-
-    Ok(())
 }
 
 fn object_id(bytes: &Vec<u8>) -> String {

@@ -60,7 +60,7 @@ fn main() -> ExitCode {
             }
         };
     } else if command_name == "backup".to_string() {
-        let command = BackupCommand::new();
+        let mut command = BackupCommand::new();
         match command.execute() {
             Ok(_) => (),
             Err(error) => {
