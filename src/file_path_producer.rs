@@ -111,3 +111,59 @@ impl FilePathProducer {
         Err(Error::new(ERROR_ID, ERROR_CODE_PRODUCING_FINISHED))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::commons::OperatePath;
+    use crate::commons::ConvertPath;
+    use crate::file_path_producer;
+    use crate::file_path_producer::FilePathProducer;
+
+    #[test]
+    fn is_creatable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = String::from_path(&temp_dir.path());
+        let _producer = FilePathProducer::new(&path);
+    }
+
+    #[test]
+    fn paths_are_producable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = String::from_path(&temp_dir.path());
+        let path = path.pushed("a.txt");
+        let Ok(_) = fs::write(&path, "ABCDE") else {
+            panic!();
+        };
+        let path = String::from_path(&temp_dir.path());
+        let path = path.pushed("b");
+        let Ok(_) = fs::create_dir_all(&path) else {
+            panic!();
+        };
+        let path = path.pushed("c.txt");
+        let Ok(_) = fs::write(&path, "FGHIJ") else {
+            panic!();
+        };
+        let path = String::from_path(&temp_dir.path());
+        let mut producer = FilePathProducer::new(&path);
+        let Ok(path) = producer.next() else {
+            panic!();
+        };
+        assert_eq!(path, "a.txt".to_string());
+        let Ok(path) = producer.next() else {
+            panic!();
+        };
+        assert_eq!(path, "b/c.txt".to_string());
+        let Err(error) = producer.next() else {
+            panic!();
+        };
+        assert_eq!(error.id, file_path_producer::ERROR_ID);
+        assert_eq!(error.code, file_path_producer::ERROR_CODE_PRODUCING_FINISHED);
+    }
+}
