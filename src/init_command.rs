@@ -58,7 +58,6 @@ impl InitCommand {
 #[cfg(test)]
 mod tests {
     use std::env;
-    use std::fs;
     use tempdir::TempDir;
 
     use crate::init_command::InitCommand;
