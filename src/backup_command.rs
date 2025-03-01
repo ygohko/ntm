@@ -49,12 +49,14 @@ pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 pub struct BackupCommand {
+    pub date_time: String,
     count: i32,
 }
 
 impl BackupCommand {
     pub fn new() -> Self {
         Self {
+            date_time: "".to_string(),
             count: 0,
         }
     }
@@ -62,7 +64,7 @@ impl BackupCommand {
     pub fn execute(&mut self) -> Result<()> {
         let store = ObjectStore::new(&"Objects");
         let now: DateTime<Local> = Local::now();
-        let date_time = now.format("%Y%m%d-%H%M").to_string();
+        self.date_time = now.format("%Y%m%d-%H%M").to_string();
         let bytes = match fs::read("ntm.toml") {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
@@ -99,7 +101,7 @@ impl BackupCommand {
             };
 
             if !done {
-                match self.process_file(&path, &store, &config.source_path, &date_time) {
+                match self.process_file(&path, &store, &config.source_path) {
                     Ok(_) => (),
                     Err(error) => {
                         println!("process_file() failed: error: {}", error);
@@ -113,7 +115,7 @@ impl BackupCommand {
         Ok(())
     }
 
-    fn process_file(&mut self, path: &String, store: &ObjectStore, source_path: &String, date_time: &String) -> Result<()> {
+    fn process_file(&mut self, path: &String, store: &ObjectStore, source_path: &String) -> Result<()> {
         self.count += 1;
         self.count %= 100;
         if self.count == 0 {
@@ -157,7 +159,7 @@ impl BackupCommand {
 
         let mut entry_path = PathBuf::new();
         entry_path.push("Backups");
-        entry_path.push(date_time.clone());
+        entry_path.push(self.date_time.clone());
         entry_path.push(path.directories());
         match fs::create_dir_all(entry_path.clone()) {
             Ok(_) => (),
@@ -217,7 +219,7 @@ mod tests {
 
     #[test]
     fn is_executable() {
-        // TODO: Do not modofy current directory.
+        // TODO: Do not modify current directory.
         let temp_dir = TempDir::new("test").unwrap();
         let previous_current_dir = env::current_dir().unwrap();
 
