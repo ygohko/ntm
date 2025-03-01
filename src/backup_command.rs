@@ -50,6 +50,7 @@ pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 pub struct BackupCommand {
     pub date_time: String,
+    processed_count: i64,
     count: i32,
 }
 
@@ -57,6 +58,7 @@ impl BackupCommand {
     pub fn new() -> Self {
         Self {
             date_time: "".to_string(),
+            processed_count: 0,
             count: 0,
         }
     }
@@ -116,10 +118,11 @@ impl BackupCommand {
     }
 
     fn process_file(&mut self, path: &String, store: &ObjectStore, source_path: &String) -> Result<()> {
+        self.processed_count += 1;
         self.count += 1;
         self.count %= 100;
         if self.count == 0 {
-            println!("path: {}", path);
+            println!("Processing ({}): {}", self.processed_count, path);
         }
         let mut path_buf = PathBuf::new();
         path_buf.push(&source_path);
