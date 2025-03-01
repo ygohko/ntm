@@ -131,15 +131,16 @@ impl BackupCommand {
             Ok(metadata) => metadata,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
         };
-        let bytes = match fs::read(path_buf.clone()) {
-            Ok(bytes) => bytes,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-        };
+        let mut bytes: Option<Vec<u8>> = None;
         let id: String;
         let file_size = metadata.len();
-        if file_size < 100 * 1024 * 1024 {
+        if file_size >= 10 * 1024 && file_size <= 100 * 1024 {
+            bytes = match fs::read(path_buf.clone()) {
+                Ok(bytes) => Some(bytes),
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+            };
             let mut id_bytes = b"b,".to_vec();
-            id_bytes = [id_bytes, bytes.clone()].concat();
+            id_bytes = [id_bytes, bytes.clone().unwrap().clone()].concat();
             // println!("id_bytes.len(): {}", id_bytes.len());
             id = object_id(&id_bytes);
         } else {
@@ -155,10 +156,22 @@ impl BackupCommand {
             id = object_id(&string.as_bytes().to_vec());
         }
 
-        match store.add(&id, &bytes) {
-            Ok(_) => (),
+        let exists = match store.exists(&id) {
+            Ok(exists) => exists,
             Err(error) => return Err(error),
         };
+        if !exists {
+            if bytes.is_none() {
+                bytes = match fs::read(path_buf.clone()) {
+                    Ok(bytes) => Some(bytes),
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+                };
+            }
+            match store.add(&id, &bytes.unwrap()) {
+                Ok(_) => (),
+                Err(error) => return Err(error),
+            };
+        }
 
         let mut entry_path = PathBuf::new();
         entry_path.push("Backups");

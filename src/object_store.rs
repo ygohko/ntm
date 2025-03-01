@@ -110,6 +110,25 @@ impl ObjectStore {
         Ok(bytes)
     }
 
+    pub fn exists(&self, id: &str) -> Result<bool> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = self.path.clone();
+        path.push(path1);
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+        path.push(id);
+        let exists = match path.try_exists() {
+            Ok(exists) => exists,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
+        };
+
+        Ok(exists)
+    }
+
     pub fn mark(&mut self, id: &str) -> Result<()> {
         if self.marked_objects.contains_key(id) {
             *self.marked_objects.get_mut(id).unwrap() += 1;
@@ -275,6 +294,27 @@ mod tests {
         for i in 0..bytes.len() {
             assert_eq!(bytes[i], bytes1[i]);
         }
+    }
+
+    #[test]
+    fn object_existing_is_testable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let Ok(_) = store.add(&id, &bytes) else {
+            panic!();
+        };
+
+        let exists = store.exists(&id).unwrap();
+        assert_eq!(exists, true);
     }
 
     #[test]
