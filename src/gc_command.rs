@@ -139,3 +139,60 @@ fn backup_paths() -> Result<Vec<String>> {
 
     Ok(backup_paths)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::backup_command::BackupCommand;
+    use crate::gc_command::GcCommand;
+    use crate::init_command::InitCommand;
+
+    #[test]
+    fn is_creatable() {
+        let _command = GcCommand::new();
+    }
+
+    #[test]
+    fn is_executable() {
+        // TODO: Do not modify current directory.
+        let temp_dir = TempDir::new("test").unwrap();
+        let previous_current_dir = env::current_dir().unwrap();
+
+        let mut temp_path = previous_current_dir.clone();
+        temp_path.push(&temp_dir.path());
+        let mut source_path = temp_path.clone();
+        source_path.push("source");
+        fs::create_dir_all(&source_path).unwrap();
+        let mut file_path = source_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "ABCDE").unwrap();
+            
+        let mut ntm_path = temp_path.clone();
+        ntm_path.push("ntm");
+        fs::create_dir_all(&ntm_path).unwrap();
+        env::set_current_dir(&ntm_path).unwrap();
+        let command = InitCommand::new();
+        command.execute().unwrap();
+
+        let mut config_path = ntm_path.clone();
+        config_path.push("ntm.toml");
+        let config = format!("source_path = \"{}\"", source_path.display());
+        fs::write(config_path, config).unwrap();
+
+        let mut command = BackupCommand::new();
+        command.execute().unwrap();
+
+        let date_time = command.date_time;
+        let mut backup_path = ntm_path.clone();
+        backup_path.push("Backups");
+        backup_path.push(&date_time);
+        fs::remove_dir_all(&backup_path).unwrap();
+        let mut command = GcCommand::new();
+        command.execute().unwrap();
+
+        env::set_current_dir(&previous_current_dir).unwrap();
+    }
+}
