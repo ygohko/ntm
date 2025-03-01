@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn is_creatable() {
-        let command = BackupCommand::new();
+        let _command = BackupCommand::new();
     }
 
     #[test]
