@@ -200,3 +200,19 @@ fn object_id(bytes: &Vec<u8>) -> String {
 
     hex.as_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::backup_command::BackupCommand;
+
+    #[test]
+    fn is_creatable() {
+        let command = BackupCommand::new();
+    }
+
+    #[test]
+    fn is_executable() {
+        // TODO: Implement this.
+        
+    }
+}
