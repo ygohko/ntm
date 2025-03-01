@@ -79,8 +79,7 @@ impl FilePathProducer {
             }
 
             if scan {
-                // TODO: Show warnings when read_dir() failed.
-                if let Ok(read_dir) = fs::read_dir(directory_path) {
+                if let Ok(read_dir) = fs::read_dir(&directory_path) {
                     for result in read_dir {
                         if result.is_ok() {
                             let entry = result.unwrap();
@@ -104,6 +103,8 @@ impl FilePathProducer {
                             }
                         }
                     }
+                } else {
+                    println!("Warning: Reading directory failed. directory_path: {}", directory_path);
                 }
             }
         }
