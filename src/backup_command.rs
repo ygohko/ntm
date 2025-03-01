@@ -134,13 +134,14 @@ impl BackupCommand {
         let mut bytes: Option<Vec<u8>> = None;
         let id: String;
         let file_size = metadata.len();
+        // TODO: Add parameters to config.
         if file_size >= 10 * 1024 && file_size <= 100 * 1024 {
             bytes = match fs::read(path_buf.clone()) {
                 Ok(bytes) => Some(bytes),
                 Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
             };
             let mut id_bytes = b"b,".to_vec();
-            id_bytes = [id_bytes, bytes.clone().unwrap().clone()].concat();
+            id_bytes = [id_bytes, bytes.clone().unwrap()].concat();
             // println!("id_bytes.len(): {}", id_bytes.len());
             id = object_id(&id_bytes);
         } else {
