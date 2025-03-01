@@ -69,7 +69,6 @@ mod tests {
 
     #[test]
     fn is_executable() {
-        // TODO: Implement this.
         let temp_dir = TempDir::new("test").unwrap();
         let previous_current_dir = env::current_dir().unwrap();
         let mut current_dir = previous_current_dir.clone();
