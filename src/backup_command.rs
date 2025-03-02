@@ -50,6 +50,8 @@ pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 pub struct BackupCommand {
     pub date_time: String,
+    bytes_id_threshold_min: i64,
+    bytes_id_threshold_max: i64,
     processed_count: i64,
     count: i32,
 }
@@ -58,6 +60,8 @@ impl BackupCommand {
     pub fn new() -> Self {
         Self {
             date_time: "".to_string(),
+            bytes_id_threshold_min: 0,
+            bytes_id_threshold_max: 100 * 1024 * 1024,
             processed_count: 0,
             count: 0,
         }
@@ -83,6 +87,14 @@ impl BackupCommand {
         } else {
             config = Config::new();
         }
+        self.bytes_id_threshold_min = match config.bytes_id_threshold_min {
+            Some(min) => min,
+            None => 0,
+        };
+        self.bytes_id_threshold_max = match config.bytes_id_threshold_max {
+            Some(max) => max,
+            None => 0,
+        };
 
         let mut producer = FilePathProducer::new(&config.source_path);
         let mut done = false;
@@ -134,8 +146,7 @@ impl BackupCommand {
         let mut bytes: Option<Vec<u8>> = None;
         let id: String;
         let file_size = metadata.len();
-        // TODO: Add parameters to config.
-        if file_size >= 10 * 1024 && file_size <= 100 * 1024 {
+        if file_size >= (self.bytes_id_threshold_min as u64) && file_size <= (self.bytes_id_threshold_max as u64) {
             bytes = match fs::read(path_buf.clone()) {
                 Ok(bytes) => Some(bytes),
                 Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
