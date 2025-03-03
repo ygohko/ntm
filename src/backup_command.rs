@@ -53,6 +53,7 @@ pub struct BackupCommand {
     bytes_id_threshold_min: i64,
     bytes_id_threshold_max: i64,
     processed_count: i64,
+    added_count: i64,
     count: i32,
 }
 
@@ -63,6 +64,7 @@ impl BackupCommand {
             bytes_id_threshold_min: 0,
             bytes_id_threshold_max: 100 * 1024 * 1024,
             processed_count: 0,
+            added_count: 0,
             count: 0,
         }
     }
@@ -130,12 +132,11 @@ impl BackupCommand {
     }
 
     fn process_file(&mut self, path: &String, store: &ObjectStore, source_path: &String) -> Result<()> {
-        self.processed_count += 1;
+        if self.count == 0 {
+            println!("Processing ({}, {}): {}", self.processed_count, self.added_count, path);
+        }
         self.count += 1;
         self.count %= 100;
-        if self.count == 0 {
-            println!("Processing ({}): {}", self.processed_count, path);
-        }
         let mut path_buf = PathBuf::new();
         path_buf.push(&source_path);
         path_buf.push(path.clone());
@@ -183,7 +184,9 @@ impl BackupCommand {
                 Ok(_) => (),
                 Err(error) => return Err(error),
             };
+            self.added_count += 1;
         }
+        self.processed_count += 1;
 
         let mut entry_path = PathBuf::new();
         entry_path.push("Backups");
