@@ -132,11 +132,11 @@ impl BackupCommand {
     }
 
     fn process_file(&mut self, path: &String, store: &ObjectStore, source_path: &String) -> Result<()> {
-        self.count += 1;
-        self.count %= 100;
         if self.count == 0 {
             println!("Processing ({}, {}): {}", self.processed_count, self.added_count, path);
         }
+        self.count += 1;
+        self.count %= 100;
         let mut path_buf = PathBuf::new();
         path_buf.push(&source_path);
         path_buf.push(path.clone());
