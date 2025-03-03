@@ -52,6 +52,7 @@ pub struct BackupCommand {
     pub date_time: String,
     bytes_id_threshold_min: i64,
     bytes_id_threshold_max: i64,
+    excluded_directories: Vec<String>,
     processed_count: i64,
     added_count: i64,
     count: i32,
@@ -63,6 +64,7 @@ impl BackupCommand {
             date_time: "".to_string(),
             bytes_id_threshold_min: 0,
             bytes_id_threshold_max: 100 * 1024 * 1024,
+            excluded_directories: vec![],
             processed_count: 0,
             added_count: 0,
             count: 0,
@@ -97,6 +99,10 @@ impl BackupCommand {
             Some(max) => max,
             None => 0,
         };
+        self.excluded_directories = match config.excluded_directories {
+            Some(directories) => directories,
+            None => vec![],
+        };
 
         let mut producer = FilePathProducer::new(&config.source_path);
         let mut done = false;
@@ -117,14 +123,25 @@ impl BackupCommand {
             };
 
             if !done {
-                match self.process_file(&path, &store, &config.source_path) {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("process_file() failed: error: {}", error);
+                let mut needed = true;
+                for directory in &self.excluded_directories {
+                    if path.find(directory) == Some(0) {
+                        needed = false;
 
-                        ()
-                    },
-                };
+                        break;
+                    }
+                }
+
+                if needed {
+                    match self.process_file(&path, &store, &config.source_path) {
+                        Ok(_) => (),
+                        Err(error) => {
+                            println!("process_file() failed: error: {}", error);
+
+                            ()
+                        },
+                    };
+                }
             }
         }
 
