@@ -46,7 +46,7 @@ pub struct GcCommand {
 }
 
 impl GcCommand {
-    pub fn new() ->Self {
+    pub fn new() -> Self {
         Self {
             store: ObjectStore::new(&"Objects"),
             count: 0,
@@ -76,13 +76,15 @@ impl GcCommand {
             let option = match producer.next() {
                 Ok(path) => Some(path),
                 Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
                         done = true;
                     }
                     // TODO: Displaying errors would be needed.
 
                     None
-                },
+                }
             };
             if let Some(produced_path) = option {
                 let entry_path = path.pushed(&produced_path);
@@ -169,7 +171,7 @@ mod tests {
         let mut file_path = source_path.clone();
         file_path.push("a.txt");
         fs::write(&file_path, "ABCDE").unwrap();
-            
+
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();

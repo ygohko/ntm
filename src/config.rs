@@ -60,7 +60,7 @@ mod tests {
                 assert!(false);
 
                 Config::new()
-            },
+            }
         };
         assert_eq!(config.source_path, "/a/b/c".to_string());
 
@@ -71,7 +71,7 @@ mod tests {
                 assert!(false);
 
                 Config::new()
-            },
+            }
         };
         assert_eq!(config.source_path, "/a/b/c".to_string());
         assert_eq!(config.bytes_id_threshold_min, Some(123));
@@ -83,7 +83,7 @@ mod tests {
                 assert!(false);
 
                 Config::new()
-            },
+            }
         };
         assert_eq!(config.source_path, "/a/b/c".to_string());
         assert_eq!(config.bytes_id_threshold_max, Some(456));
@@ -95,7 +95,7 @@ mod tests {
                 assert!(false);
 
                 Config::new()
-            },
+            }
         };
         assert_eq!(config.source_path, "/a/b/c".to_string());
         assert_eq!(config.excluded_directories, Some(vec!["d".to_string()]));

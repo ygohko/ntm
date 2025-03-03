@@ -25,8 +25,8 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
-use crate::commons::OperatePath;
 use crate::commons::ConvertPath;
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -42,7 +42,7 @@ pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
-const MARKED_OBJECTS_MAX:usize = 4000000;
+const MARKED_OBJECTS_MAX: usize = 4000000;
 
 pub struct ObjectStore {
     path: PathBuf,
@@ -146,7 +146,7 @@ impl ObjectStore {
         path.push(path3);
         path.push(path4);
         let file_name = id.to_string() + ".marked";
-        path.push(&file_name);        
+        path.push(&file_name);
 
         if path.exists() {
             return Ok(());
@@ -171,12 +171,14 @@ impl ObjectStore {
             let option = match producer.next() {
                 Ok(path) => Some(path),
                 Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
                         done = true;
                     }
 
                     None
-                },
+                }
             };
             if let Some(path) = option {
                 if path.rfind(".marked").is_none() {
@@ -228,7 +230,10 @@ impl ObjectStore {
             }
         }
 
-        println!("marked_objects shrinked. len: {}", self.marked_objects.len());
+        println!(
+            "marked_objects shrinked. len: {}",
+            self.marked_objects.len()
+        );
     }
 }
 
@@ -365,7 +370,7 @@ mod tests {
         };
         let Ok(_) = store.bytes(&id) else {
             panic!();
-        }; 
+        };
 
         let Ok(_) = store.sweep() else {
             panic!();
@@ -386,7 +391,9 @@ mod tests {
         }
         let mut store = ObjectStore::new(&path);
 
-        store.marked_objects.insert("ffffffffffffffff".to_string(), 1);
+        store
+            .marked_objects
+            .insert("ffffffffffffffff".to_string(), 1);
         assert_eq!(store.marked_objects.len(), 1);
         store.shrink_marked_objects();
         assert_eq!(store.marked_objects.len(), 0);
@@ -397,6 +404,9 @@ mod tests {
         }
         assert_eq!(store.marked_objects.len(), object_store::MARKED_OBJECTS_MAX);
         store.shrink_marked_objects();
-        assert_eq!(store.marked_objects.len(), object_store::MARKED_OBJECTS_MAX / 2);
+        assert_eq!(
+            store.marked_objects.len(),
+            object_store::MARKED_OBJECTS_MAX / 2
+        );
     }
 }

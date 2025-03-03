@@ -80,8 +80,8 @@ impl ConvertPath for String {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::commons::OperatePath;
     use crate::commons::ConvertPath;
+    use crate::commons::OperatePath;
 
     #[test]
     fn is_pushable() {

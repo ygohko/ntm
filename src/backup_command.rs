@@ -139,7 +139,7 @@ impl BackupCommand {
                             println!("process_file() failed: error: {}", error);
 
                             ()
-                        },
+                        }
                     };
                 }
             }
@@ -148,9 +148,17 @@ impl BackupCommand {
         Ok(())
     }
 
-    fn process_file(&mut self, path: &String, store: &ObjectStore, source_path: &String) -> Result<()> {
+    fn process_file(
+        &mut self,
+        path: &String,
+        store: &ObjectStore,
+        source_path: &String,
+    ) -> Result<()> {
         if self.count == 0 {
-            println!("Processing ({}, {}): {}", self.processed_count, self.added_count, path);
+            println!(
+                "Processing ({}, {}): {}",
+                self.processed_count, self.added_count, path
+            );
         }
         self.count += 1;
         self.count %= 100;
@@ -164,7 +172,9 @@ impl BackupCommand {
         let mut bytes: Option<Vec<u8>> = None;
         let id: String;
         let file_size = metadata.len();
-        if file_size >= (self.bytes_id_threshold_min as u64) && file_size <= (self.bytes_id_threshold_max as u64) {
+        if file_size >= (self.bytes_id_threshold_min as u64)
+            && file_size <= (self.bytes_id_threshold_max as u64)
+        {
             bytes = match fs::read(path_buf.clone()) {
                 Ok(bytes) => Some(bytes),
                 Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
@@ -182,7 +192,12 @@ impl BackupCommand {
                     modified = result.unwrap().as_secs();
                 }
             }
-            let string = format!("p,{},{},{}", path_buf.to_string_lossy().to_string(), modified, file_size);
+            let string = format!(
+                "p,{},{},{}",
+                path_buf.to_string_lossy().to_string(),
+                modified,
+                file_size
+            );
             id = object_id(&string.as_bytes().to_vec());
         }
 
@@ -211,9 +226,7 @@ impl BackupCommand {
         entry_path.push(path.directories());
         match fs::create_dir_all(entry_path.clone()) {
             Ok(_) => (),
-            Err(_) => {
-                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
-            }
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
         entry_path.push(&path.file_name());
         // TODO: Set other fields.
@@ -226,15 +239,11 @@ impl BackupCommand {
         };
         let string = match serde_json::to_string(&entry) {
             Ok(string) => string,
-            Err(_) => {
-                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
-            }
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
         match fs::write(entry_path, string.as_bytes()) {
             Ok(_) => (),
-            Err(_) => {
-                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED))
-            }
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
 
         Ok(())
@@ -279,7 +288,7 @@ mod tests {
         let mut file_path = source_path.clone();
         file_path.push("a.txt");
         fs::write(&file_path, "ABCDE").unwrap();
-            
+
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();

@@ -76,7 +76,7 @@ mod tests {
         let error = Error::new(error::ERROR_ID, error::ERROR_CODE_GENERAL);
         let _string = format!("{}", error);
     }
-    
+
     #[test]
     fn is_creatable() {
         let _error = Error::new(error::ERROR_ID, error::ERROR_CODE_GENERAL);
