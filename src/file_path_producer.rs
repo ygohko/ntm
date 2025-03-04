@@ -39,6 +39,7 @@ pub struct FilePathProducer {
     file_paths: Vec<String>,
     directory_paths: Vec<String>,
     prefix_length: usize,
+    excluded_directories: Vec<String>,
 }
 
 impl FilePathProducer {
@@ -49,6 +50,7 @@ impl FilePathProducer {
             file_paths: Vec::new(),
             directory_paths: vec![path.to_string()],
             prefix_length: prefix_length,
+            excluded_directories: vec![],
         };
     }
 
@@ -99,7 +101,15 @@ impl FilePathProducer {
                                 let path = path[self.prefix_length..].to_string();
                                 self.file_paths.push(path);
                             } else if is_dir {
-                                self.directory_paths.push(path);
+                                let mut needed = true;
+                                for directory in &self.excluded_directories {
+                                    if path.find(directory) == Some(0) {
+                                        needed = false;
+                                    }
+                                }
+                                if needed {
+                                    self.directory_paths.push(path);
+                                }
                             }
                         }
                     }
@@ -113,6 +123,10 @@ impl FilePathProducer {
         }
 
         Err(Error::new(ERROR_ID, ERROR_CODE_PRODUCING_FINISHED))
+    }
+
+    pub fn set_excluded_directories(&mut self, directories: &Vec<String>) {
+        self.excluded_directories = directories.clone();
     }
 }
 
