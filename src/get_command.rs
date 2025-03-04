@@ -72,6 +72,7 @@ impl GetCommand {
             return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
         }
 
+        // TODO: Produce file paths only in specified path when argument is given.
         let mut producer = FilePathProducer::new(&String::from_path(&path));
         let mut done = false;
         while !done {
