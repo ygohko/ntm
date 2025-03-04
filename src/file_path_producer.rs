@@ -102,8 +102,9 @@ impl FilePathProducer {
                                 self.file_paths.push(path);
                             } else if is_dir {
                                 let mut needed = true;
+                                let path1 = path[self.prefix_length..].to_string();
                                 for directory in &self.excluded_directories {
-                                    if path.find(directory) == Some(0) {
+                                    if path1.find(directory) == Some(0) {
                                         needed = false;
                                     }
                                 }

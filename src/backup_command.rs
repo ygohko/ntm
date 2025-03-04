@@ -105,6 +105,9 @@ impl BackupCommand {
         };
 
         let mut producer = FilePathProducer::new(&config.source_path);
+        if self.excluded_directories.len() > 0 {
+            producer.set_excluded_directories(&self.excluded_directories);
+        }
         let mut done = false;
         while !done {
             let path = match producer.next() {
@@ -124,6 +127,7 @@ impl BackupCommand {
 
             if !done {
                 let mut needed = true;
+                /*
                 for directory in &self.excluded_directories {
                     if path.find(directory) == Some(0) {
                         needed = false;
@@ -131,6 +135,7 @@ impl BackupCommand {
                         break;
                     }
                 }
+                */
 
                 if needed {
                     match self.process_file(&path, &store, &config.source_path) {
