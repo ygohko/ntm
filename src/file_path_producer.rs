@@ -24,6 +24,7 @@ use std::env::consts;
 use std::fs;
 use std::path::Path;
 
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -39,16 +40,17 @@ pub struct FilePathProducer {
     file_paths: Vec<String>,
     directory_paths: Vec<String>,
     prefix_length: usize,
+    excluded_directories: Vec<String>,
 }
 
 impl FilePathProducer {
-    // TODO: This argument should be AsRef<Path>?
     pub fn new(path: &str) -> FilePathProducer {
         let prefix_length = path.len() + 1;
         return FilePathProducer {
             file_paths: Vec::new(),
             directory_paths: vec![path.to_string()],
             prefix_length: prefix_length,
+            excluded_directories: vec![],
         };
     }
 
@@ -96,10 +98,20 @@ impl FilePathProducer {
                             };
                             let path = entry.path().to_string_lossy().to_string();
                             if is_file {
+                                // TODO: Add a method to remove some head directories.
                                 let path = path[self.prefix_length..].to_string();
                                 self.file_paths.push(path);
                             } else if is_dir {
-                                self.directory_paths.push(path);
+                                let mut needed = true;
+                                let path1 = path[self.prefix_length..].to_string();
+                                for directory in &self.excluded_directories {
+                                    if path1.is_begun(directory) {
+                                        needed = false;
+                                    }
+                                }
+                                if needed {
+                                    self.directory_paths.push(path);
+                                }
                             }
                         }
                     }
@@ -113,6 +125,10 @@ impl FilePathProducer {
         }
 
         Err(Error::new(ERROR_ID, ERROR_CODE_PRODUCING_FINISHED))
+    }
+
+    pub fn set_excluded_directories(&mut self, directories: &Vec<String>) {
+        self.excluded_directories = directories.clone();
     }
 }
 
