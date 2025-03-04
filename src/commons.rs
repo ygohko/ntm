@@ -60,6 +60,7 @@ impl OperatePath for str {
     }
 
     fn is_begun(&self, path: &str) -> bool {
+        // TODO: Improve implementation.
         if self.find(path) == Some(0) {
             return true;
         }
