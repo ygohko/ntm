@@ -28,6 +28,7 @@ pub trait OperatePath {
     fn pushed(&self, path: &str) -> String;
     fn directories(&self) -> String;
     fn file_name(&self) -> String;
+    fn is_begun(&self, path: &str) -> bool;
     #[allow(dead_code)]
     fn to_path_buf(&self) -> PathBuf;
 }
@@ -56,6 +57,14 @@ impl OperatePath for str {
         }
 
         split.pop().unwrap().to_string()
+    }
+
+    fn is_begun(&self, path: &str) -> bool {
+        if self.find(path) == Some(0) {
+            return true;
+        }
+
+        false
     }
 
     fn to_path_buf(&self) -> PathBuf {
@@ -104,6 +113,13 @@ mod tests {
         assert_eq!(directories, "d.txt".to_string());
     }
 
+    #[test]
+    fn head_directries_are_checkable() {
+        let path = "a/b/c/d.txt";
+        assert_eq!(path.is_begun("a/b"), true);
+        assert_eq!(path.is_begun("a/c"), false);
+    }
+    
     #[test]
     fn path_buf_is_gettable() {
         let path = "a/b/c/d.txt";

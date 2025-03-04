@@ -24,6 +24,7 @@ use std::env::consts;
 use std::fs;
 use std::path::Path;
 
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -43,7 +44,6 @@ pub struct FilePathProducer {
 }
 
 impl FilePathProducer {
-    // TODO: This argument should be AsRef<Path>?
     pub fn new(path: &str) -> FilePathProducer {
         let prefix_length = path.len() + 1;
         return FilePathProducer {
@@ -104,7 +104,7 @@ impl FilePathProducer {
                                 let mut needed = true;
                                 let path1 = path[self.prefix_length..].to_string();
                                 for directory in &self.excluded_directories {
-                                    if path1.find(directory) == Some(0) {
+                                    if path1.is_begun(directory) {
                                         needed = false;
                                     }
                                 }

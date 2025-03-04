@@ -126,27 +126,14 @@ impl BackupCommand {
             };
 
             if !done {
-                let mut needed = true;
-                /*
-                for directory in &self.excluded_directories {
-                    if path.find(directory) == Some(0) {
-                        needed = false;
+                match self.process_file(&path, &store, &config.source_path) {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("process_file() failed: error: {}", error);
 
-                        break;
+                        ()
                     }
-                }
-                */
-
-                if needed {
-                    match self.process_file(&path, &store, &config.source_path) {
-                        Ok(_) => (),
-                        Err(error) => {
-                            println!("process_file() failed: error: {}", error);
-
-                            ()
-                        }
-                    };
-                }
+                };
             }
         }
 
