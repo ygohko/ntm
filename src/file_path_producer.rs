@@ -89,10 +89,10 @@ impl FilePathProducer {
                                 Ok(metadata) => {
                                     is_file = metadata.is_file();
                                     is_dir = metadata.is_dir() && !metadata.is_symlink();
-                                },
+                                }
                                 Err(error) => {
                                     println!("error: {}", error);
-                                },
+                                }
                             };
                             let path = entry.path().to_string_lossy().to_string();
                             if is_file {
@@ -104,7 +104,10 @@ impl FilePathProducer {
                         }
                     }
                 } else {
-                    println!("Warning: Reading directory failed. directory_path: {}", directory_path);
+                    println!(
+                        "Warning: Reading directory failed. directory_path: {}",
+                        directory_path
+                    );
                 }
             }
         }
@@ -118,8 +121,8 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::commons::OperatePath;
     use crate::commons::ConvertPath;
+    use crate::commons::OperatePath;
     use crate::file_path_producer;
     use crate::file_path_producer::FilePathProducer;
 
@@ -165,6 +168,9 @@ mod tests {
             panic!();
         };
         assert_eq!(error.id, file_path_producer::ERROR_ID);
-        assert_eq!(error.code, file_path_producer::ERROR_CODE_PRODUCING_FINISHED);
+        assert_eq!(
+            error.code,
+            file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+        );
     }
 }

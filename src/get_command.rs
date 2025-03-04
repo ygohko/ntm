@@ -72,6 +72,7 @@ impl GetCommand {
             return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
         }
 
+        // TODO: Produce file paths only in specified path when argument is given.
         let mut producer = FilePathProducer::new(&String::from_path(&path));
         let mut done = false;
         while !done {
@@ -102,7 +103,6 @@ impl GetCommand {
                 }
 
                 if found {
-                    
                     let mut entry_path = PathBuf::new();
                     entry_path.push(&backup_path);
                     entry_path.push(&path);
@@ -132,17 +132,20 @@ impl GetCommand {
                     destination_path.push(&self.backup);
                     destination_path.push(&path);
                     println!("destination_path: {}", destination_path.display());
-                    let directories =
-                        String::from_path(&destination_path).directories();
+                    let directories = String::from_path(&destination_path).directories();
                     match fs::create_dir_all(&directories) {
                         Ok(_) => (),
                         // TODO: Skipping file that writing is failed may be needed.
-                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                        Err(_) => {
+                            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED))
+                        }
                     }
                     match fs::write(destination_path, bytes) {
                         Ok(_) => (),
                         // TODO: Skipping file that writing is failed may be needed.
-                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                        Err(_) => {
+                            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED))
+                        }
                     };
                 }
             }
@@ -163,8 +166,8 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
-    use crate::init_command::InitCommand;
     use crate::get_command::GetCommand;
+    use crate::init_command::InitCommand;
 
     #[test]
     fn is_creatable() {
@@ -185,7 +188,7 @@ mod tests {
         let mut file_path = source_path.clone();
         file_path.push("a.txt");
         fs::write(&file_path, "ABCDE").unwrap();
-            
+
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
