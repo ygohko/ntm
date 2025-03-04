@@ -126,14 +126,9 @@ impl BackupCommand {
             };
 
             if !done {
-                match self.process_file(&path, &store, &config.source_path) {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("process_file() failed: error: {}", error);
-
-                        ()
-                    }
-                };
+                if let Err(error) = self.process_file(&path, &store, &config.source_path) {
+                    println!("process_file() failed: error: {}", error);
+                }
             }
         }
 

@@ -98,6 +98,7 @@ impl FilePathProducer {
                             };
                             let path = entry.path().to_string_lossy().to_string();
                             if is_file {
+                                // TODO: Add a method to remove some head directories.
                                 let path = path[self.prefix_length..].to_string();
                                 self.file_paths.push(path);
                             } else if is_dir {
