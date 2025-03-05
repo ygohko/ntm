@@ -44,14 +44,14 @@ pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 
 pub struct GetCommand {
     backup: String,
-    limited_path: String,
+    limited_directory: String,
 }
 
 impl GetCommand {
     pub fn new(backup: &str) -> Self {
         GetCommand {
             backup: backup.to_string(),
-            limited_path: "".to_string(),
+            limited_directory: "".to_string(),
         }
     }
 
@@ -71,9 +71,8 @@ impl GetCommand {
             return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
         }
 
-        // TODO: Produce file paths only in specified path when argument is given.
-        if self.limited_path != "".to_string() {
-            path.push(&self.limited_path);
+        if self.limited_directory != "".to_string() {
+            path.push(&self.limited_directory);
         }
         let mut producer = FilePathProducer::new(&String::from_path(&path));
         let mut done = false;
@@ -96,8 +95,8 @@ impl GetCommand {
             if !done {
                 let mut entry_path = PathBuf::new();
                 entry_path.push(&backup_path);
-                if self.limited_path != "".to_string() {
-                    entry_path.push(&self.limited_path);
+                if self.limited_directory != "".to_string() {
+                    entry_path.push(&self.limited_directory);
                 }
                 entry_path.push(&path);
                 println!("entry_path: {}", entry_path.display());
@@ -124,8 +123,8 @@ impl GetCommand {
                 };
                 let mut destination_path = PathBuf::new();
                 destination_path.push(&self.backup);
-                if self.limited_path != "".to_string() {
-                    destination_path.push(&self.limited_path);
+                if self.limited_directory != "".to_string() {
+                    destination_path.push(&self.limited_directory);
                 }
                 destination_path.push(&path);
                 println!("destination_path: {}", destination_path.display());
@@ -150,8 +149,8 @@ impl GetCommand {
         Ok(())
     }
 
-    pub fn set_limited_path(&mut self, path: &str) -> () {
-        self.limited_path = path.to_string();
+    pub fn set_limited_directory(&mut self, directory: &str) -> () {
+        self.limited_directory = directory.to_string();
     }
 }
 

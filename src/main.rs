@@ -80,7 +80,7 @@ fn main() -> ExitCode {
         let mut command = GetCommand::new(&backup);
         if count >= 4 {
             let path = arguments[3].clone();
-            command.set_limited_path(&path);
+            command.set_limited_directory(&path);
         }
         match command.execute() {
             Ok(_) => (),
