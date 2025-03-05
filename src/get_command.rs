@@ -124,6 +124,9 @@ impl GetCommand {
                 };
                 let mut destination_path = PathBuf::new();
                 destination_path.push(&self.backup);
+                if self.limited_path != "".to_string() {
+                    destination_path.push(&self.limited_path);
+                }
                 destination_path.push(&path);
                 println!("destination_path: {}", destination_path.display());
                 let directories = String::from_path(&destination_path).directories();
