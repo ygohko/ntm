@@ -31,6 +31,8 @@ mod get_command;
 mod init_command;
 mod object_store;
 
+use clap::Parser;
+use clap::Subcommand;
 use std::env;
 use std::process::ExitCode;
 
@@ -38,6 +40,25 @@ use crate::backup_command::BackupCommand;
 use crate::gc_command::GcCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
+
+#[derive(Parser)]
+struct Arguments {
+    /// Command you want to do
+    #[command(subcommand)]
+    command: Option<CommandKind>,
+}
+
+#[derive(Subcommand, PartialEq)]
+enum CommandKind {
+    /// Initialize a backup destination into this directory
+    Init,
+    /// Backup directories and files into this directory's backup destination
+    Backup,
+    /// Get backuped directories and files that is specified
+    Get,
+    /// Execute garbage collection for this backup destination
+    Gc,
+}
 
 fn main() -> ExitCode {
     // TODO: Embed clap.
