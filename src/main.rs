@@ -99,6 +99,32 @@ fn main() -> ExitCode {
             }
         };
     }
+    else if let CommandKind::Get(arguments) = command {
+        let backup = arguments.backup;
+        let mut command = GetCommand::new(&backup);
+        if let Some(directory) = arguments.limited_directory {
+            command.set_limited_directory(&directory);
+        }
+        match command.execute() {
+            Ok(_) => (),
+            Err(error) => {
+                println!("Error caused.\n\n{}", error);
+
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+    else if command == CommandKind::Gc {
+        let mut command = GcCommand::new();
+        match command.execute() {
+            Ok(_) => (),
+            Err(error) => {
+                println!("Error caused.\n\n{}", error);
+
+                return ExitCode::FAILURE;
+            }
+        }
+    }
 
     /*
     let arguments: Vec<_> = env::args().collect();
