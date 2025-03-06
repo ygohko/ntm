@@ -55,15 +55,52 @@ enum CommandKind {
     /// Backup directories and files into this directory's backup destination
     Backup,
     /// Get backuped directories and files that is specified
-    Get,
+    Get(GetArguments),
     /// Execute garbage collection for this backup destination
     Gc,
+}
+
+#[derive(Parser, PartialEq)]
+struct GetArguments {
+    /// Backup to get from this backup destination
+    backup: String,
+    /// Directory to limit getting backuped directories and files
+    limited_directory: Option<String>,
 }
 
 fn main() -> ExitCode {
     // TODO: Embed clap.
     let arguments = Arguments::parse();
+    let Some(command) = arguments.command else {
+        println!("USAGE: ntm COMMAND");
 
+        return ExitCode::SUCCESS;
+    };
+
+    if command == CommandKind::Init {
+        let command = InitCommand::new();
+        match command.execute() {
+            Ok(_) => (),
+            Err(error) => {
+                println!("Error caused.\n\n{}", error);
+
+                return ExitCode::FAILURE;
+            }
+        };
+    }
+    else if command == CommandKind::Backup {
+        let mut command = BackupCommand::new();
+        match command.execute() {
+            Ok(_) => (),
+            Err(error) => {
+                println!("Error caused.\n\n{}", error);
+
+                return ExitCode::FAILURE;
+            }
+        };
+    }
+
+    /*
     let arguments: Vec<_> = env::args().collect();
     if arguments.len() < 2 {
         println!("USAGE: ntm COMMAND");
@@ -124,6 +161,7 @@ fn main() -> ExitCode {
             }
         }
     }
+    */
 
     ExitCode::SUCCESS
 }
