@@ -31,7 +31,8 @@ mod get_command;
 mod init_command;
 mod object_store;
 
-use std::env;
+use clap::Parser;
+use clap::Subcommand;
 use std::process::ExitCode;
 
 use crate::backup_command::BackupCommand;
@@ -39,17 +40,43 @@ use crate::gc_command::GcCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 
+#[derive(Parser)]
+struct Arguments {
+    /// Command you want to do
+    #[command(subcommand)]
+    command: Option<CommandKind>,
+}
+
+#[derive(Subcommand, PartialEq)]
+enum CommandKind {
+    /// Initialize a backup destination into this directory
+    Init,
+    /// Backup directories and files into this directory's backup destination
+    Backup,
+    /// Get backuped directories and files that is specified
+    Get(GetArguments),
+    /// Execute garbage collection for this backup destination
+    Gc,
+}
+
+#[derive(Parser, PartialEq)]
+struct GetArguments {
+    /// Backup to get from this backup destination
+    backup: String,
+    /// Directory to limit getting backuped directories and files
+    limited_directory: Option<String>,
+}
+
 fn main() -> ExitCode {
     // TODO: Embed clap.
-    let arguments: Vec<_> = env::args().collect();
-    if arguments.len() < 2 {
+    let arguments = Arguments::parse();
+    let Some(command) = arguments.command else {
         println!("USAGE: ntm COMMAND");
 
         return ExitCode::SUCCESS;
-    }
-    let command_name = arguments[1].clone();
+    };
 
-    if command_name == "init".to_string() {
+    if command == CommandKind::Init {
         let command = InitCommand::new();
         match command.execute() {
             Ok(_) => (),
@@ -59,7 +86,8 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-    } else if command_name == "backup".to_string() {
+    }
+    else if command == CommandKind::Backup {
         let mut command = BackupCommand::new();
         match command.execute() {
             Ok(_) => (),
@@ -69,18 +97,12 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-    } else if command_name == "get".to_string() {
-        let count = arguments.len();
-        if count < 3 {
-            println!("Missing BACKUP argument.");
-
-            return ExitCode::FAILURE;
-        }
-        let backup = arguments[2].clone();
+    }
+    else if let CommandKind::Get(arguments) = command {
+        let backup = arguments.backup;
         let mut command = GetCommand::new(&backup);
-        if count >= 4 {
-            let path = arguments[3].clone();
-            command.set_limited_directory(&path);
+        if let Some(directory) = arguments.limited_directory {
+            command.set_limited_directory(&directory);
         }
         match command.execute() {
             Ok(_) => (),
@@ -90,7 +112,8 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
-    } else if command_name == "gc".to_string() {
+    }
+    else if command == CommandKind::Gc {
         let mut command = GcCommand::new();
         match command.execute() {
             Ok(_) => (),
