@@ -33,7 +33,6 @@ mod object_store;
 
 use clap::Parser;
 use clap::Subcommand;
-use std::env;
 use std::process::ExitCode;
 
 use crate::backup_command::BackupCommand;
@@ -125,69 +124,6 @@ fn main() -> ExitCode {
             }
         }
     }
-
-    /*
-    let arguments: Vec<_> = env::args().collect();
-    if arguments.len() < 2 {
-        println!("USAGE: ntm COMMAND");
-
-        return ExitCode::SUCCESS;
-    }
-    let command_name = arguments[1].clone();
-
-    if command_name == "init".to_string() {
-        let command = InitCommand::new();
-        match command.execute() {
-            Ok(_) => (),
-            Err(error) => {
-                println!("Error caused.\n\n{}", error);
-
-                return ExitCode::FAILURE;
-            }
-        };
-    } else if command_name == "backup".to_string() {
-        let mut command = BackupCommand::new();
-        match command.execute() {
-            Ok(_) => (),
-            Err(error) => {
-                println!("Error caused.\n\n{}", error);
-
-                return ExitCode::FAILURE;
-            }
-        };
-    } else if command_name == "get".to_string() {
-        let count = arguments.len();
-        if count < 3 {
-            println!("Missing BACKUP argument.");
-
-            return ExitCode::FAILURE;
-        }
-        let backup = arguments[2].clone();
-        let mut command = GetCommand::new(&backup);
-        if count >= 4 {
-            let path = arguments[3].clone();
-            command.set_limited_directory(&path);
-        }
-        match command.execute() {
-            Ok(_) => (),
-            Err(error) => {
-                println!("Error caused.\n\n{}", error);
-
-                return ExitCode::FAILURE;
-            }
-        }
-    } else if command_name == "gc".to_string() {
-        let mut command = GcCommand::new();
-        match command.execute() {
-            Ok(_) => (),
-            Err(error) => {
-                println!("Error caused.\n\n{}", error);
-
-                return ExitCode::FAILURE;
-            }
-        }
-    }
-    */
 
     ExitCode::SUCCESS
 }
