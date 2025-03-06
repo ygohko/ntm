@@ -62,6 +62,8 @@ enum CommandKind {
 
 fn main() -> ExitCode {
     // TODO: Embed clap.
+    let arguments = Arguments::parse();
+
     let arguments: Vec<_> = env::args().collect();
     if arguments.len() < 2 {
         println!("USAGE: ntm COMMAND");
