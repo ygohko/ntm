@@ -120,7 +120,7 @@ mod tests {
         assert_eq!(path.is_begun("a/b"), true);
         assert_eq!(path.is_begun("a/c"), false);
     }
-    
+
     #[test]
     fn path_buf_is_gettable() {
         let path = "a/b/c/d.txt";
