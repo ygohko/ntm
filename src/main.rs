@@ -85,8 +85,7 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-    }
-    else if command == CommandKind::Backup {
+    } else if command == CommandKind::Backup {
         let mut command = BackupCommand::new();
         match command.execute() {
             Ok(_) => (),
@@ -96,8 +95,7 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-    }
-    else if let CommandKind::Get(arguments) = command {
+    } else if let CommandKind::Get(arguments) = command {
         let backup = arguments.backup;
         let mut command = GetCommand::new(&backup);
         if let Some(directory) = arguments.limited_directory {
@@ -111,8 +109,7 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
-    }
-    else if command == CommandKind::Gc {
+    } else if command == CommandKind::Gc {
         let mut command = GcCommand::new();
         match command.execute() {
             Ok(_) => (),

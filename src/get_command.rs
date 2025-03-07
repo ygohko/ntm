@@ -102,16 +102,12 @@ impl GetCommand {
                 println!("entry_path: {}", entry_path.display());
                 let string = match fs::read_to_string(entry_path.clone()) {
                     Ok(bytes) => bytes,
-                    Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
-                    }
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
                 };
 
                 let entry: Entry = match serde_json::from_str(&string) {
                     Ok(entry) => entry,
-                    Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED))
-                    }
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
                 };
 
                 println!("entry.id: {}", entry.id);
@@ -132,16 +128,12 @@ impl GetCommand {
                 match fs::create_dir_all(&directories) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED))
-                    }
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 }
                 match fs::write(destination_path, bytes) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED))
-                    }
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
             }
         }
