@@ -68,7 +68,6 @@ struct GetArguments {
 }
 
 fn main() -> ExitCode {
-    // TODO: Embed clap.
     let arguments = Arguments::parse();
     let Some(command) = arguments.command else {
         println!("USAGE: ntm COMMAND");
