@@ -132,6 +132,8 @@ impl BackupCommand {
             }
         }
 
+        println!("{} object(s) added.", self.added_count);
+
         Ok(())
     }
 
