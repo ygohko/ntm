@@ -199,7 +199,7 @@ mod tests {
         command.execute().unwrap();
         let date_time = command.date_time;
 
-        let command = GetCommand::new(&date_time);
+        let mut command = GetCommand::new(&date_time);
         command.execute().unwrap();
 
         env::set_current_dir(&previous_current_dir).unwrap();
