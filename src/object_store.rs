@@ -44,6 +44,13 @@ pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
 const MARKED_OBJECTS_MAX: usize = 4000000;
 
+#[derive(PartialEq)]
+pub enum MarkingResult {
+    Marked,
+    AlreadyMarked,
+    NotFound,
+}
+
 pub struct ObjectStore {
     path: PathBuf,
     marked_objects: HashMap<String, i64>,
@@ -129,11 +136,11 @@ impl ObjectStore {
         Ok(exists)
     }
 
-    pub fn mark(&mut self, id: &str) -> Result<()> {
+    pub fn mark(&mut self, id: &str) -> Result<MarkingResult> {
         if self.marked_objects.contains_key(id) {
             *self.marked_objects.get_mut(id).unwrap() += 1;
 
-            return Ok(());
+            return Ok(MarkingResult::AlreadyMarked);
         }
 
         let path1 = &id[0..2];
@@ -145,14 +152,25 @@ impl ObjectStore {
         path.push(path2);
         path.push(path3);
         path.push(path4);
+        let mut object_path = path.clone();
+        object_path.push(id);
         let file_name = id.to_string() + ".marked";
-        path.push(&file_name);
+        let mut mark_path = path.clone();
+        mark_path.push(&file_name);
 
-        if path.exists() {
-            return Ok(());
-        }
-        if let Err(_) = fs::write(path, "") {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
+        let result: MarkingResult;
+        if mark_path.exists() {
+            result = MarkingResult::AlreadyMarked;
+        } else {
+            if let Err(_) = fs::write(mark_path, "") {
+                if object_path.exists() {
+                    return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
+                }
+
+                return Ok(MarkingResult::NotFound);
+            }
+            
+            result = MarkingResult::Marked;
         }
 
         if self.marked_objects.len() > MARKED_OBJECTS_MAX {
@@ -160,12 +178,13 @@ impl ObjectStore {
         }
         self.marked_objects.insert(id.to_string(), 1);
 
-        Ok(())
+        Ok(result)
     }
 
     pub fn sweep(&self) -> Result<()> {
         let mut count: i32 = 0;
         let mut producer = FilePathProducer::new(&String::from_path(&self.path));
+        let mut removed_count:i64 = 0;
         let mut done = false;
         while !done {
             let option = match producer.next() {
@@ -199,10 +218,12 @@ impl ObjectStore {
                         if let Err(_) = fs::remove_file(&object_path) {
                             println!("Warning: removing object {} failed.", object_path);
                         }
+                        removed_count += 1;
                     }
                 }
             }
         }
+        println!("{} object(s) removed.", removed_count);
 
         Ok(())
     }
