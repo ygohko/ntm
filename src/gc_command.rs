@@ -121,7 +121,7 @@ impl GcCommand {
         if result == MarkingResult::Marked {
             self.marked_count += 1;
         }
-        
+
         Ok(())
     }
 }
