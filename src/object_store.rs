@@ -184,6 +184,7 @@ impl ObjectStore {
     pub fn sweep(&self) -> Result<()> {
         let mut count: i32 = 0;
         let mut producer = FilePathProducer::new(&String::from_path(&self.path));
+        let mut removed_count:i64 = 0;
         let mut done = false;
         while !done {
             let option = match producer.next() {
@@ -217,10 +218,12 @@ impl ObjectStore {
                         if let Err(_) = fs::remove_file(&object_path) {
                             println!("Warning: removing object {} failed.", object_path);
                         }
+                        removed_count += 1;
                     }
                 }
             }
         }
+        println!("{} object(s) removed.", removed_count);
 
         Ok(())
     }

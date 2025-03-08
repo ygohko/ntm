@@ -104,7 +104,7 @@ impl GcCommand {
 
     fn process_entry(&mut self, path: &str) -> Result<()> {
         if self.count == 0 {
-            println!("Processing entry ({}, {}): {}", self.processed_count, self.marked_count, path);
+            println!("Processing ({}, {}): {}", self.processed_count, self.marked_count, path);
         }
         self.count += 1;
         self.count %= 100;
