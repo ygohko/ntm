@@ -145,14 +145,21 @@ impl ObjectStore {
         path.push(path2);
         path.push(path3);
         path.push(path4);
+        let mut object_path = path.clone();
+        object_path.push(id);
         let file_name = id.to_string() + ".marked";
-        path.push(&file_name);
+        let mut mark_path = path.clone();
+        mark_path.push(&file_name);
 
-        if path.exists() {
+        if mark_path.exists() {
             return Ok(());
         }
-        if let Err(_) = fs::write(path, "") {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
+        if let Err(_) = fs::write(mark_path, "") {
+            if object_path.exists() {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
+            }
+
+            return Ok(());
         }
 
         if self.marked_objects.len() > MARKED_OBJECTS_MAX {
