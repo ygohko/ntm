@@ -44,6 +44,13 @@ pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 
 const MARKED_OBJECTS_MAX: usize = 4000000;
 
+#[derive(PartialEq)]
+pub enum MarkingResult {
+    Marked,
+    AlreadyMarked,
+    NotFound,
+}
+
 pub struct ObjectStore {
     path: PathBuf,
     marked_objects: HashMap<String, i64>,
@@ -129,11 +136,11 @@ impl ObjectStore {
         Ok(exists)
     }
 
-    pub fn mark(&mut self, id: &str) -> Result<()> {
+    pub fn mark(&mut self, id: &str) -> Result<MarkingResult> {
         if self.marked_objects.contains_key(id) {
             *self.marked_objects.get_mut(id).unwrap() += 1;
 
-            return Ok(());
+            return Ok(MarkingResult::AlreadyMarked);
         }
 
         let path1 = &id[0..2];
@@ -151,15 +158,19 @@ impl ObjectStore {
         let mut mark_path = path.clone();
         mark_path.push(&file_name);
 
+        let result: MarkingResult;
         if mark_path.exists() {
-            return Ok(());
-        }
-        if let Err(_) = fs::write(mark_path, "") {
-            if object_path.exists() {
-                return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
-            }
+            result = MarkingResult::AlreadyMarked;
+        } else {
+            if let Err(_) = fs::write(mark_path, "") {
+                if object_path.exists() {
+                    return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
+                }
 
-            return Ok(());
+                return Ok(MarkingResult::NotFound);
+            }
+            
+            result = MarkingResult::Marked;
         }
 
         if self.marked_objects.len() > MARKED_OBJECTS_MAX {
@@ -167,7 +178,7 @@ impl ObjectStore {
         }
         self.marked_objects.insert(id.to_string(), 1);
 
-        Ok(())
+        Ok(result)
     }
 
     pub fn sweep(&self) -> Result<()> {

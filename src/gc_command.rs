@@ -31,6 +31,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_store::MarkingResult;
 use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "gc_command";
@@ -42,6 +43,8 @@ pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
 
 pub struct GcCommand {
     store: ObjectStore,
+    processed_count: i64,
+    marked_count: i64,
     count: i32,
 }
 
@@ -49,6 +52,8 @@ impl GcCommand {
     pub fn new() -> Self {
         Self {
             store: ObjectStore::new(&"Objects"),
+            processed_count: 0,
+            marked_count: 0,
             count: 0,
         }
     }
@@ -98,12 +103,12 @@ impl GcCommand {
     }
 
     fn process_entry(&mut self, path: &str) -> Result<()> {
+        if self.count == 0 {
+            println!("Processing entry ({}, {}): {}", self.processed_count, self.marked_count, path);
+        }
         self.count += 1;
         self.count %= 100;
-        if self.count == 0 {
-            println!("Processing entry: {}", path);
-        }
-        let string = match fs::read_to_string(path) {
+         let string = match fs::read_to_string(path) {
             Ok(string) => string,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
         };
@@ -111,10 +116,12 @@ impl GcCommand {
             Ok(entry) => entry,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
         };
-        if let Err(error) = self.store.mark(&entry.id) {
-            return Err(error);
+        let result = self.store.mark(&entry.id)?;
+        self.processed_count += 1;
+        if result == MarkingResult::Marked {
+            self.marked_count += 1;
         }
-
+        
         Ok(())
     }
 }
