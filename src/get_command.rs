@@ -45,6 +45,8 @@ pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 pub struct GetCommand {
     backup: String,
     limited_directory: String,
+    processed_count: i64,
+    count: i32,
 }
 
 impl GetCommand {
@@ -52,10 +54,12 @@ impl GetCommand {
         GetCommand {
             backup: backup.to_string(),
             limited_directory: "".to_string(),
+            processed_count: 0,
+            count: 0,
         }
     }
 
-    pub fn execute(&self) -> Result<()> {
+    pub fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
         let store = ObjectStore::new(&"Objects");
         let mut backup_path = PathBuf::new();
@@ -99,7 +103,11 @@ impl GetCommand {
                     entry_path.push(&self.limited_directory);
                 }
                 entry_path.push(&path);
-                println!("entry_path: {}", entry_path.display());
+                if self.count == 0 {
+                    println!("Processing ({}): {}", self.processed_count, entry_path.display());
+                }
+                self.count += 1;
+                self.count %= 100;
                 let string = match fs::read_to_string(entry_path.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
@@ -109,9 +117,6 @@ impl GetCommand {
                     Ok(entry) => entry,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
                 };
-
-                println!("entry.id: {}", entry.id);
-
                 let bytes = match store.bytes(&entry.id) {
                     Ok(bytes) => bytes,
                     // TODO: Skipping file that object is not found may be needed.
@@ -123,7 +128,6 @@ impl GetCommand {
                     destination_path.push(&self.limited_directory);
                 }
                 destination_path.push(&path);
-                println!("destination_path: {}", destination_path.display());
                 let directories = String::from_path(&destination_path).directories();
                 match fs::create_dir_all(&directories) {
                     Ok(_) => (),
@@ -135,8 +139,11 @@ impl GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
+
+                self.processed_count += 1;
             }
         }
+        println!("{} file(s) gotten.", self.processed_count);
 
         Ok(())
     }
