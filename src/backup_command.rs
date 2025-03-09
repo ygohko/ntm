@@ -38,6 +38,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_store::Attribute;
 use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "backup_command";
@@ -210,10 +211,12 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
             }
-            match store.add(&id, &bytes.unwrap()) {
-                Ok(_) => (),
-                Err(error) => return Err(error),
-            };
+            // TODO: Give proper added time.
+            let attribute = Attribute::new(
+                &path,
+                0,
+            );
+            store.add(&id, &bytes.unwrap(), &attribute)?;
             self.added_count += 1;
         }
         self.processed_count += 1;

@@ -54,10 +54,20 @@ pub enum MarkingResult {
     NotFound,
 }
 
+// TODO: Move to attribute.rs.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Attribute {
     path: String,
     added: i64,
+}
+
+impl Attribute {
+    pub fn new(path: &str, added: i64) -> Self {
+        Self {
+            path: path.to_string(),
+            added,
+        }
+    }
 }
 
 pub struct ObjectStore {
