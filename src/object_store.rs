@@ -114,7 +114,7 @@ impl ObjectStore {
         attribute_path.push(attribute_name);
         if let Err(_) = fs::write(&attribute_path, &serialized) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
-        };
+        }
 
         Ok(())
     }
@@ -285,6 +285,7 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::object_store;
+    use crate::object_store::Attribute;
     use crate::object_store::ObjectStore;
 
     #[test]
@@ -312,9 +313,11 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
-            panic!();
+        let attribute = Attribute {
+            path: "".to_string(),
+            added: 0,
         };
+        store.add(&id, &bytes, &attribute).unwrap();
     }
 
     #[test]
