@@ -241,6 +241,10 @@ impl BackupCommand {
 
         Ok(())
     }
+
+    pub fn set_destination_path(&mut self, path: &str) {
+        self.destination_path = path.to_string();
+    }
 }
 
 fn object_id(bytes: &Vec<u8>) -> String {
@@ -256,6 +260,7 @@ fn object_id(bytes: &Vec<u8>) -> String {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::PathBuf;
     use tempdir::TempDir;
 
     use crate::commons::ConvertPath;
@@ -291,7 +296,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.destination_path = String::from_path(&ntm_path);
+        command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
     }
 }

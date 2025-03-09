@@ -45,6 +45,8 @@ pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 pub struct GetCommand {
     backup: String,
     limited_directory: String,
+    destination_path: String,
+    gotten_path: String,
     processed_count: i64,
     count: i32,
 }
@@ -54,6 +56,8 @@ impl GetCommand {
         GetCommand {
             backup: backup.to_string(),
             limited_directory: "".to_string(),
+            destination_path: ".".to_string(),
+            gotten_path: ".".to_string(),
             processed_count: 0,
             count: 0,
         }
@@ -61,8 +65,9 @@ impl GetCommand {
 
     pub fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
-        let store = ObjectStore::new(&"Objects");
-        let mut backup_path = PathBuf::new();
+        let path = self.destination_path.pushed("Objects");
+        let store = ObjectStore::new(&path);
+        let mut backup_path = PathBuf::from(&self.destination_path);
         backup_path.push("Backups");
         backup_path.push(&self.backup);
         let mut path = PathBuf::new();
@@ -122,19 +127,19 @@ impl GetCommand {
                     // TODO: Skipping file that object is not found may be needed.
                     Err(error) => return Err(error),
                 };
-                let mut destination_path = PathBuf::new();
-                destination_path.push(&self.backup);
+                let mut gotten_path = PathBuf::from(&self.gotten_path);
+                gotten_path.push(&self.backup);
                 if self.limited_directory != "".to_string() {
-                    destination_path.push(&self.limited_directory);
+                    gotten_path.push(&self.limited_directory);
                 }
-                destination_path.push(&path);
-                let directories = String::from_path(&destination_path).directories();
+                gotten_path.push(&path);
+                let directories = String::from_path(&gotten_path).directories();
                 match fs::create_dir_all(&directories) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 }
-                match fs::write(destination_path, bytes) {
+                match fs::write(gotten_path, bytes) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
@@ -151,15 +156,24 @@ impl GetCommand {
     pub fn set_limited_directory(&mut self, directory: &str) -> () {
         self.limited_directory = directory.to_string();
     }
+
+    pub fn set_destination_path(&mut self, path: &str) {
+        self.destination_path = path.to_string();
+    }
+
+    pub fn set_gotten_path(&mut self, path: &str) {
+        self.gotten_path = path.to_string();
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::env;
     use std::fs;
+    use std::path::PathBuf;
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
+    use crate::commons::ConvertPath;
     use crate::get_command::GetCommand;
     use crate::init_command::InitCommand;
 
@@ -170,12 +184,8 @@ mod tests {
 
     #[test]
     fn is_executable() {
-        // TODO: Do not modify current directory.
         let temp_dir = TempDir::new("test").unwrap();
-        let previous_current_dir = env::current_dir().unwrap();
-
-        let mut temp_path = previous_current_dir.clone();
-        temp_path.push(&temp_dir.path());
+        let temp_path = temp_dir.path().to_path_buf();
         let mut source_path = temp_path.clone();
         source_path.push("source");
         fs::create_dir_all(&source_path).unwrap();
@@ -186,8 +196,8 @@ mod tests {
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
-        env::set_current_dir(&ntm_path).unwrap();
-        let command = InitCommand::new();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -196,12 +206,16 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
         let date_time = command.date_time;
 
+        let mut gotten_path = temp_path.clone();
+        gotten_path.push("gotten");
+        fs::create_dir_all(&gotten_path).unwrap();
         let mut command = GetCommand::new(&date_time);
+        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_gotten_path(&String::from_path(&gotten_path));
         command.execute().unwrap();
-
-        env::set_current_dir(&previous_current_dir).unwrap();
     }
 }
