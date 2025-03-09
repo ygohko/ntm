@@ -22,6 +22,7 @@
 
 use std::fs;
 
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -33,19 +34,25 @@ pub const ERROR_ID: ErrorId = "init_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
 
-pub struct InitCommand {}
+pub struct InitCommand {
+    destination_path: String,
+}
 
 impl InitCommand {
     pub fn new() -> Self {
-        InitCommand {}
+        InitCommand {
+            destination_path: ".".to_string(),
+        }
     }
 
     pub fn execute(&self) -> Result<()> {
-        match fs::create_dir_all("Backups") {
+        let path = self.destination_path.pushed("Backups");
+        match fs::create_dir_all(&path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
-        match fs::create_dir_all("Objects") {
+        let path = self.destination_path.pushed("Objects");
+        match fs::create_dir_all(&path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
