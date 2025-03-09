@@ -323,10 +323,7 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let attribute = Attribute {
-            path: "".to_string(),
-            added: 0,
-        };
+        let attribute = Attribute::new("", 0);
         store.add(&id, &bytes, &attribute).unwrap();
     }
 
@@ -343,7 +340,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
+        let attribute = Attribute::new("", 0);
+        let Ok(_) = store.add(&id, &bytes, &attribute) else {
             panic!();
         };
 
@@ -369,7 +367,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
+        let attribute = Attribute::new("", 0);
+        let Ok(_) = store.add(&id, &bytes, &attribute) else {
             panic!();
         };
 
@@ -390,7 +389,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
+        let attribute = Attribute::new("", 0);
+        let Ok(_) = store.add(&id, &bytes, &attribute) else {
             panic!();
         };
 
