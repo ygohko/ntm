@@ -67,6 +67,7 @@ mod tests {
     use std::env;
     use tempdir::TempDir;
 
+    use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
 
     #[test]
@@ -77,14 +78,8 @@ mod tests {
     #[test]
     fn is_executable() {
         let temp_dir = TempDir::new("test").unwrap();
-        let previous_current_dir = env::current_dir().unwrap();
-        let mut current_dir = previous_current_dir.clone();
-        current_dir.push(&temp_dir.path());
-        env::set_current_dir(&current_dir).unwrap();
-
-        let command = InitCommand::new();
+        let mut command = InitCommand::new();
+        command.destination_path = String::from_path(&temp_dir.path());
         command.execute().unwrap();
-
-        env::set_current_dir(&previous_current_dir).unwrap();
     }
 }
