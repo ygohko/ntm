@@ -169,7 +169,6 @@ impl GetCommand {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::path::PathBuf;
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;

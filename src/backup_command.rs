@@ -260,7 +260,6 @@ fn object_id(bytes: &Vec<u8>) -> String {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::path::PathBuf;
     use tempdir::TempDir;
 
     use crate::commons::ConvertPath;
