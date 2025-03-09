@@ -60,11 +60,14 @@ impl InitCommand {
 
         Ok(())
     }
+
+    pub fn set_destination_path(&mut self, path: &str) {
+        self.destination_path = path.to_string();
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::env;
     use tempdir::TempDir;
 
     use crate::commons::ConvertPath;

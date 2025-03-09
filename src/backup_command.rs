@@ -78,7 +78,8 @@ impl BackupCommand {
         let store = ObjectStore::new(&path);
         let now: DateTime<Local> = Local::now();
         self.date_time = now.format("%Y%m%d-%H%M").to_string();
-        let bytes = match fs::read("ntm.toml") {
+        let path = self.destination_path.pushed("ntm.toml");
+        let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
         };
@@ -254,10 +255,10 @@ fn object_id(bytes: &Vec<u8>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
     use std::fs;
     use tempdir::TempDir;
 
+    use crate::commons::ConvertPath;
     use crate::backup_command::BackupCommand;
     use crate::init_command::InitCommand;
 
@@ -268,12 +269,8 @@ mod tests {
 
     #[test]
     fn is_executable() {
-        // TODO: Do not modify current directory.
         let temp_dir = TempDir::new("test").unwrap();
-        let previous_current_dir = env::current_dir().unwrap();
-
-        let mut temp_path = previous_current_dir.clone();
-        temp_path.push(&temp_dir.path());
+        let temp_path = temp_dir.path().to_path_buf();
         let mut source_path = temp_path.clone();
         source_path.push("source");
         fs::create_dir_all(&source_path).unwrap();
@@ -284,8 +281,8 @@ mod tests {
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
-        env::set_current_dir(&ntm_path).unwrap();
-        let command = InitCommand::new();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -294,8 +291,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
+        command.destination_path = String::from_path(&ntm_path);
         command.execute().unwrap();
-
-        env::set_current_dir(&previous_current_dir).unwrap();
     }
 }
