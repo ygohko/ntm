@@ -24,6 +24,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
@@ -41,6 +43,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 4;
 
 const MARKED_OBJECTS_MAX: usize = 4000000;
 
@@ -49,6 +52,12 @@ pub enum MarkingResult {
     Marked,
     AlreadyMarked,
     NotFound,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Attribute {
+    path: String,
+    added: i64,
 }
 
 pub struct ObjectStore {
@@ -66,7 +75,7 @@ impl ObjectStore {
         }
     }
 
-    pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<()> {
+    pub fn add(&self, id: &str, bytes: &Vec<u8>, attribute: &Attribute) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -82,18 +91,30 @@ impl ObjectStore {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         }
 
-        path.push(id);
-        let exists = match path.try_exists() {
+        let mut object_path = path.clone();
+        object_path.push(id);
+        let exists = match object_path.try_exists() {
             Ok(exists) => exists,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         };
         if exists {
             return Ok(());
         }
-        match fs::write(path, bytes) {
+        match fs::write(object_path, bytes) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         }
+
+        let serialized = match serde_json::to_string(&attribute) {
+            Ok(serialized) => serialized,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED)),
+        };
+        let mut attribute_path = path.clone();
+        let attribute_name = id.to_string() + ".attribute";
+        attribute_path.push(attribute_name);
+        if let Err(_) = fs::write(&attribute_path, &serialized) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
+        };
 
         Ok(())
     }
