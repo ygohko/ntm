@@ -42,6 +42,7 @@ pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
 
 pub struct GcCommand {
+    destination_path: String,
     store: ObjectStore,
     processed_count: i64,
     marked_count: i64,
@@ -51,6 +52,7 @@ pub struct GcCommand {
 impl GcCommand {
     pub fn new() -> Self {
         Self {
+            destination_path: ".".to_string(),
             store: ObjectStore::new(&"Objects"),
             processed_count: 0,
             marked_count: 0,
@@ -59,7 +61,9 @@ impl GcCommand {
     }
 
     pub fn execute(&mut self) -> Result<()> {
-        let backup_paths = match backup_paths() {
+        let path = self.destination_path.pushed("Objects");
+        self.store = ObjectStore::new(&path);
+        let backup_paths = match self.backup_paths() {
             Ok(backup_paths) => backup_paths,
             Err(error) => return Err(error),
         };
@@ -124,29 +128,30 @@ impl GcCommand {
 
         Ok(())
     }
-}
 
-fn backup_paths() -> Result<Vec<String>> {
-    let read_dir = match fs::read_dir("Backups") {
-        Ok(read_dir) => read_dir,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED)),
-    };
-    let mut backup_paths: Vec<String> = Vec::new();
-    for result in read_dir {
-        if result.is_ok() {
-            let entry = result.unwrap();
-            let path = entry.path();
-            let result = entry.metadata();
+    fn backup_paths(&self) -> Result<Vec<String>> {
+        let path = self.destination_path.pushed("Backups");
+        let read_dir = match fs::read_dir(&path) {
+            Ok(read_dir) => read_dir,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED)),
+        };
+        let mut backup_paths: Vec<String> = Vec::new();
+        for result in read_dir {
             if result.is_ok() {
-                let metadata = result.unwrap();
-                if metadata.is_dir() && !metadata.is_symlink() {
-                    backup_paths.push(String::from_path(&path));
+                let entry = result.unwrap();
+                let path = entry.path();
+                let result = entry.metadata();
+                if result.is_ok() {
+                    let metadata = result.unwrap();
+                    if metadata.is_dir() && !metadata.is_symlink() {
+                        backup_paths.push(String::from_path(&path));
+                    }
                 }
             }
         }
-    }
 
-    Ok(backup_paths)
+        Ok(backup_paths)
+    }
 }
 
 #[cfg(test)]
