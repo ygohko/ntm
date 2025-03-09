@@ -78,6 +78,10 @@ impl GcCommand {
         Ok(())
     }
 
+    pub fn set_destination_path(&mut self, path: &str) {
+        self.destination_path = path.to_string();
+    }
+
     fn process_backup(&mut self, path: &str) -> Result<()> {
         let mut producer = FilePathProducer::new(&path);
         let mut done = false;
@@ -156,11 +160,11 @@ impl GcCommand {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
     use std::fs;
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
+    use crate::commons::ConvertPath;
     use crate::gc_command::GcCommand;
     use crate::init_command::InitCommand;
 
@@ -171,12 +175,8 @@ mod tests {
 
     #[test]
     fn is_executable() {
-        // TODO: Do not modify current directory.
         let temp_dir = TempDir::new("test").unwrap();
-        let previous_current_dir = env::current_dir().unwrap();
-
-        let mut temp_path = previous_current_dir.clone();
-        temp_path.push(&temp_dir.path());
+        let temp_path = &temp_dir.path().to_path_buf();
         let mut source_path = temp_path.clone();
         source_path.push("source");
         fs::create_dir_all(&source_path).unwrap();
@@ -187,8 +187,8 @@ mod tests {
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
-        env::set_current_dir(&ntm_path).unwrap();
-        let command = InitCommand::new();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -197,6 +197,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
 
         let date_time = command.date_time;
@@ -205,8 +206,7 @@ mod tests {
         backup_path.push(&date_time);
         fs::remove_dir_all(&backup_path).unwrap();
         let mut command = GcCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
-
-        env::set_current_dir(&previous_current_dir).unwrap();
     }
 }
