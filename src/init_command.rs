@@ -22,6 +22,7 @@
 
 use std::fs;
 
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -33,19 +34,25 @@ pub const ERROR_ID: ErrorId = "init_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
 
-pub struct InitCommand {}
+pub struct InitCommand {
+    destination_path: String,
+}
 
 impl InitCommand {
     pub fn new() -> Self {
-        InitCommand {}
+        InitCommand {
+            destination_path: ".".to_string(),
+        }
     }
 
     pub fn execute(&self) -> Result<()> {
-        match fs::create_dir_all("Backups") {
+        let path = self.destination_path.pushed("Backups");
+        match fs::create_dir_all(&path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
-        match fs::create_dir_all("Objects") {
+        let path = self.destination_path.pushed("Objects");
+        match fs::create_dir_all(&path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
@@ -53,13 +60,18 @@ impl InitCommand {
 
         Ok(())
     }
+
+    #[allow(dead_code)]
+    pub fn set_destination_path(&mut self, path: &str) {
+        self.destination_path = path.to_string();
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::env;
     use tempdir::TempDir;
 
+    use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
 
     #[test]
@@ -70,14 +82,8 @@ mod tests {
     #[test]
     fn is_executable() {
         let temp_dir = TempDir::new("test").unwrap();
-        let previous_current_dir = env::current_dir().unwrap();
-        let mut current_dir = previous_current_dir.clone();
-        current_dir.push(&temp_dir.path());
-        env::set_current_dir(&current_dir).unwrap();
-
-        let command = InitCommand::new();
+        let mut command = InitCommand::new();
+        command.destination_path = String::from_path(&temp_dir.path());
         command.execute().unwrap();
-
-        env::set_current_dir(&previous_current_dir).unwrap();
     }
 }
