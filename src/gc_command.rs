@@ -201,7 +201,7 @@ mod tests {
         command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
 
-        let date_time = command.date_time;
+        let date_time = command.name;
         let mut backup_path = ntm_path.clone();
         backup_path.push("Backups");
         backup_path.push(&date_time);

@@ -50,7 +50,7 @@ pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 pub struct BackupCommand {
-    pub date_time: String,
+    pub name: String,
     destination_path: String,
     bytes_id_threshold_min: i64,
     bytes_id_threshold_max: i64,
@@ -63,7 +63,7 @@ pub struct BackupCommand {
 impl BackupCommand {
     pub fn new() -> Self {
         Self {
-            date_time: "".to_string(),
+            name: "".to_string(),
             destination_path: ".".to_string(),
             bytes_id_threshold_min: 0,
             bytes_id_threshold_max: 100 * 1024 * 1024,
@@ -78,7 +78,7 @@ impl BackupCommand {
         let path = self.destination_path.pushed("Objects");
         let store = ObjectStore::new(&path);
         let now: DateTime<Local> = Local::now();
-        self.date_time = now.format("%Y%m%d-%H%M").to_string();
+        self.name = now.format("%Y%m%d-%H%M").to_string();
         let path = self.destination_path.pushed("ntm.toml");
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
@@ -223,7 +223,7 @@ impl BackupCommand {
 
         let mut entry_path = PathBuf::from(&self.destination_path);
         entry_path.push("Backups");
-        entry_path.push(self.date_time.clone());
+        entry_path.push(self.name.clone());
         entry_path.push(path.directories());
         match fs::create_dir_all(entry_path.clone()) {
             Ok(_) => (),

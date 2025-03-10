@@ -209,7 +209,7 @@ mod tests {
         let mut command = BackupCommand::new();
         command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
-        let date_time = command.date_time;
+        let date_time = command.name;
 
         let mut gotten_path = temp_path.clone();
         gotten_path.push("gotten");
