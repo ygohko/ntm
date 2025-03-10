@@ -62,8 +62,6 @@ impl GcCommand {
     }
 
     pub fn execute(&mut self) -> Result<()> {
-        // TODO: Make backup name list.
-
         let mut backup_path = self.destination_path.clone();
         backup_path = backup_path.pushed("Backups");
         let Ok(read_dir) = fs::read_dir(&backup_path) else {
