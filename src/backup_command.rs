@@ -51,6 +51,7 @@ pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 pub struct BackupCommand {
     pub name: String,
+    executing: DateTime<Local>,
     destination_path: String,
     bytes_id_threshold_min: i64,
     bytes_id_threshold_max: i64,
@@ -64,6 +65,7 @@ impl BackupCommand {
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
+            executing: Local::now(),
             destination_path: ".".to_string(),
             bytes_id_threshold_min: 0,
             bytes_id_threshold_max: 100 * 1024 * 1024,
@@ -77,8 +79,7 @@ impl BackupCommand {
     pub fn execute(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Objects");
         let store = ObjectStore::new(&path);
-        let now: DateTime<Local> = Local::now();
-        self.name = now.format("%Y%m%d-%H%M").to_string();
+        self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let path = self.destination_path.pushed("ntm.toml");
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
@@ -211,10 +212,9 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
             }
-            // TODO: Give proper added time.
             let attribute = Attribute::new(
                 &path,
-                0,
+                self.executing.timestamp(),
             );
             store.add(&id, &bytes.unwrap(), &attribute)?;
             self.added_count += 1;
