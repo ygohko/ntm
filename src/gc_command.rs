@@ -201,10 +201,9 @@ mod tests {
         command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
 
-        let date_time = command.name;
         let mut backup_path = ntm_path.clone();
         backup_path.push("Backups");
-        backup_path.push(&date_time);
+        backup_path.push(&command.name);
         fs::remove_dir_all(&backup_path).unwrap();
         let mut command = GcCommand::new();
         command.set_destination_path(&String::from_path(&ntm_path));

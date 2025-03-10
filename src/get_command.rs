@@ -209,12 +209,11 @@ mod tests {
         let mut command = BackupCommand::new();
         command.set_destination_path(&String::from_path(&ntm_path));
         command.execute().unwrap();
-        let date_time = command.name;
 
         let mut gotten_path = temp_path.clone();
         gotten_path.push("gotten");
         fs::create_dir_all(&gotten_path).unwrap();
-        let mut command = GetCommand::new(&date_time);
+        let mut command = GetCommand::new(&command.name);
         command.set_destination_path(&String::from_path(&ntm_path));
         command.set_gotten_path(&String::from_path(&gotten_path));
         command.execute().unwrap();
