@@ -61,6 +61,19 @@ impl GcCommand {
     }
 
     pub fn execute(&mut self) -> Result<()> {
+        // TODO: Make backup name list.
+
+        // TODO: Iterate for objects.
+
+        // TODO: Get entry path from attributes.
+
+        // TODO: Iterate entries.
+
+        // TODO: Remove object and attributes if reference is not found.
+        
+    }
+    
+    pub fn execute_old(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Objects");
         self.store = ObjectStore::new(&path);
         let backup_paths = match self.backup_paths() {
