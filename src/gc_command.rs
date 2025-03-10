@@ -25,6 +25,7 @@ use std::fs;
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
+use crate::error;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -63,6 +64,22 @@ impl GcCommand {
     pub fn execute(&mut self) -> Result<()> {
         // TODO: Make backup name list.
 
+        let mut backup_path = self.destination_path.clone();
+        backup_path = backup_path.pushed("Backups");
+        let Ok(read_dir) = fs::read_dir(&backup_path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED));
+        };
+        let mut backup_names: Vec<String> = Vec::new();
+        for result in read_dir {
+            if let Ok(entry) = result {
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_dir() {
+                        backup_names.push(String::from_path(&entry.path()));
+                    }
+                }
+            }
+        }
+        
         // TODO: Iterate for objects.
 
         // TODO: Get entry path from attributes.
@@ -70,7 +87,8 @@ impl GcCommand {
         // TODO: Iterate entries.
 
         // TODO: Remove object and attributes if reference is not found.
-        
+
+        Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
     }
     
     pub fn execute_old(&mut self) -> Result<()> {
