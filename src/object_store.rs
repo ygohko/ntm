@@ -24,6 +24,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
@@ -41,6 +43,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 4;
 
 const MARKED_OBJECTS_MAX: usize = 4000000;
 
@@ -49,6 +52,22 @@ pub enum MarkingResult {
     Marked,
     AlreadyMarked,
     NotFound,
+}
+
+// TODO: Move to attributes.rs.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Attributes {
+    path: String,
+    added: i64,
+}
+
+impl Attributes {
+    pub fn new(path: &str, added: i64) -> Self {
+        Self {
+            path: path.to_string(),
+            added,
+        }
+    }
 }
 
 pub struct ObjectStore {
@@ -66,7 +85,7 @@ impl ObjectStore {
         }
     }
 
-    pub fn add(&self, id: &str, bytes: &Vec<u8>) -> Result<()> {
+    pub fn add(&self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -82,17 +101,29 @@ impl ObjectStore {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         }
 
-        path.push(id);
-        let exists = match path.try_exists() {
+        let mut object_path = path.clone();
+        object_path.push(id);
+        let exists = match object_path.try_exists() {
             Ok(exists) => exists,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         };
         if exists {
             return Ok(());
         }
-        match fs::write(path, bytes) {
+        match fs::write(object_path, bytes) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+        }
+
+        let serialized = match serde_json::to_string(&attributes) {
+            Ok(serialized) => serialized,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED)),
+        };
+        let mut attributes_path = path.clone();
+        let attributes_name = id.to_string() + ".attributes";
+        attributes_path.push(attributes_name);
+        if let Err(_) = fs::write(&attributes_path, &serialized) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
         }
 
         Ok(())
@@ -264,6 +295,7 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::object_store;
+    use crate::object_store::Attributes;
     use crate::object_store::ObjectStore;
 
     #[test]
@@ -291,9 +323,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
-            panic!();
-        };
+        let attribute = Attributes::new("", 0);
+        store.add(&id, &bytes, &attribute).unwrap();
     }
 
     #[test]
@@ -309,7 +340,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
+        let attribute = Attributes::new("", 0);
+        let Ok(_) = store.add(&id, &bytes, &attribute) else {
             panic!();
         };
 
@@ -335,7 +367,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
+        let attribute = Attributes::new("", 0);
+        let Ok(_) = store.add(&id, &bytes, &attribute) else {
             panic!();
         };
 
@@ -356,7 +389,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
+        let attribute = Attributes::new("", 0);
+        let Ok(_) = store.add(&id, &bytes, &attribute) else {
             panic!();
         };
 
@@ -378,7 +412,8 @@ mod tests {
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        let Ok(_) = store.add(&id, &bytes) else {
+        let attribute = Attributes::new("", 0);
+        let Ok(_) = store.add(&id, &bytes, &attribute) else {
             panic!();
         };
 
