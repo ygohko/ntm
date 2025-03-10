@@ -54,14 +54,14 @@ pub enum MarkingResult {
     NotFound,
 }
 
-// TODO: Move to attribute.rs.
+// TODO: Move to attributes.rs.
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Attribute {
+pub struct Attributes {
     path: String,
     added: i64,
 }
 
-impl Attribute {
+impl Attributes {
     pub fn new(path: &str, added: i64) -> Self {
         Self {
             path: path.to_string(),
@@ -85,7 +85,7 @@ impl ObjectStore {
         }
     }
 
-    pub fn add(&self, id: &str, bytes: &Vec<u8>, attribute: &Attribute) -> Result<()> {
+    pub fn add(&self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -115,14 +115,14 @@ impl ObjectStore {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         }
 
-        let serialized = match serde_json::to_string(&attribute) {
+        let serialized = match serde_json::to_string(&attributes) {
             Ok(serialized) => serialized,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED)),
         };
-        let mut attribute_path = path.clone();
-        let attribute_name = id.to_string() + ".attribute";
-        attribute_path.push(attribute_name);
-        if let Err(_) = fs::write(&attribute_path, &serialized) {
+        let mut attributes_path = path.clone();
+        let attributes_name = id.to_string() + ".attributes";
+        attributes_path.push(attributes_name);
+        if let Err(_) = fs::write(&attributes_path, &serialized) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
         }
 

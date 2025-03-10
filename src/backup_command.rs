@@ -38,7 +38,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
-use crate::object_store::Attribute;
+use crate::object_store::Attributes;
 use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "backup_command";
@@ -212,7 +212,7 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
             }
-            let attribute = Attribute::new(
+            let attribute = Attributes::new(
                 &path,
                 self.executing.timestamp(),
             );
