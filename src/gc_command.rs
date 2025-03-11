@@ -32,6 +32,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_store::Attributes;
 use crate::object_store::MarkingResult;
 use crate::object_store::ObjectStore;
 
@@ -41,10 +42,12 @@ pub const ERROR_ID: ErrorId = "gc_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
+pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
 
 pub struct GcCommand {
     destination_path: String,
     store: ObjectStore,
+    backup_paths: Vec<String>,
     processed_count: i64,
     marked_count: i64,
     count: i32,
@@ -55,6 +58,7 @@ impl GcCommand {
         Self {
             destination_path: ".".to_string(),
             store: ObjectStore::new(&"Objects"),
+            backup_paths: Vec::new(),
             processed_count: 0,
             marked_count: 0,
             count: 0,
@@ -67,18 +71,16 @@ impl GcCommand {
         let Ok(read_dir) = fs::read_dir(&backup_path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED));
         };
-        let mut backup_names: Vec<String> = Vec::new();
         for result in read_dir {
             if let Ok(entry) = result {
                 if let Ok(metadata) = entry.metadata() {
                     if metadata.is_dir() {
-                        backup_names.push(String::from_path(&entry.path()));
+                        self.backup_paths.push(String::from_path(&entry.path()));
                     }
                 }
             }
         }
         
-        // TODO: Iterate for objects.
         let mut object_path = self.destination_path.clone();
         object_path = object_path.pushed("Objects");
         let mut producer = FilePathProducer::new(&object_path);
@@ -137,12 +139,19 @@ impl GcCommand {
     fn process_object(&mut self, path: &str) -> Result<()> {
         // TODO: Implement this.
 
-        // TODO: Read attributes.
         let mut attributes_path = path.to_string();
         attributes_path += ".attributes";
+        let Ok(serialized) = fs::read_to_string(&attributes_path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED));
+        };
+        let attributes: Attributes = match serde_json::from_str(&serialized) {
+            Ok(attributes) => attributes,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED)),
+        };
 
-        // kokokara---
-        
+        let mut referred = false;
+
+
         // TODO: Iterate entries.
 
         // TODO: If rederence is not found, remove this object.
