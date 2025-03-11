@@ -137,6 +137,16 @@ impl GcCommand {
     fn process_object(&mut self, path: &str) -> Result<()> {
         // TODO: Implement this.
 
+        // TODO: Read attributes.
+        let mut attributes_path = path.to_string();
+        attributes_path += ".attributes";
+
+        // kokokara---
+        
+        // TODO: Iterate entries.
+
+        // TODO: If rederence is not found, remove this object.
+        
         Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
     } 
     
