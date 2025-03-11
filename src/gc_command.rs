@@ -149,13 +149,26 @@ impl GcCommand {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED)),
         };
 
-        let mut referred = false;
+        let object_id = path.file_name();
+        for backup_path in &self.backup_paths {
+            let mut option: Option<String> = None;
+            let entry_path = backup_path.pushed(&attributes.path);
+            if let Ok(serialized) = fs::read_to_string(&entry_path) {
+                option = match serde_json::from_str::<Entry>(&serialized) {
+                    Ok(entry) => Some(entry.id),
+                    Err(_) => None,
+                }
+            }
 
+            if let Some(entry_object_id) = option {
+                if entry_object_id == object_id {
+                    return Ok(());
+                }
+            }
+        }
 
-        // TODO: Iterate entries.
-
-        // TODO: If rederence is not found, remove this object.
-        
+        // TODO: Remove this object.
+                
         Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
     } 
     

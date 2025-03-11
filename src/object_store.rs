@@ -57,8 +57,8 @@ pub enum MarkingResult {
 // TODO: Move to attributes.rs.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Attributes {
-    path: String,
-    added: i64,
+    pub path: String,
+    pub added: i64,
 }
 
 impl Attributes {
