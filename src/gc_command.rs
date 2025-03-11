@@ -79,7 +79,29 @@ impl GcCommand {
         }
         
         // TODO: Iterate for objects.
+        let mut object_path = self.destination_path.clone();
+        object_path = object_path.pushed("Objects");
+        let mut producer = FilePathProducer::new(&object_path);
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                        done = true;
+                    }
 
+                    None
+                },
+            };
+
+            if let Some(produced_path) = option {
+                if let Err(error) = self.process_object(&produced_path) {
+                    println!("Warning: error caused when processing objects. error: {}", error);
+                }
+            }
+        }
+        
         // TODO: Get entry path from attributes.
 
         // TODO: Iterate entries.
@@ -112,6 +134,12 @@ impl GcCommand {
         self.destination_path = path.to_string();
     }
 
+    fn process_object(&mut self, path: &str) -> Result<()> {
+        // TODO: Implement this.
+
+        Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
+    } 
+    
     fn process_backup(&mut self, path: &str) -> Result<()> {
         let mut producer = FilePathProducer::new(&path);
         let mut done = false;
