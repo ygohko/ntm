@@ -169,8 +169,14 @@ impl GcCommand {
             }
         }
 
-        if let Err(_) = fs::remove_file(&path) {
-            println!("Warning: Removing {} failed.", path);
+        let mut object_path = self.destination_path.clone();
+        object_path = object_path.pushed("Objects");
+        object_path = object_path.pushed(path);
+        if let Err(_) = fs::remove_file(&object_path) {
+            println!("Warning: Removing {} failed.", object_path);
+        }
+        if let Err(_) = fs::remove_file(&attributes_path) {
+            println!("Warning: Removing {} failed.", attributes_path);
         }
                 
         Ok(())
