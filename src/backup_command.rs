@@ -212,10 +212,7 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
             }
-            let attribute = Attributes::new(
-                &path,
-                self.executing.timestamp(),
-            );
+            let attribute = Attributes::new(&path, self.executing.timestamp());
             store.add(&id, &bytes.unwrap(), &attribute)?;
             self.added_count += 1;
         }
@@ -266,8 +263,8 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::commons::ConvertPath;
     use crate::backup_command::BackupCommand;
+    use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
 
     #[test]

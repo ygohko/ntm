@@ -109,7 +109,11 @@ impl GetCommand {
                 }
                 entry_path.push(&path);
                 if self.count == 0 {
-                    println!("Processing ({}): {}", self.processed_count, entry_path.display());
+                    println!(
+                        "Processing ({}): {}",
+                        self.processed_count,
+                        entry_path.display()
+                    );
                 }
                 self.count += 1;
                 self.count %= 100;

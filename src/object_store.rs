@@ -20,12 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
 
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
@@ -200,7 +200,7 @@ impl ObjectStore {
 
                 return Ok(MarkingResult::NotFound);
             }
-            
+
             result = MarkingResult::Marked;
         }
 
@@ -215,7 +215,7 @@ impl ObjectStore {
     pub fn sweep(&self) -> Result<()> {
         let mut count: i32 = 0;
         let mut producer = FilePathProducer::new(&String::from_path(&self.path));
-        let mut removed_count:i64 = 0;
+        let mut removed_count: i64 = 0;
         let mut done = false;
         while !done {
             let option = match producer.next() {
