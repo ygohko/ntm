@@ -80,7 +80,7 @@ impl GcCommand {
                 }
             }
         }
-        
+
         let mut object_path = self.destination_path.clone();
         object_path = object_path.pushed("Objects");
         let mut producer = FilePathProducer::new(&object_path);
@@ -89,18 +89,23 @@ impl GcCommand {
             let option = match producer.next() {
                 Ok(path) => Some(path),
                 Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
                         done = true;
                     }
 
                     None
-                },
+                }
             };
 
             if let Some(produced_path) = option {
                 if produced_path.extension() == "" {
                     if let Err(error) = self.process_object(&produced_path) {
-                        println!("Warning: error caused when processing objects. error: {}", error);
+                        println!(
+                            "Warning: error caused when processing objects. error: {}",
+                            error
+                        );
                     }
                     self.processed_count += 1;
                 }
@@ -109,7 +114,7 @@ impl GcCommand {
 
         Ok(())
     }
-    
+
     pub fn execute_old(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Objects");
         self.store = ObjectStore::new(&path);
@@ -135,7 +140,10 @@ impl GcCommand {
 
     fn process_object(&mut self, path: &str) -> Result<()> {
         if self.count == 0 {
-            println!("Processing ({}, {}): {}", self.processed_count, self.removed_count, path);
+            println!(
+                "Processing ({}, {}): {}",
+                self.processed_count, self.removed_count, path
+            );
         }
         self.count += 1;
         self.count %= 100;
@@ -146,7 +154,7 @@ impl GcCommand {
         attributes_path += ".attributes";
 
         // println!("attributes_path: {}", attributes_path);
-        
+
         let Ok(serialized) = fs::read_to_string(&attributes_path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED));
         };
@@ -168,7 +176,6 @@ impl GcCommand {
 
             if let Some(entry_object_id) = option {
                 if entry_object_id == object_id {
-
                     // println!("Object {} keeped.", path);
 
                     return Ok(());
@@ -186,10 +193,10 @@ impl GcCommand {
             println!("Warning: Removing {} failed.", attributes_path);
         }
         self.removed_count += 1;
-        
+
         Ok(())
-    } 
-    
+    }
+
     fn process_backup(&mut self, path: &str) -> Result<()> {
         let mut producer = FilePathProducer::new(&path);
         let mut done = false;
@@ -224,7 +231,7 @@ impl GcCommand {
         }
         self.count += 1;
         self.count %= 100;
-         let string = match fs::read_to_string(path) {
+        let string = match fs::read_to_string(path) {
             Ok(string) => string,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
         };
