@@ -116,15 +116,34 @@ mod tests {
         let path = "a/b/c/d.txt";
         let directories = path.directories();
         assert_eq!(directories, "a/b/c".to_string());
+
+        let path = "d.txt";
+        let directories = path.directories();
+        assert_eq!(directories, "".to_string());
     }
 
     #[test]
     fn file_name_is_gettable() {
         let path = "a/b/c/d.txt";
-        let directories = path.file_name();
-        assert_eq!(directories, "d.txt".to_string());
+        let file_name = path.file_name();
+        assert_eq!(file_name, "d.txt".to_string());
+
+        let path = "a.txt";
+        let file_name = path.file_name();
+        assert_eq!(file_name, "a.txt".to_string());
     }
 
+    #[test]
+    fn extension_is_gettable() {
+        let path = "a/b/c/d.txt";
+        let extension = path.extension();
+        assert_eq!(extension, "txt".to_string());
+
+        let path = "a/b/c/d";
+        let extension = path.extension();
+        assert_eq!(extension, "".to_string());
+    }
+    
     #[test]
     fn head_directries_are_checkable() {
         let path = "a/b/c/d.txt";
