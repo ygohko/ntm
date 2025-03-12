@@ -53,8 +53,6 @@ pub struct BackupCommand {
     pub name: String,
     executing: DateTime<Local>,
     destination_path: String,
-    bytes_id_threshold_min: i64,
-    bytes_id_threshold_max: i64,
     excluded_directories: Vec<String>,
     processed_count: i64,
     added_count: i64,
@@ -67,8 +65,6 @@ impl BackupCommand {
             name: "".to_string(),
             executing: Local::now(),
             destination_path: ".".to_string(),
-            bytes_id_threshold_min: 0,
-            bytes_id_threshold_max: 100 * 1024 * 1024,
             excluded_directories: vec![],
             processed_count: 0,
             added_count: 0,
@@ -97,14 +93,6 @@ impl BackupCommand {
         } else {
             config = Config::new();
         }
-        self.bytes_id_threshold_min = match config.bytes_id_threshold_min {
-            Some(min) => min,
-            None => 0,
-        };
-        self.bytes_id_threshold_max = match config.bytes_id_threshold_max {
-            Some(max) => max,
-            None => 0,
-        };
         self.excluded_directories = match config.excluded_directories {
             Some(directories) => directories,
             None => vec![],
