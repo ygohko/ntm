@@ -98,17 +98,12 @@ impl GcCommand {
             };
 
             if let Some(produced_path) = option {
+                // TODO: Ensure that this path does not have extension.
                 if let Err(error) = self.process_object(&produced_path) {
                     println!("Warning: error caused when processing objects. error: {}", error);
                 }
             }
         }
-        
-        // TODO: Get entry path from attributes.
-
-        // TODO: Iterate entries.
-
-        // TODO: Remove object and attributes if reference is not found.
 
         Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
     }
@@ -137,10 +132,11 @@ impl GcCommand {
     }
 
     fn process_object(&mut self, path: &str) -> Result<()> {
-        // TODO: Implement this.
-
         let mut attributes_path = path.to_string();
         attributes_path += ".attributes";
+
+        println!("attributes_path: {}", attributes_path);
+        
         let Ok(serialized) = fs::read_to_string(&attributes_path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED));
         };
@@ -162,14 +158,19 @@ impl GcCommand {
 
             if let Some(entry_object_id) = option {
                 if entry_object_id == object_id {
+
+                    println!("Object {} keeped.", path);
+
                     return Ok(());
                 }
             }
         }
 
-        // TODO: Remove this object.
+        if let Err(_) = fs::remove_file(&path) {
+            println!("Warning: Removing {} failed.", path);
+        }
                 
-        Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
+        Ok(())
     } 
     
     fn process_backup(&mut self, path: &str) -> Result<()> {
