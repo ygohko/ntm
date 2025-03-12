@@ -98,14 +98,15 @@ impl GcCommand {
             };
 
             if let Some(produced_path) = option {
-                // TODO: Ensure that this path does not have extension.
-                if let Err(error) = self.process_object(&produced_path) {
-                    println!("Warning: error caused when processing objects. error: {}", error);
+                if produced_path.extension() == "" {
+                    if let Err(error) = self.process_object(&produced_path) {
+                        println!("Warning: error caused when processing objects. error: {}", error);
+                    }
                 }
             }
         }
 
-        Err(Error::new(error::ERROR_ID, error::ERROR_CODE_NOT_IMPLEMENTED))
+        Ok(())
     }
     
     pub fn execute_old(&mut self) -> Result<()> {
@@ -132,7 +133,9 @@ impl GcCommand {
     }
 
     fn process_object(&mut self, path: &str) -> Result<()> {
-        let mut attributes_path = path.to_string();
+        let mut attributes_path = self.destination_path.clone();
+        attributes_path = attributes_path.pushed("Objects");
+        attributes_path = attributes_path.pushed(path);
         attributes_path += ".attributes";
 
         println!("attributes_path: {}", attributes_path);

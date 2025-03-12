@@ -28,6 +28,7 @@ pub trait OperatePath {
     fn pushed(&self, path: &str) -> String;
     fn directories(&self) -> String;
     fn file_name(&self) -> String;
+    fn extension(&self) -> String;
     fn is_begun(&self, path: &str) -> bool;
     #[allow(dead_code)]
     fn to_path_buf(&self) -> PathBuf;
@@ -53,6 +54,16 @@ impl OperatePath for str {
     fn file_name(&self) -> String {
         let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
         if split.len() < 1 {
+            return "".to_string();
+        }
+
+        split.pop().unwrap().to_string()
+    }
+
+    fn extension(&self) -> String {
+        let file_name = self.file_name();
+        let mut split: Vec<_> = file_name.split(".").collect();
+        if split.len() < 2 {
             return "".to_string();
         }
 
