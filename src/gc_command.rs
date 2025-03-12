@@ -98,12 +98,6 @@ impl GcCommand {
             };
 
             if let Some(produced_path) = option {
-                if self.count == 0 {
-                    println!("Processing ({}, {}: {})", self.processed_count, self.removed_count, produced_path);
-                }
-                self.count += 1;
-                self.count %= 100;
-                
                 if produced_path.extension() == "" {
                     if let Err(error) = self.process_object(&produced_path) {
                         println!("Warning: error caused when processing objects. error: {}", error);
@@ -140,6 +134,12 @@ impl GcCommand {
     }
 
     fn process_object(&mut self, path: &str) -> Result<()> {
+        if self.count == 0 {
+            println!("Processing ({}, {}: {})", self.processed_count, self.removed_count, path);
+        }
+        self.count += 1;
+        self.count %= 100;
+
         let mut attributes_path = self.destination_path.clone();
         attributes_path = attributes_path.pushed("Objects");
         attributes_path = attributes_path.pushed(path);
