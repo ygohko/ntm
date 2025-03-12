@@ -49,7 +49,7 @@ pub struct GcCommand {
     store: ObjectStore,
     backup_paths: Vec<String>,
     processed_count: i64,
-    marked_count: i64,
+    removed_count: i64,
     count: i32,
 }
 
@@ -60,7 +60,7 @@ impl GcCommand {
             store: ObjectStore::new(&"Objects"),
             backup_paths: Vec::new(),
             processed_count: 0,
-            marked_count: 0,
+            removed_count: 0,
             count: 0,
         }
     }
@@ -98,10 +98,17 @@ impl GcCommand {
             };
 
             if let Some(produced_path) = option {
+                if self.count == 0 {
+                    println!("Processing ({}, {}: {})", self.processed_count, self.removed_count, produced_path);
+                }
+                self.count += 1;
+                self.count %= 100;
+                
                 if produced_path.extension() == "" {
                     if let Err(error) = self.process_object(&produced_path) {
                         println!("Warning: error caused when processing objects. error: {}", error);
                     }
+                    self.processed_count += 1;
                 }
             }
         }
@@ -138,7 +145,7 @@ impl GcCommand {
         attributes_path = attributes_path.pushed(path);
         attributes_path += ".attributes";
 
-        println!("attributes_path: {}", attributes_path);
+        // println!("attributes_path: {}", attributes_path);
         
         let Ok(serialized) = fs::read_to_string(&attributes_path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED));
@@ -162,7 +169,7 @@ impl GcCommand {
             if let Some(entry_object_id) = option {
                 if entry_object_id == object_id {
 
-                    println!("Object {} keeped.", path);
+                    // println!("Object {} keeped.", path);
 
                     return Ok(());
                 }
@@ -178,7 +185,8 @@ impl GcCommand {
         if let Err(_) = fs::remove_file(&attributes_path) {
             println!("Warning: Removing {} failed.", attributes_path);
         }
-                
+        self.removed_count += 1;
+        
         Ok(())
     } 
     
@@ -212,7 +220,7 @@ impl GcCommand {
 
     fn process_entry(&mut self, path: &str) -> Result<()> {
         if self.count == 0 {
-            println!("Processing ({}, {}): {}", self.processed_count, self.marked_count, path);
+            // println!("Processing ({}, {}): {}", self.processed_count, self.marked_count, path);
         }
         self.count += 1;
         self.count %= 100;
@@ -227,7 +235,7 @@ impl GcCommand {
         let result = self.store.mark(&entry.id)?;
         self.processed_count += 1;
         if result == MarkingResult::Marked {
-            self.marked_count += 1;
+            // self.marked_count += 1;
         }
 
         Ok(())
