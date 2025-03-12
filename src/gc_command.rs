@@ -135,7 +135,7 @@ impl GcCommand {
 
     fn process_object(&mut self, path: &str) -> Result<()> {
         if self.count == 0 {
-            println!("Processing ({}, {}: {})", self.processed_count, self.removed_count, path);
+            println!("Processing ({}, {}): {}", self.processed_count, self.removed_count, path);
         }
         self.count += 1;
         self.count %= 100;
