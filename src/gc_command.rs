@@ -172,30 +172,6 @@ impl GcCommand {
 
         Ok(())
     }
-
-    fn backup_paths(&self) -> Result<Vec<String>> {
-        let path = self.destination_path.pushed("Backups");
-        let read_dir = match fs::read_dir(&path) {
-            Ok(read_dir) => read_dir,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED)),
-        };
-        let mut backup_paths: Vec<String> = Vec::new();
-        for result in read_dir {
-            if result.is_ok() {
-                let entry = result.unwrap();
-                let path = entry.path();
-                let result = entry.metadata();
-                if result.is_ok() {
-                    let metadata = result.unwrap();
-                    if metadata.is_dir() && !metadata.is_symlink() {
-                        backup_paths.push(String::from_path(&path));
-                    }
-                }
-            }
-        }
-
-        Ok(backup_paths)
-    }
 }
 
 #[cfg(test)]
