@@ -25,7 +25,6 @@ use std::fs;
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
-use crate::error;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -33,20 +32,16 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::Attributes;
-use crate::object_store::MarkingResult;
-use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_PROCESSING_ENTRY_FAILED: ErrorCode = 2;
-pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
 
 pub struct GcCommand {
     destination_path: String,
-    store: ObjectStore,
     backup_paths: Vec<String>,
     processed_count: i64,
     removed_count: i64,
@@ -57,7 +52,6 @@ impl GcCommand {
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
-            store: ObjectStore::new(&"Objects"),
             backup_paths: Vec::new(),
             processed_count: 0,
             removed_count: 0,
@@ -111,24 +105,6 @@ impl GcCommand {
                 }
             }
         }
-
-        Ok(())
-    }
-
-    pub fn execute_old(&mut self) -> Result<()> {
-        let path = self.destination_path.pushed("Objects");
-        self.store = ObjectStore::new(&path);
-        let backup_paths = match self.backup_paths() {
-            Ok(backup_paths) => backup_paths,
-            Err(error) => return Err(error),
-        };
-        for path in backup_paths {
-            println!("Processing backup: {}", path);
-            if let Err(error) = self.process_backup(&path) {
-                println!("Processing backup {} failed. error: {}", path, error);
-            }
-        }
-        self.store.sweep()?;
 
         Ok(())
     }
@@ -195,81 +171,6 @@ impl GcCommand {
         self.removed_count += 1;
 
         Ok(())
-    }
-
-    fn process_backup(&mut self, path: &str) -> Result<()> {
-        let mut producer = FilePathProducer::new(&path);
-        let mut done = false;
-        while !done {
-            let option = match producer.next() {
-                Ok(path) => Some(path),
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID
-                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                    {
-                        done = true;
-                    }
-                    // TODO: Displaying errors would be needed.
-
-                    None
-                }
-            };
-            if let Some(produced_path) = option {
-                let entry_path = path.pushed(&produced_path);
-                if let Err(error) = self.process_entry(&entry_path) {
-                    println!("Processing entry {} failed. error: {}", entry_path, error);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn process_entry(&mut self, path: &str) -> Result<()> {
-        if self.count == 0 {
-            // println!("Processing ({}, {}): {}", self.processed_count, self.marked_count, path);
-        }
-        self.count += 1;
-        self.count %= 100;
-        let string = match fs::read_to_string(path) {
-            Ok(string) => string,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
-        };
-        let entry: Entry = match serde_json::from_str(&string) {
-            Ok(entry) => entry,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_ENTRY_FAILED)),
-        };
-        let result = self.store.mark(&entry.id)?;
-        self.processed_count += 1;
-        if result == MarkingResult::Marked {
-            // self.marked_count += 1;
-        }
-
-        Ok(())
-    }
-
-    fn backup_paths(&self) -> Result<Vec<String>> {
-        let path = self.destination_path.pushed("Backups");
-        let read_dir = match fs::read_dir(&path) {
-            Ok(read_dir) => read_dir,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED)),
-        };
-        let mut backup_paths: Vec<String> = Vec::new();
-        for result in read_dir {
-            if result.is_ok() {
-                let entry = result.unwrap();
-                let path = entry.path();
-                let result = entry.metadata();
-                if result.is_ok() {
-                    let metadata = result.unwrap();
-                    if metadata.is_dir() && !metadata.is_symlink() {
-                        backup_paths.push(String::from_path(&path));
-                    }
-                }
-            }
-        }
-
-        Ok(backup_paths)
     }
 }
 
