@@ -53,8 +53,6 @@ pub struct BackupCommand {
     pub name: String,
     executing: DateTime<Local>,
     destination_path: String,
-    bytes_id_threshold_min: i64,
-    bytes_id_threshold_max: i64,
     excluded_directories: Vec<String>,
     processed_count: i64,
     added_count: i64,
@@ -67,8 +65,6 @@ impl BackupCommand {
             name: "".to_string(),
             executing: Local::now(),
             destination_path: ".".to_string(),
-            bytes_id_threshold_min: 0,
-            bytes_id_threshold_max: 100 * 1024 * 1024,
             excluded_directories: vec![],
             processed_count: 0,
             added_count: 0,
@@ -97,14 +93,6 @@ impl BackupCommand {
         } else {
             config = Config::new();
         }
-        self.bytes_id_threshold_min = match config.bytes_id_threshold_min {
-            Some(min) => min,
-            None => 0,
-        };
-        self.bytes_id_threshold_max = match config.bytes_id_threshold_max {
-            Some(max) => max,
-            None => 0,
-        };
         self.excluded_directories = match config.excluded_directories {
             Some(directories) => directories,
             None => vec![],
@@ -172,34 +160,21 @@ impl BackupCommand {
         let mut bytes: Option<Vec<u8>> = None;
         let id: String;
         let file_size = metadata.len();
-        if file_size >= (self.bytes_id_threshold_min as u64)
-            && file_size <= (self.bytes_id_threshold_max as u64)
-        {
-            bytes = match fs::read(path_buf.clone()) {
-                Ok(bytes) => Some(bytes),
-                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-            };
-            let mut id_bytes = b"b,".to_vec();
-            id_bytes = [id_bytes, bytes.clone().unwrap()].concat();
-            // println!("id_bytes.len(): {}", id_bytes.len());
-            id = object_id(&id_bytes);
-        } else {
-            let mut modified: u64 = 0;
-            let result = metadata.modified();
+        let mut modified: u64 = 0;
+        let result = metadata.modified();
+        if result.is_ok() {
+            let result = result.unwrap().duration_since(SystemTime::UNIX_EPOCH);
             if result.is_ok() {
-                let result = result.unwrap().duration_since(SystemTime::UNIX_EPOCH);
-                if result.is_ok() {
-                    modified = result.unwrap().as_secs();
-                }
+                modified = result.unwrap().as_secs();
             }
-            let string = format!(
-                "p,{},{},{}",
-                path_buf.to_string_lossy().to_string(),
-                modified,
-                file_size
-            );
-            id = object_id(&string.as_bytes().to_vec());
         }
+        let string = format!(
+            "p,{},{},{}",
+            path_buf.to_string_lossy().to_string(),
+            modified,
+            file_size
+        );
+        id = object_id(&string.as_bytes().to_vec());
 
         let exists = match store.exists(&id) {
             Ok(exists) => exists,
