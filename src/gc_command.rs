@@ -42,6 +42,7 @@ pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
 
 pub struct GcCommand {
     destination_path: String,
+    limited_directory: String,
     backup_paths: Vec<String>,
     processed_count: i64,
     removed_count: i64,
@@ -52,6 +53,7 @@ impl GcCommand {
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
+            limited_directory: "".to_string(),
             backup_paths: Vec::new(),
             processed_count: 0,
             removed_count: 0,
