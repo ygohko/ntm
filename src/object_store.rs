@@ -22,19 +22,14 @@
 
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
-use crate::commons::ConvertPath;
-use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
-use crate::file_path_producer;
-use crate::file_path_producer::FilePathProducer;
 
 pub const ERROR_ID: ErrorId = "object_store";
 
@@ -42,17 +37,7 @@ pub const ERROR_ID: ErrorId = "object_store";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
-pub const ERROR_CODE_MARKING_OBJECT_FAILED: ErrorCode = 3;
 pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 4;
-
-const MARKED_OBJECTS_MAX: usize = 4000000;
-
-#[derive(PartialEq)]
-pub enum MarkingResult {
-    Marked,
-    AlreadyMarked,
-    NotFound,
-}
 
 // TODO: Move to attributes.rs.
 #[derive(Serialize, Deserialize, Clone)]
@@ -72,7 +57,6 @@ impl Attributes {
 
 pub struct ObjectStore {
     path: PathBuf,
-    marked_objects: HashMap<String, i64>,
 }
 
 impl ObjectStore {
@@ -81,7 +65,6 @@ impl ObjectStore {
         path_buf.push(path);
         ObjectStore {
             path: path_buf,
-            marked_objects: HashMap::new(),
         }
     }
 
@@ -165,127 +148,6 @@ impl ObjectStore {
         };
 
         Ok(exists)
-    }
-
-    pub fn mark(&mut self, id: &str) -> Result<MarkingResult> {
-        if self.marked_objects.contains_key(id) {
-            *self.marked_objects.get_mut(id).unwrap() += 1;
-
-            return Ok(MarkingResult::AlreadyMarked);
-        }
-
-        let path1 = &id[0..2];
-        let path2 = &id[2..4];
-        let path3 = &id[4..6];
-        let path4 = &id[6..8];
-        let mut path = self.path.clone();
-        path.push(path1);
-        path.push(path2);
-        path.push(path3);
-        path.push(path4);
-        let mut object_path = path.clone();
-        object_path.push(id);
-        let file_name = id.to_string() + ".marked";
-        let mut mark_path = path.clone();
-        mark_path.push(&file_name);
-
-        let result: MarkingResult;
-        if mark_path.exists() {
-            result = MarkingResult::AlreadyMarked;
-        } else {
-            if let Err(_) = fs::write(mark_path, "") {
-                if object_path.exists() {
-                    return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_OBJECT_FAILED));
-                }
-
-                return Ok(MarkingResult::NotFound);
-            }
-
-            result = MarkingResult::Marked;
-        }
-
-        if self.marked_objects.len() > MARKED_OBJECTS_MAX {
-            self.shrink_marked_objects();
-        }
-        self.marked_objects.insert(id.to_string(), 1);
-
-        Ok(result)
-    }
-
-    pub fn sweep(&self) -> Result<()> {
-        let mut count: i32 = 0;
-        let mut producer = FilePathProducer::new(&String::from_path(&self.path));
-        let mut removed_count: i64 = 0;
-        let mut done = false;
-        while !done {
-            let option = match producer.next() {
-                Ok(path) => Some(path),
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID
-                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                    {
-                        done = true;
-                    }
-
-                    None
-                }
-            };
-            if let Some(path) = option {
-                if path.rfind(".marked").is_none() {
-                    let mark_path = path.clone() + ".marked";
-                    let mark_path = String::from_path(&self.path).pushed(&mark_path);
-                    count += 1;
-                    count %= 100;
-                    if count == 0 {
-                        println!("Checking: {}", mark_path);
-                    }
-                    let exists = PathBuf::from(&mark_path).exists();
-                    if exists {
-                        if let Err(_) = fs::remove_file(&mark_path) {
-                            println!("Warning: removing mark file {} failed.", path);
-                        }
-                    } else {
-                        let object_path = String::from_path(&self.path).pushed(&path);
-                        if let Err(_) = fs::remove_file(&object_path) {
-                            println!("Warning: removing object {} failed.", object_path);
-                        }
-                        removed_count += 1;
-                    }
-                }
-            }
-        }
-        println!("{} object(s) removed.", removed_count);
-
-        Ok(())
-    }
-
-    fn shrink_marked_objects(&mut self) {
-        let count = self.marked_objects.len();
-        let mut sum: i64 = 0;
-        for (_, value) in &self.marked_objects {
-            sum += value;
-        }
-        let average = sum / (count as i64);
-
-        let mut removing_count = MARKED_OBJECTS_MAX / 2;
-        let mut keys: Vec<String> = Vec::new();
-        for key in self.marked_objects.keys() {
-            keys.push(key.clone());
-        }
-        for key in keys {
-            if self.marked_objects[&key] <= average {
-                self.marked_objects.remove(&key);
-                removing_count -= 1;
-                if removing_count <= 0 {
-                    break;
-                }
-            }
-        }
-
-        println!(
-            "marked_objects shrinked. len: {}",
-            self.marked_objects.len()
-        );
     }
 }
 
