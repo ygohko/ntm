@@ -20,7 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::fs;
+use std::path::Path;
 
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
@@ -32,7 +35,6 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::Attributes;
-use std::path::Path;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
@@ -41,6 +43,11 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_UNIT_NOT_FOUND: ErrorCode = 2;
 pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct State {
+    pub last_processed_id: String,
+}
 
 pub struct GcCommand {
     destination_path: String,
