@@ -32,13 +32,15 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::Attributes;
+use std::path::Path;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
+pub const ERROR_CODE_UNIT_NOT_FOUND: ErrorCode = 2;
+pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
 
 pub struct GcCommand {
     destination_path: String,
@@ -77,46 +79,11 @@ impl GcCommand {
             }
         }
 
-        // TODO: Add process_unit() method.
-
         for i in 0x00..0x100 {
             for j in 0x00..0x100 {
                 self.process_unit(i as i32, j as i32);
             }
         }
-       
-        /*
-        let mut object_path = self.destination_path.clone();
-        object_path = object_path.pushed("Objects");
-        let mut producer = FilePathProducer::new(&object_path);
-        let mut done = false;
-        while !done {
-            let option = match producer.next() {
-                Ok(path) => Some(path),
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID
-                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                    {
-                        done = true;
-                    }
-
-                    None
-                }
-            };
-
-            if let Some(produced_path) = option {
-                if produced_path.extension() == "" {
-                    if let Err(error) = self.process_object(&produced_path) {
-                        println!(
-                            "Warning: error caused when processing objects. error: {}",
-                            error
-                        );
-                    }
-                    self.processed_count += 1;
-                }
-            }
-        }
-        */
 
         Ok(())
     }
@@ -133,6 +100,9 @@ impl GcCommand {
         object_path = object_path.pushed("Objects");
         object_path = object_path.pushed(&path1);
         object_path = object_path.pushed(&path2);
+        if !Path::new(&object_path).exists() {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_UNIT_NOT_FOUND));
+        }
         let mut producer = FilePathProducer::new(&object_path);
         let mut done = false;
         while !done {
