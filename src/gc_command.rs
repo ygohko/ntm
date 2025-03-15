@@ -32,13 +32,15 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::Attributes;
+use std::path::Path;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
+pub const ERROR_CODE_UNIT_NOT_FOUND: ErrorCode = 2;
+pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
 
 pub struct GcCommand {
     destination_path: String,
@@ -75,8 +77,32 @@ impl GcCommand {
             }
         }
 
+        for i in 0x00..0x100 {
+            for j in 0x00..0x100 {
+                if let Err(error) = self.process_unit(i as i32, j as i32) {
+                    println!("Warning: Processing unit failed. error: {}", error);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn set_destination_path(&mut self, path: &str) {
+        self.destination_path = path.to_string();
+    }
+
+    fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
+        let path1 = format!("{:02x}", index1);
+        let path2 = format!("{:02x}", index2);
         let mut object_path = self.destination_path.clone();
         object_path = object_path.pushed("Objects");
+        object_path = object_path.pushed(&path1);
+        object_path = object_path.pushed(&path2);
+        if !Path::new(&object_path).exists() {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_UNIT_NOT_FOUND));
+        }
         let mut producer = FilePathProducer::new(&object_path);
         let mut done = false;
         while !done {
@@ -95,7 +121,10 @@ impl GcCommand {
 
             if let Some(produced_path) = option {
                 if produced_path.extension() == "" {
-                    if let Err(error) = self.process_object(&produced_path) {
+                    let mut path = path1.clone();
+                    path = path.pushed(&path2);
+                    path = path.pushed(&produced_path);
+                    if let Err(error) = self.process_object(&path) {
                         println!(
                             "Warning: error caused when processing objects. error: {}",
                             error
@@ -107,11 +136,6 @@ impl GcCommand {
         }
 
         Ok(())
-    }
-
-    #[allow(dead_code)]
-    pub fn set_destination_path(&mut self, path: &str) {
-        self.destination_path = path.to_string();
     }
 
     fn process_object(&mut self, path: &str) -> Result<()> {
