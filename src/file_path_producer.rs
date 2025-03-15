@@ -116,10 +116,12 @@ impl FilePathProducer {
                         }
                     }
                 } else {
+                    /*
                     println!(
                         "Warning: Reading directory failed. directory_path: {}",
                         directory_path
                     );
+                    */
                 }
             }
         }

@@ -78,7 +78,14 @@ impl GcCommand {
         }
 
         // TODO: Add process_unit() method.
-        
+
+        for i in 0x00..0x100 {
+            for j in 0x00..0x100 {
+                self.process_unit(i as i32, j as i32);
+            }
+        }
+       
+        /*
         let mut object_path = self.destination_path.clone();
         object_path = object_path.pushed("Objects");
         let mut producer = FilePathProducer::new(&object_path);
@@ -109,6 +116,7 @@ impl GcCommand {
                 }
             }
         }
+        */
 
         Ok(())
     }
@@ -118,6 +126,48 @@ impl GcCommand {
         self.destination_path = path.to_string();
     }
 
+    fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
+        let path1 = format!("{:02x}", index1);
+        let path2 = format!("{:02x}", index2);
+        let mut object_path = self.destination_path.clone();
+        object_path = object_path.pushed("Objects");
+        object_path = object_path.pushed(&path1);
+        object_path = object_path.pushed(&path2);
+        let mut producer = FilePathProducer::new(&object_path);
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
+                        done = true;
+                    }
+
+                    None
+                }
+            };
+
+            if let Some(produced_path) = option {
+                if produced_path.extension() == "" {
+                    let mut path = path1.clone();
+                    path = path.pushed(&path2);
+                    path = path.pushed(&produced_path);
+                    if let Err(error) = self.process_object(&path) {
+                        println!(
+                            "Warning: error caused when processing objects. error: {}",
+                            error
+                        );
+                    }
+                    self.processed_count += 1;
+                }
+            }
+        }
+
+        Ok(())
+    }
+    
     fn process_object(&mut self, path: &str) -> Result<()> {
         if self.count == 0 {
             println!(
