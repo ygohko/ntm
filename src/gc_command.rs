@@ -52,7 +52,7 @@ pub struct State {
 impl State {
     pub fn new() -> Self {
         Self {
-            last_processed_id: 0,
+            last_processed_id: "".to_string(),
         }
     }
 }
@@ -60,7 +60,7 @@ impl State {
 pub struct GcCommand {
     destination_path: String,
     backup_paths: Vec<String>,
-    state: State::new(),
+    state: State,
     processed_count: i64,
     removed_count: i64,
     count: i32,
@@ -71,6 +71,7 @@ impl GcCommand {
         Self {
             destination_path: ".".to_string(),
             backup_paths: Vec::new(),
+            state: State::new(),
             processed_count: 0,
             removed_count: 0,
             count: 0,
@@ -98,6 +99,12 @@ impl GcCommand {
                 if let Err(error) = self.process_unit(i as i32, j as i32) {
                     println!("Warning: Processing unit failed. error: {}", error);
                 }
+            }
+
+            // TODO: Write state.
+            let Ok(serialized) = serde_json::to_string(&self.state) {
+                let path = self.destination_path.clone();
+                fs::write(&path, &serialized);
             }
         }
 
@@ -147,6 +154,7 @@ impl GcCommand {
                         );
                     }
                     self.processed_count += 1;
+                    self.state.last_processed_id = produced_path.file_name();
                 }
             }
         }
