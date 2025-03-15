@@ -44,7 +44,6 @@ pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
 
 pub struct GcCommand {
     destination_path: String,
-    starting_object_id: String,
     backup_paths: Vec<String>,
     processed_count: i64,
     removed_count: i64,
@@ -55,7 +54,6 @@ impl GcCommand {
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
-            starting_object_id: "".to_string(),
             backup_paths: Vec::new(),
             processed_count: 0,
             removed_count: 0,
@@ -81,7 +79,9 @@ impl GcCommand {
 
         for i in 0x00..0x100 {
             for j in 0x00..0x100 {
-                self.process_unit(i as i32, j as i32);
+                if let Err(error) = self.process_unit(i as i32, j as i32) {
+                    println!("Warning: Processing unit failed. error: {}", error);
+                }
             }
         }
 
