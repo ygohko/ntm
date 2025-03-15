@@ -20,7 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::fs;
+use std::path::Path;
 
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
@@ -32,19 +35,31 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::Attributes;
-use std::path::Path;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_UNIT_NOT_FOUND: ErrorCode = 2;
-pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct State {
+    pub last_processed_id: String,
+}
+
+impl State {
+    pub fn new() -> Self {
+        Self {
+            last_processed_id: "".to_string(),
+        }
+    }
+}
 
 pub struct GcCommand {
     destination_path: String,
     backup_paths: Vec<String>,
+    state: State,
     processed_count: i64,
     removed_count: i64,
     count: i32,
@@ -55,6 +70,7 @@ impl GcCommand {
         Self {
             destination_path: ".".to_string(),
             backup_paths: Vec::new(),
+            state: State::new(),
             processed_count: 0,
             removed_count: 0,
             count: 0,
@@ -77,10 +93,37 @@ impl GcCommand {
             }
         }
 
-        for i in 0x00..0x100 {
-            for j in 0x00..0x100 {
-                if let Err(error) = self.process_unit(i as i32, j as i32) {
+        let mut offset1 = 0;
+        let mut offset2 = 0;
+        let mut state_path = self.destination_path.clone();
+        state_path = state_path.pushed("state.json");
+        if let Ok(serialized) = fs::read_to_string(&state_path) {
+            if let Ok(state) = serde_json::from_str::<State>(&serialized) {
+                let string = &state.last_processed_id[0..4];
+                if let Ok(mut value) = u16::from_str_radix(&string, 16) {
+                    value += 1;
+                    offset1 = (value / 0x100) as i32;
+                    offset2 = (value & 0xFF) as i32;
+                }
+            }
+        }
+
+        for i in 0..256 {
+            for j in 0..256 {
+                let mut index1 = (i as i32) + offset1;
+                index1 &= 0xFF;
+                let mut index2 = (j as i32) + offset2;
+                index2 &= 0xFF;
+                if let Err(error) = self.process_unit(index1 as i32, index2 as i32) {
                     println!("Warning: Processing unit failed. error: {}", error);
+                }
+            }
+
+            if let Ok(serialized) = serde_json::to_string(&self.state) {
+                let mut path = self.destination_path.clone();
+                path = path.pushed("state.json");
+                if let Err(_) = fs::write(&path, &serialized) {
+                    println!("Warning: Writing state failed.");
                 }
             }
         }
@@ -101,7 +144,7 @@ impl GcCommand {
         object_path = object_path.pushed(&path1);
         object_path = object_path.pushed(&path2);
         if !Path::new(&object_path).exists() {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_UNIT_NOT_FOUND));
+            return Ok(());
         }
         let mut producer = FilePathProducer::new(&object_path);
         let mut done = false;
@@ -131,6 +174,7 @@ impl GcCommand {
                         );
                     }
                     self.processed_count += 1;
+                    self.state.last_processed_id = produced_path.file_name();
                 }
             }
         }
