@@ -99,13 +99,11 @@ impl GcCommand {
         state_path = state_path.pushed("state.json");
         if let Ok(serialized) = fs::read_to_string(&state_path) {
             if let Ok(state) = serde_json::from_str::<State>(&serialized) {
-                let string = &state.last_processed_id[0..2];
-                if let Ok(value) = i32::from_str_radix(&string, 16) {
-                    offset1 = value;
-                }
-                let string = &state.last_processed_id[2..4];
-                if let Ok(value) = i32::from_str_radix(&string, 16) {
-                    offset2 = value;
+                let string = &state.last_processed_id[0..4];
+                if let Ok(mut value) = u16::from_str_radix(&string, 16) {
+                    value += 1;
+                    offset1 = (value / 0x100) as i32;
+                    offset2 = (value & 0xFF) as i32;
                 }
             }
         }
