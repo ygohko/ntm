@@ -137,7 +137,7 @@ impl GcCommand {
 
         Ok(())
     }
-    
+
     fn process_object(&mut self, path: &str) -> Result<()> {
         if self.count == 0 {
             println!(
