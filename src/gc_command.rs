@@ -49,9 +49,18 @@ pub struct State {
     pub last_processed_id: String,
 }
 
+impl State {
+    pub fn new() -> Self {
+        Self {
+            last_processed_id: 0,
+        }
+    }
+}
+
 pub struct GcCommand {
     destination_path: String,
     backup_paths: Vec<String>,
+    state: State::new(),
     processed_count: i64,
     removed_count: i64,
     count: i32,
