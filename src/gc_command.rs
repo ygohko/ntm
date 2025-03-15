@@ -41,8 +41,7 @@ pub const ERROR_ID: ErrorId = "gc_command";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_UNIT_NOT_FOUND: ErrorCode = 2;
-pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
@@ -94,17 +93,40 @@ impl GcCommand {
             }
         }
 
-        for i in 0x00..0x100 {
-            for j in 0x00..0x100 {
-                if let Err(error) = self.process_unit(i as i32, j as i32) {
+        let mut offset1 = 0;
+        let mut offset2 = 0;
+        let mut state_path = self.destination_path.clone();
+        state_path = state_path.pushed("state.json");
+        if let Ok(serialized) = fs::read_to_string(&state_path) {
+            if let Ok(state) = serde_json::from_str::<State>(&serialized) {
+                let string = &state.last_processed_id[0..2];
+                if let Ok(value) = i32::from_str_radix(&string, 16) {
+                    offset1 = value;
+                }
+                let string = &state.last_processed_id[2..4];
+                if let Ok(value) = i32::from_str_radix(&string, 16) {
+                    offset2 = value;
+                }
+            }
+        }
+
+        for i in 0..256 {
+            for j in 0..256 {
+                let mut index1 = (i as i32) + offset1;
+                index1 &= 0xFF;
+                let mut index2 = (j as i32) + offset2;
+                index2 &= 0xFF;
+                if let Err(error) = self.process_unit(index1 as i32, index2 as i32) {
                     println!("Warning: Processing unit failed. error: {}", error);
                 }
             }
 
-            // TODO: Write state.
-            let Ok(serialized) = serde_json::to_string(&self.state) {
-                let path = self.destination_path.clone();
-                fs::write(&path, &serialized);
+            if let Ok(serialized) = serde_json::to_string(&self.state) {
+                let mut path = self.destination_path.clone();
+                path = path.pushed("state.json");
+                if let Err(_) = fs::write(&path, &serialized) {
+                    println!("Warning: Writing state failed.");
+                }
             }
         }
 
@@ -124,7 +146,7 @@ impl GcCommand {
         object_path = object_path.pushed(&path1);
         object_path = object_path.pushed(&path2);
         if !Path::new(&object_path).exists() {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_UNIT_NOT_FOUND));
+            return Ok(());
         }
         let mut producer = FilePathProducer::new(&object_path);
         let mut done = false;
