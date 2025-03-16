@@ -93,37 +93,34 @@ impl GcCommand {
             }
         }
 
-        let mut offset1 = 0;
-        let mut offset2 = 0;
+        let mut offset = 0;
         let mut state_path = self.destination_path.clone();
         state_path = state_path.pushed("state.json");
         if let Ok(serialized) = fs::read_to_string(&state_path) {
             if let Ok(state) = serde_json::from_str::<State>(&serialized) {
                 let string = &state.last_processed_id[0..4];
-                if let Ok(mut value) = u16::from_str_radix(&string, 16) {
+                if let Ok(mut value) = u32::from_str_radix(&string, 16) {
                     value += 1;
-                    offset1 = (value / 0x100) as i32;
-                    offset2 = (value & 0xFF) as i32;
+                    offset = (value & 0xFFFF) as i32;
                 }
             }
         }
 
-        for i in 0..256 {
-            for j in 0..256 {
-                let mut index1 = (i as i32) + offset1;
-                index1 &= 0xFF;
-                let mut index2 = (j as i32) + offset2;
-                index2 &= 0xFF;
-                if let Err(error) = self.process_unit(index1 as i32, index2 as i32) {
-                    println!("Warning: Processing unit failed. error: {}", error);
-                }
+        for i in 0..65536 {
+            let index = (i as i32) + offset;
+            let index1 = (index / 0x100) & 0xFF;
+            let index2 = index & 0xFF;
+            if let Err(error) = self.process_unit(index1, index2) {
+                println!("Warning: Processing unit failed. error: {}", error);
             }
 
-            if let Ok(serialized) = serde_json::to_string(&self.state) {
-                let mut path = self.destination_path.clone();
-                path = path.pushed("state.json");
-                if let Err(_) = fs::write(&path, &serialized) {
-                    println!("Warning: Writing state failed.");
+            if (i & 0xFF) == 0 {
+                if let Ok(serialized) = serde_json::to_string(&self.state) {
+                    let mut path = self.destination_path.clone();
+                    path = path.pushed("state.json");
+                    if let Err(_) = fs::write(&path, &serialized) {
+                        println!("Warning: Writing state failed.");
+                    }
                 }
             }
         }
