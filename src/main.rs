@@ -40,11 +40,18 @@ use crate::gc_command::GcCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 
-#[derive(Parser)]
-struct Arguments {
-    /// Command you want to do
-    #[command(subcommand)]
-    command: Option<CommandKind>,
+#[derive(Parser, PartialEq)]
+struct GetArguments {
+    /// Backup to get from this backup destination
+    backup: String,
+    /// Directory to limit getting backuped directories and files
+    limited_directory: Option<String>,
+}
+
+#[derive(Parser, PartialEq)]
+struct GcArguments {
+    /// Directory to limit getting backuped directories and files
+    limited_count: Option<i32>,
 }
 
 #[derive(Subcommand, PartialEq)]
@@ -56,15 +63,14 @@ enum CommandKind {
     /// Get backuped directories and files that is specified
     Get(GetArguments),
     /// Execute garbage collection for this backup destination
-    Gc,
+    Gc(GcArguments),
 }
 
-#[derive(Parser, PartialEq)]
-struct GetArguments {
-    /// Backup to get from this backup destination
-    backup: String,
-    /// Directory to limit getting backuped directories and files
-    limited_directory: Option<String>,
+#[derive(Parser)]
+struct Arguments {
+    /// Command you want to do
+    #[command(subcommand)]
+    command: Option<CommandKind>,
 }
 
 fn main() -> ExitCode {
@@ -109,8 +115,11 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
-    } else if command == CommandKind::Gc {
+    } else if let CommandKind::Gc(arguments) = command {
         let mut command = GcCommand::new();
+        if let Some(limited_count) = arguments.limited_count {
+            command.set_limited_count(limited_count as i64);
+        }
         match command.execute() {
             Ok(_) => (),
             Err(error) => {

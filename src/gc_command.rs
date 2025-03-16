@@ -58,6 +58,7 @@ impl State {
 
 pub struct GcCommand {
     destination_path: String,
+    limited_count: Option<i64>,
     backup_paths: Vec<String>,
     state: State,
     processed_count: i64,
@@ -69,6 +70,7 @@ impl GcCommand {
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
+            limited_count: None,
             backup_paths: Vec::new(),
             state: State::new(),
             processed_count: 0,
@@ -123,6 +125,11 @@ impl GcCommand {
                     }
                 }
             }
+            if let Some(count) = self.limited_count {
+                if self.processed_count >= count {
+                    break;
+                }
+            }
         }
 
         println!("{} object(s) removed.", self.removed_count);
@@ -133,6 +140,10 @@ impl GcCommand {
     #[allow(dead_code)]
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
+    }
+
+    pub fn set_limited_count(&mut self, count: i64) {
+        self.limited_count = Some(count);
     }
 
     fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
