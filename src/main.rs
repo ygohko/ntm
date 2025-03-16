@@ -42,6 +42,13 @@ use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 
 #[derive(Parser, PartialEq)]
+struct BackupArguments {
+    /// Backup to get from this backup destination
+    #[arg(short, long)]
+    destination: Option<String>,
+}
+
+#[derive(Parser, PartialEq)]
 struct GetArguments {
     /// Backup to get from this backup destination
     backup: String,
@@ -60,7 +67,7 @@ enum CommandKind {
     /// Initialize a backup destination into this directory
     Init,
     /// Backup directories and files into this directory's backup destination
-    Backup,
+    Backup(BackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
     /// Execute garbage collection for this backup destination
@@ -92,7 +99,7 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-    } else if command == CommandKind::Backup {
+    } else if let CommandKind::Backup(arguments) = command {
         let mut command = BackupCommand::new();
         match command.execute() {
             Ok(_) => (),
