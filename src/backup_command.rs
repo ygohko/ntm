@@ -29,6 +29,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
+use crate::attributes::Attributes;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -38,7 +39,6 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
-use crate::object_store::Attributes;
 use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "backup_command";

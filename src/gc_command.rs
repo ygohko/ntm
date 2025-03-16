@@ -25,6 +25,7 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 
+use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
@@ -34,7 +35,6 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
-use crate::object_store::Attributes;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
@@ -58,6 +58,7 @@ impl State {
 
 pub struct GcCommand {
     destination_path: String,
+    limited_count: Option<i64>,
     backup_paths: Vec<String>,
     state: State,
     processed_count: i64,
@@ -69,6 +70,7 @@ impl GcCommand {
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
+            limited_count: None,
             backup_paths: Vec::new(),
             state: State::new(),
             processed_count: 0,
@@ -123,14 +125,25 @@ impl GcCommand {
                     }
                 }
             }
+            if let Some(count) = self.limited_count {
+                if self.processed_count >= count {
+                    break;
+                }
+            }
         }
 
+        println!("{} object(s) removed.", self.removed_count);
+        
         Ok(())
     }
 
     #[allow(dead_code)]
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
+    }
+
+    pub fn set_limited_count(&mut self, count: i64) {
+        self.limited_count = Some(count);
     }
 
     fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
