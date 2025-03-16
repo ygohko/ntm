@@ -101,6 +101,9 @@ fn main() -> ExitCode {
         };
     } else if let CommandKind::Backup(arguments) = command {
         let mut command = BackupCommand::new();
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
+        }
         match command.execute() {
             Ok(_) => (),
             Err(error) => {
