@@ -125,6 +125,8 @@ impl GcCommand {
             }
         }
 
+        println!("{} object(s) removed.", self.removed_count);
+        
         Ok(())
     }
 
