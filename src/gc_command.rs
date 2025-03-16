@@ -25,6 +25,7 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 
+use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
@@ -34,7 +35,6 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
-use crate::object_store::Attributes;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 

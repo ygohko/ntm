@@ -20,12 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::attributes::Attributes;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -38,22 +37,6 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 4;
-
-// TODO: Move to attributes.rs.
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Attributes {
-    pub path: String,
-    pub added: i64,
-}
-
-impl Attributes {
-    pub fn new(path: &str, added: i64) -> Self {
-        Self {
-            path: path.to_string(),
-            added,
-        }
-    }
-}
 
 pub struct ObjectStore {
     path: PathBuf,

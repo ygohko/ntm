@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+mod attributes;
 mod backup_command;
 mod commons;
 mod config;
