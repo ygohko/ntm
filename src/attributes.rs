@@ -37,3 +37,28 @@ impl Attributes {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::attributes::Attributes;
+
+    #[test]
+    fn is_creatable() {
+        let _attributes = Attributes::new("/a/b/c/d.txt", 12345);
+    }
+
+    #[test]
+    fn is_serializable() {
+        let attributes = Attributes::new("/a/b/c/d.txt", 12345);
+        let serialized = serde_json::to_string(&attributes).unwrap();
+        assert_eq!(serialized, "{\"path\":\"/a/b/c/d.txt\",\"added\":12345}".to_string());
+    }
+
+    #[test]
+    fn is_deserializable() {
+        let serialized = "{ \"path\": \"/a/b/c/d.txt\", \"added\": 12345 }";
+        let attributes: Attributes = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(attributes.path, "/a/b/c/d.txt".to_string());
+        assert_eq!(attributes.added, 12345);
+    }
+}
