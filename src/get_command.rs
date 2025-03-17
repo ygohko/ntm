@@ -161,7 +161,6 @@ impl GetCommand {
         self.limited_directory = directory.to_string();
     }
 
-    #[allow(dead_code)]
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }
