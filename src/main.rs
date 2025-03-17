@@ -70,6 +70,9 @@ struct GetArguments {
 struct GcArguments {
     /// Directory to limit getting backuped directories and files
     limited_count: Option<i32>,
+    /// Backup destination that GC is executed on
+    #[arg(short, long)]
+    destination: Option<String>,
 }
 
 #[derive(Subcommand, PartialEq)]
@@ -146,6 +149,9 @@ fn main() -> ExitCode {
         let mut command = GcCommand::new();
         if let Some(limited_count) = arguments.limited_count {
             command.set_limited_count(limited_count as i64);
+        }
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
         }
         match command.execute() {
             Ok(_) => (),
