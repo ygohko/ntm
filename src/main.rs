@@ -42,25 +42,45 @@ use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 
 #[derive(Parser, PartialEq)]
+struct InitArguments {
+    /// Backup destnation that is initialized
+    #[arg(short, long)]
+    destination: Option<String>,
+}
+
+#[derive(Parser, PartialEq)]
+struct BackupArguments {
+    /// Backup destination that is used for backup
+    #[arg(short, long)]
+    destination: Option<String>,
+}
+
+#[derive(Parser, PartialEq)]
 struct GetArguments {
     /// Backup to get from this backup destination
     backup: String,
     /// Directory to limit getting backuped directories and files
     limited_directory: Option<String>,
+    /// Backup destination that dirctries and files are gotten from
+    #[arg(short, long)]
+    destination: Option<String>,
 }
 
 #[derive(Parser, PartialEq)]
 struct GcArguments {
     /// Directory to limit getting backuped directories and files
     limited_count: Option<i32>,
+    /// Backup destination that GC is executed on
+    #[arg(short, long)]
+    destination: Option<String>,
 }
 
 #[derive(Subcommand, PartialEq)]
 enum CommandKind {
     /// Initialize a backup destination into this directory
-    Init,
+    Init(InitArguments),
     /// Backup directories and files into this directory's backup destination
-    Backup,
+    Backup(BackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
     /// Execute garbage collection for this backup destination
@@ -82,8 +102,11 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     };
 
-    if command == CommandKind::Init {
-        let command = InitCommand::new();
+    if let CommandKind::Init(arguments) = command {
+        let mut command = InitCommand::new();
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
+        }
         match command.execute() {
             Ok(_) => (),
             Err(error) => {
@@ -92,8 +115,11 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-    } else if command == CommandKind::Backup {
+    } else if let CommandKind::Backup(arguments) = command {
         let mut command = BackupCommand::new();
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
+        }
         match command.execute() {
             Ok(_) => (),
             Err(error) => {
@@ -108,6 +134,9 @@ fn main() -> ExitCode {
         if let Some(directory) = arguments.limited_directory {
             command.set_limited_directory(&directory);
         }
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
+        }
         match command.execute() {
             Ok(_) => (),
             Err(error) => {
@@ -120,6 +149,9 @@ fn main() -> ExitCode {
         let mut command = GcCommand::new();
         if let Some(limited_count) = arguments.limited_count {
             command.set_limited_count(limited_count as i64);
+        }
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
         }
         match command.execute() {
             Ok(_) => (),
