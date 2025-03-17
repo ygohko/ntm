@@ -43,7 +43,7 @@ use crate::init_command::InitCommand;
 
 #[derive(Parser, PartialEq)]
 struct InitArguments {
-    /// Backup destnation that is initoalized
+    /// Backup destnation that is initialized
     #[arg(short, long)]
     destination: Option<String>,
 }
@@ -61,6 +61,9 @@ struct GetArguments {
     backup: String,
     /// Directory to limit getting backuped directories and files
     limited_directory: Option<String>,
+    /// Backup destination that dirctries and files are gotten from
+    #[arg(short, long)]
+    destination: Option<String>,
 }
 
 #[derive(Parser, PartialEq)]
@@ -127,6 +130,9 @@ fn main() -> ExitCode {
         let mut command = GetCommand::new(&backup);
         if let Some(directory) = arguments.limited_directory {
             command.set_limited_directory(&directory);
+        }
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
         }
         match command.execute() {
             Ok(_) => (),
