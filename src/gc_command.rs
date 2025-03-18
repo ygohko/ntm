@@ -35,6 +35,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
@@ -59,6 +60,7 @@ impl State {
 pub struct GcCommand {
     destination_path: String,
     limited_count: Option<i64>,
+    object_store: Option<ObjectStore>,
     backup_paths: Vec<String>,
     state: State,
     processed_count: i64,
@@ -71,6 +73,7 @@ impl GcCommand {
         Self {
             destination_path: ".".to_string(),
             limited_count: None,
+            object_store: None,
             backup_paths: Vec::new(),
             state: State::new(),
             processed_count: 0,
@@ -80,6 +83,9 @@ impl GcCommand {
     }
 
     pub fn execute(&mut self) -> Result<()> {
+        let path = self.destination_path.pushed("Objects");
+        self.object_store = Some(ObjectStore::new(&path));
+        
         let mut backup_path = self.destination_path.clone();
         backup_path = backup_path.pushed("Backups");
         let Ok(read_dir) = fs::read_dir(&backup_path) else {
@@ -202,23 +208,9 @@ impl GcCommand {
         self.count %= 100;
 
         let object_id = path.file_name();
-        let attributes = match self.store.attributes(&object_id) {
-            // kokokara----
-        };
-
-        let mut attributes_path = self.destination_path.clone();
-        attributes_path = attributes_path.pushed("Objects");
-        attributes_path = attributes_path.pushed(path);
-        attributes_path += ".attributes";
-
-        // println!("attributes_path: {}", attributes_path);
-
-        let Ok(serialized) = fs::read_to_string(&attributes_path) else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED));
-        };
-        let attributes: Attributes = match serde_json::from_str(&serialized) {
+        let attributes = match self.object_store.as_ref().unwrap().attributes(&object_id) {
             Ok(attributes) => attributes,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED)),
+            Err(error) => return Err(error),
         };
 
         for backup_path in &self.backup_paths {
@@ -243,6 +235,8 @@ impl GcCommand {
         let mut object_path = self.destination_path.clone();
         object_path = object_path.pushed("Objects");
         object_path = object_path.pushed(path);
+        let attributes_path = object_path.clone() + ".attributes";
+        // TODO: Add remove() method to ObjectStore.
         if let Err(_) = fs::remove_file(&object_path) {
             println!("Warning: Removing {} failed.", object_path);
         }
