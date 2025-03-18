@@ -96,6 +96,11 @@ impl ObjectStore {
         Ok(())
     }
 
+    pub fn remove(&self) -> Result<()> {
+        // kokokara--
+        Ok(())
+    }
+    
     pub fn bytes(&self, id: &str) -> Result<Vec<u8>> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
