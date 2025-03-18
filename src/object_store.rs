@@ -36,6 +36,7 @@ pub const ERROR_ID: ErrorId = "object_store";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
+pub const ERROR_CODE_READING_ATTTIBUTE_FAILED: ErrorCode = 3;
 pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 4;
 
 pub struct ObjectStore {
@@ -112,6 +113,29 @@ impl ObjectStore {
         };
 
         Ok(bytes)
+    }
+
+    pub fn attributes(&self, id: &str) -> Result<Attributes> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = self.path.clone();
+        path.push(path1);
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+        let file_name = id.to_string() + ".attributes";
+        path.push(file_name);
+        let Ok(serialized) = fs::read_to_string(&path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ATTTIBUTE_FAILED));
+        };
+        let attributes: Attributes = match serde_json::from_str(&serialized) {
+            Ok(attributes) => attributes,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ATTTIBUTE_FAILED)),
+        };
+
+        Ok(attributes)
     }
 
     pub fn exists(&self, id: &str) -> Result<bool> {
