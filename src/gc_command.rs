@@ -201,6 +201,11 @@ impl GcCommand {
         self.count += 1;
         self.count %= 100;
 
+        let object_id = path.file_name();
+        let attributes = match self.store.attributes(&object_id) {
+            // kokokara----
+        };
+
         let mut attributes_path = self.destination_path.clone();
         attributes_path = attributes_path.pushed("Objects");
         attributes_path = attributes_path.pushed(path);
@@ -216,7 +221,6 @@ impl GcCommand {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED)),
         };
 
-        let object_id = path.file_name();
         for backup_path in &self.backup_paths {
             let mut option: Option<String> = None;
             let entry_path = backup_path.pushed(&attributes.path);
