@@ -223,6 +223,31 @@ mod tests {
     }
 
     #[test]
+    fn attributes_are_gettable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attributes = Attributes::new("a/b/c/d.txt", 123456);
+        let Ok(_) = store.add(&id, &bytes, &attributes) else {
+            panic!();
+        };
+
+        let Ok(attributes1) = store.attributes(&id) else {
+            panic!();
+        };
+        assert_eq!(attributes.path, attributes1.path);
+        assert_eq!(attributes.added, attributes1.added);
+    }
+    
+    #[test]
     fn object_existing_is_testable() {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
