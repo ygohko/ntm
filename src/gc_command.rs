@@ -198,6 +198,7 @@ impl GcCommand {
     }
 
     fn process_object(&mut self, path: &str) -> Result<()> {
+        let object_store = self.object_store.as_ref().unwrap();
         if self.count == 0 {
             println!(
                 "Processing ({}, {}): {}",
@@ -208,7 +209,7 @@ impl GcCommand {
         self.count %= 100;
 
         let object_id = path.file_name();
-        let attributes = match self.object_store.as_ref().unwrap().attributes(&object_id) {
+        let attributes = match object_store.attributes(&object_id) {
             Ok(attributes) => attributes,
             Err(error) => return Err(error),
         };
@@ -232,16 +233,8 @@ impl GcCommand {
             }
         }
 
-        let mut object_path = self.destination_path.clone();
-        object_path = object_path.pushed("Objects");
-        object_path = object_path.pushed(path);
-        let attributes_path = object_path.clone() + ".attributes";
-        // TODO: Add remove() method to ObjectStore.
-        if let Err(_) = fs::remove_file(&object_path) {
-            println!("Warning: Removing {} failed.", object_path);
-        }
-        if let Err(_) = fs::remove_file(&attributes_path) {
-            println!("Warning: Removing {} failed.", attributes_path);
+        if let Err(_) = object_store.remove(&object_id) {
+            println!("Warning: Removing object {} failed.", object_id);
         }
         self.removed_count += 1;
 
