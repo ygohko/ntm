@@ -223,6 +223,24 @@ mod tests {
     }
 
     #[test]
+    fn objetc_is_removable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attribute = Attributes::new("", 0);
+        store.add(&id, &bytes, &attribute).unwrap();
+        store.remove(&id).unwrap();
+    }
+
+    #[test]
     fn bytes_are_gettable() {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
