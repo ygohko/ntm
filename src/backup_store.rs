@@ -31,7 +31,7 @@ impl BackupStore {
         }
     }
 
-    pub fn names(&mut self) -> Vec<String> {
+    pub fn names(&mut self) -> Result<Vec<String>> {
         let Ok(read_dir) = fs::read_dir(&self.path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED));
         };
@@ -46,7 +46,7 @@ impl BackupStore {
             }
         }
 
-        names
+        Ok(names)
     }
 }
 
@@ -63,5 +63,16 @@ mod tests {
         let path = temp_dir.path().join("Backups");
         fs::create_dir_all(&path).unwrap();
         let _store = BackupStore::new(&path);
+    }
+
+    #[test]
+    fn is_creatable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let path = temp_dir.path().join("Backups");
+        let mut backup_path = path.clone();
+        backup_path.push("11111111-1111");
+        fs::create_dir_all(&backup_path).unwrap();
+        let store = BackupStore::new(&path);
+        let _names = store.names().unwrap();
     }
 }
