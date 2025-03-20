@@ -49,3 +49,19 @@ impl BackupStore {
         names
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::backup_store::BackupStore;
+
+    #[test]
+    fn is_creatable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let path = temp_dir.path().join("Backups");
+        fs::create_dir_all(&path).unwrap();
+        let _store = BackupStore::new(&path);
+    }
+}
