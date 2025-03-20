@@ -25,7 +25,6 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 
-use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
@@ -42,7 +41,6 @@ pub const ERROR_ID: ErrorId = "gc_command";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
