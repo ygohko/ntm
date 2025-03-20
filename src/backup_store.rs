@@ -30,4 +30,22 @@ impl BackupStore {
             path,
         }
     }
+
+    pub fn names(&mut self) -> Vec<String> {
+        let Ok(read_dir) = fs::read_dir(&self.path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED));
+        };
+        let mut names: Vec<String> = Vec::new();
+        for result in read_dir {
+            if let Ok(entry) = result {
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_dir() {
+                        names.push(String::from_path(&entry.path()));
+                    }
+                }
+            }
+        }
+
+        names
+    }
 }
