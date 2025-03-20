@@ -25,7 +25,6 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 
-use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
@@ -35,13 +34,13 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_store::ObjectStore;
 
 pub const ERROR_ID: ErrorId = "gc_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_PROCESSING_OBJECT_FAILED: ErrorCode = 2;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
@@ -59,6 +58,7 @@ impl State {
 pub struct GcCommand {
     destination_path: String,
     limited_count: Option<i64>,
+    object_store: Option<ObjectStore>,
     backup_paths: Vec<String>,
     state: State,
     processed_count: i64,
@@ -71,6 +71,7 @@ impl GcCommand {
         Self {
             destination_path: ".".to_string(),
             limited_count: None,
+            object_store: None,
             backup_paths: Vec::new(),
             state: State::new(),
             processed_count: 0,
@@ -80,6 +81,9 @@ impl GcCommand {
     }
 
     pub fn execute(&mut self) -> Result<()> {
+        let path = self.destination_path.pushed("Objects");
+        self.object_store = Some(ObjectStore::new(&path));
+        
         let mut backup_path = self.destination_path.clone();
         backup_path = backup_path.pushed("Backups");
         let Ok(read_dir) = fs::read_dir(&backup_path) else {
@@ -192,6 +196,7 @@ impl GcCommand {
     }
 
     fn process_object(&mut self, path: &str) -> Result<()> {
+        let object_store = self.object_store.as_ref().unwrap();
         if self.count == 0 {
             println!(
                 "Processing ({}, {}): {}",
@@ -201,22 +206,12 @@ impl GcCommand {
         self.count += 1;
         self.count %= 100;
 
-        let mut attributes_path = self.destination_path.clone();
-        attributes_path = attributes_path.pushed("Objects");
-        attributes_path = attributes_path.pushed(path);
-        attributes_path += ".attributes";
-
-        // println!("attributes_path: {}", attributes_path);
-
-        let Ok(serialized) = fs::read_to_string(&attributes_path) else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED));
-        };
-        let attributes: Attributes = match serde_json::from_str(&serialized) {
-            Ok(attributes) => attributes,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_PROCESSING_OBJECT_FAILED)),
-        };
-
         let object_id = path.file_name();
+        let attributes = match object_store.attributes(&object_id) {
+            Ok(attributes) => attributes,
+            Err(error) => return Err(error),
+        };
+
         for backup_path in &self.backup_paths {
             let mut option: Option<String> = None;
             let entry_path = backup_path.pushed(&attributes.path);
@@ -236,14 +231,8 @@ impl GcCommand {
             }
         }
 
-        let mut object_path = self.destination_path.clone();
-        object_path = object_path.pushed("Objects");
-        object_path = object_path.pushed(path);
-        if let Err(_) = fs::remove_file(&object_path) {
-            println!("Warning: Removing {} failed.", object_path);
-        }
-        if let Err(_) = fs::remove_file(&attributes_path) {
-            println!("Warning: Removing {} failed.", attributes_path);
+        if let Err(_) = object_store.remove(&object_id) {
+            println!("Warning: Removing object {} failed.", object_id);
         }
         self.removed_count += 1;
 

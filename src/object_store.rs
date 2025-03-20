@@ -25,6 +25,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use crate::attributes::Attributes;
+use crate::commons::ConvertPath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -36,7 +37,10 @@ pub const ERROR_ID: ErrorId = "object_store";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_OBJECT_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
-pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 4;
+pub const ERROR_CODE_REMOVING_OBJECT_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_READING_ATTTIBUTE_FAILED: ErrorCode = 4;
+pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 5;
+pub const ERROR_CODE_REMOVING_ATTTIBUTE_FAILED: ErrorCode = 6;
 
 pub struct ObjectStore {
     path: PathBuf,
@@ -95,6 +99,30 @@ impl ObjectStore {
         Ok(())
     }
 
+    pub fn remove(&self, id: &str) -> Result<()> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = self.path.clone();
+        path.push(path1);
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+        path.push(id);
+        if let Err(_) = fs::remove_file(&path) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_OBJECT_FAILED));
+        }
+
+        let mut attributes_path = String::from_path(&path);
+        attributes_path += ".attributes";
+        if let Err(_) = fs::remove_file(&attributes_path) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_ATTTIBUTE_FAILED));
+        };        
+
+        Ok(())
+    }
+    
     pub fn bytes(&self, id: &str) -> Result<Vec<u8>> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -112,6 +140,29 @@ impl ObjectStore {
         };
 
         Ok(bytes)
+    }
+
+    pub fn attributes(&self, id: &str) -> Result<Attributes> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = self.path.clone();
+        path.push(path1);
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+        let file_name = id.to_string() + ".attributes";
+        path.push(file_name);
+        let Ok(serialized) = fs::read_to_string(&path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ATTTIBUTE_FAILED));
+        };
+        let attributes: Attributes = match serde_json::from_str(&serialized) {
+            Ok(attributes) => attributes,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ATTTIBUTE_FAILED)),
+        };
+
+        Ok(attributes)
     }
 
     pub fn exists(&self, id: &str) -> Result<bool> {
@@ -172,6 +223,24 @@ mod tests {
     }
 
     #[test]
+    fn objetc_is_removable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attribute = Attributes::new("", 0);
+        store.add(&id, &bytes, &attribute).unwrap();
+        store.remove(&id).unwrap();
+    }
+
+    #[test]
     fn bytes_are_gettable() {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
@@ -198,6 +267,31 @@ mod tests {
         }
     }
 
+    #[test]
+    fn attributes_are_gettable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attributes = Attributes::new("a/b/c/d.txt", 123456);
+        let Ok(_) = store.add(&id, &bytes, &attributes) else {
+            panic!();
+        };
+
+        let Ok(attributes1) = store.attributes(&id) else {
+            panic!();
+        };
+        assert_eq!(attributes.path, attributes1.path);
+        assert_eq!(attributes.added, attributes1.added);
+    }
+    
     #[test]
     fn object_existing_is_testable() {
         let Ok(temp_dir) = TempDir::new("test") else {
