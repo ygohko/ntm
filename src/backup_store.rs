@@ -71,13 +71,14 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_store::BackupStore;
-
+    use crate::commons::ConvertPath;
+    
     #[test]
     fn is_creatable() {
         let temp_dir = TempDir::new("test").unwrap();
         let path = temp_dir.path().join("Backups");
         fs::create_dir_all(&path).unwrap();
-        let _store = BackupStore::new(&path);
+        let _store = BackupStore::new(&String::from_path(&path));
     }
 
     #[test]
@@ -87,7 +88,7 @@ mod tests {
         let mut backup_path = path.clone();
         backup_path.push("11111111-1111");
         fs::create_dir_all(&backup_path).unwrap();
-        let store = BackupStore::new(&path);
+        let mut store = BackupStore::new(&String::from_path(&path));
         let _names = store.names().unwrap();
     }
 }
