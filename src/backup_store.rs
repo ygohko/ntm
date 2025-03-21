@@ -23,7 +23,7 @@
 use std::fs;
 
 use crate::commons::ConvertPath;
-use crate::error;
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -55,7 +55,8 @@ impl BackupStore {
             if let Ok(entry) = result {
                 if let Ok(metadata) = entry.metadata() {
                     if metadata.is_dir() {
-                        names.push(String::from_path(&entry.path()));
+                        let path = String::from_path(&entry.path());
+                        names.push(path.file_name());
                     }
                 }
             }
@@ -88,7 +89,17 @@ mod tests {
         let mut backup_path = path.clone();
         backup_path.push("11111111-1111");
         fs::create_dir_all(&backup_path).unwrap();
+        let mut backup_path = path.clone();
+        backup_path.push("22222222-2222");
+        fs::create_dir_all(&backup_path).unwrap();
+        let mut backup_path = path.clone();
+        backup_path.push("33333333-3333");
+        fs::create_dir_all(&backup_path).unwrap();
         let mut store = BackupStore::new(&String::from_path(&path));
-        let _names = store.names().unwrap();
+        let names = store.names().unwrap();
+        assert_eq!(names.len(), 3);
+        assert!(names.contains(&"11111111-1111".to_string()));
+        assert!(names.contains(&"22222222-2222".to_string()));
+        assert!(names.contains(&"33333333-3333".to_string()));
     }
 }
