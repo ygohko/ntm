@@ -22,6 +22,7 @@
 
 mod attributes;
 mod backup_command;
+mod backup_store;
 mod commons;
 mod config;
 mod entry;

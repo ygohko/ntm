@@ -20,6 +20,21 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::fs;
+
+use crate::commons::ConvertPath;
+use crate::error;
+use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
+use crate::error::Result;
+
+pub const ERROR_ID: ErrorId = "object_store";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
+
 pub struct BackupStore {
     path: String,
 }
@@ -27,7 +42,7 @@ pub struct BackupStore {
 impl BackupStore {
     pub fn new(path: &str) -> Self {
         Self {
-            path,
+            path: path.to_string(),
         }
     }
 
@@ -66,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    fn is_creatable() {
+    fn names_are_gettable() {
         let temp_dir = TempDir::new("test").unwrap();
         let path = temp_dir.path().join("Backups");
         let mut backup_path = path.clone();
