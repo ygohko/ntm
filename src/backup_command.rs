@@ -213,9 +213,13 @@ impl BackupCommand {
             Ok(string) => string,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
-        match fs::write(entry_path, string.as_bytes()) {
+        match fs::write(&entry_path, string.as_bytes()) {
             Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+            Err(error) => {
+                println!("entry_path: {}, error: {}", entry_path.display(), error);
+
+                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
+            },
         };
 
         Ok(())

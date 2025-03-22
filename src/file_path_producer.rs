@@ -59,9 +59,11 @@ impl FilePathProducer {
         while !done {
             if self.file_paths.len() > 0 {
                 let mut path = self.file_paths.pop().unwrap();
+                /*
                 if consts::OS == "windows" {
                     path = path.replace("\\", "/");
                 }
+                */
 
                 return Ok(path);
             }
