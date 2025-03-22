@@ -25,10 +25,9 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 
-use crate::commons::ConvertPath;
+ use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
-use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
@@ -36,11 +35,11 @@ use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
 
+#[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "gc_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
@@ -84,19 +83,16 @@ impl GcCommand {
         let path = self.destination_path.pushed("Objects");
         self.object_store = Some(ObjectStore::new(&path));
         
-        let mut backup_path = self.destination_path.clone();
-        backup_path = backup_path.pushed("Backups");
-        let Ok(read_dir) = fs::read_dir(&backup_path) else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED));
+        let mut backups_path = self.destination_path.clone();
+        backups_path = backups_path.pushed("Backups");
+        let backup_store = BackupStore::new(&backups_path);
+        let names = match backup_store.names() {
+            Ok(names) => names,
+            Err(error) => return Err(error),
         };
-        for result in read_dir {
-            if let Ok(entry) = result {
-                if let Ok(metadata) = entry.metadata() {
-                    if metadata.is_dir() {
-                        self.backup_paths.push(String::from_path(&entry.path()));
-                    }
-                }
-            }
+        for name in names {
+            let backup_path = backups_path.pushed(&name);
+            self.backup_paths.push(backup_path);
         }
 
         let mut offset = 0;
