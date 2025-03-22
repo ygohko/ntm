@@ -85,17 +85,15 @@ impl GcCommand {
         let path = self.destination_path.pushed("Objects");
         self.object_store = Some(ObjectStore::new(&path));
         
-        let mut backup_path = self.destination_path.clone();
-        backup_path = backup_path.pushed("Backups");
-        let backup_store = BackupStore::new(&backup_path);
+        let mut backups_path = self.destination_path.clone();
+        backups_path = backups_path.pushed("Backups");
+        let backup_store = BackupStore::new(&backups_path);
         let names = match backup_store.names() {
             Ok(names) => names,
             Err(error) => return Err(error),
         };
         for name in names {
-            let mut backup_path = self.destination_path.clone();
-            backup_path = backup_path.pushed("Backups");
-            backup_path = backup_path.pushed(&name);
+            let backup_path = backups_path.pushed(&name);
             self.backup_paths.push(backup_path);
         }
 
