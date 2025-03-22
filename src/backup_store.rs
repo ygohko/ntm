@@ -46,7 +46,7 @@ impl BackupStore {
         }
     }
 
-    pub fn names(&mut self) -> Result<Vec<String>> {
+    pub fn names(&self) -> Result<Vec<String>> {
         let Ok(read_dir) = fs::read_dir(&self.path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED));
         };
