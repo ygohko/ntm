@@ -169,7 +169,7 @@ impl BackupCommand {
         }
         let id_path = String::from_path(&path_buf);
 
-        println!("id_path: {}", id_path);
+        // println!("id_path: {}", id_path);
 
         let string = format!(
             "p,{},{},{}",
