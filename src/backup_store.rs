@@ -95,7 +95,7 @@ mod tests {
         let mut backup_path = path.clone();
         backup_path.push("33333333-3333");
         fs::create_dir_all(&backup_path).unwrap();
-        let mut store = BackupStore::new(&String::from_path(&path));
+        let store = BackupStore::new(&String::from_path(&path));
         let names = store.names().unwrap();
         assert_eq!(names.len(), 3);
         assert!(names.contains(&"11111111-1111".to_string()));

@@ -30,6 +30,7 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
+use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -157,7 +158,6 @@ impl BackupCommand {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
         };
         let mut bytes: Option<Vec<u8>> = None;
-        let id: String;
         let file_size = metadata.len();
         let mut modified: u64 = 0;
         let result = metadata.modified();
@@ -167,13 +167,14 @@ impl BackupCommand {
                 modified = result.unwrap().as_secs();
             }
         }
+        let id_path = String::from_path(&path_buf);
         let string = format!(
             "p,{},{},{}",
-            path_buf.to_string_lossy().to_string(),
+            id_path,
             modified,
             file_size
         );
-        id = object_id(&string.as_bytes().to_vec());
+        let id = object_id(&string.as_bytes().to_vec());
 
         let exists = match store.exists(&id) {
             Ok(exists) => exists,
@@ -213,7 +214,7 @@ impl BackupCommand {
             Ok(string) => string,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
-        match fs::write(entry_path, string.as_bytes()) {
+        match fs::write(&entry_path, string.as_bytes()) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
