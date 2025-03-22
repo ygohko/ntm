@@ -168,9 +168,6 @@ impl BackupCommand {
             }
         }
         let id_path = String::from_path(&path_buf);
-
-        // println!("id_path: {}", id_path);
-
         let string = format!(
             "p,{},{},{}",
             id_path,
@@ -219,11 +216,7 @@ impl BackupCommand {
         };
         match fs::write(&entry_path, string.as_bytes()) {
             Ok(_) => (),
-            Err(error) => {
-                println!("entry_path: {}, error: {}", entry_path.display(), error);
-
-                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
-            },
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
 
         Ok(())
