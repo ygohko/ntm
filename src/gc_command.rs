@@ -26,10 +26,8 @@ use std::fs;
 use std::path::Path;
 
  use crate::backup_store::BackupStore;
-use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
-use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
@@ -37,11 +35,11 @@ use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
 
+#[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "gc_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
