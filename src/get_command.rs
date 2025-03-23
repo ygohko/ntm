@@ -180,7 +180,8 @@ mod tests {
     use crate::commons::ConvertPath;
     use crate::get_command::GetCommand;
     use crate::init_command::InitCommand;
-
+    use crate::task::Task;
+    
     #[test]
     fn is_creatable() {
         let _command = GetCommand::new("");

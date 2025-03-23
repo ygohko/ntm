@@ -40,7 +40,7 @@ pub struct InitCommand {
 }
 
 impl Task for InitCommand {
-    fn execute(&self) -> Result<()> {
+    fn execute(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Backups");
         match fs::create_dir_all(&path) {
             Ok(_) => (),
@@ -64,24 +64,6 @@ impl InitCommand {
         }
     }
 
-    /*
-    pub fn execute(&self) -> Result<()> {
-        let path = self.destination_path.pushed("Backups");
-        match fs::create_dir_all(&path) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
-        };
-        let path = self.destination_path.pushed("Objects");
-        match fs::create_dir_all(&path) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
-        };
-        // TODO: Create ntm.toml.
-
-        Ok(())
-    }
-    */
-
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }
@@ -93,7 +75,8 @@ mod tests {
 
     use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
-
+    use crate::task::Task;
+    
     #[test]
     fn is_creatable() {
         let _command = InitCommand::new();

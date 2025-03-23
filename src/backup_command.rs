@@ -41,6 +41,7 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
+use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "backup_command";
 
@@ -60,20 +61,8 @@ pub struct BackupCommand {
     count: i32,
 }
 
-impl BackupCommand {
-    pub fn new() -> Self {
-        Self {
-            name: "".to_string(),
-            executing: Local::now(),
-            destination_path: ".".to_string(),
-            excluded_directories: vec![],
-            processed_count: 0,
-            added_count: 0,
-            count: 0,
-        }
-    }
-
-    pub fn execute(&mut self) -> Result<()> {
+impl Task for BackupCommand {
+    fn execute(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Objects");
         let store = ObjectStore::new(&path);
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
@@ -130,6 +119,20 @@ impl BackupCommand {
         println!("{} object(s) added.", self.added_count);
 
         Ok(())
+    }
+}
+
+impl BackupCommand {
+    pub fn new() -> Self {
+        Self {
+            name: "".to_string(),
+            executing: Local::now(),
+            destination_path: ".".to_string(),
+            excluded_directories: vec![],
+            processed_count: 0,
+            added_count: 0,
+            count: 0,
+        }
     }
 
     pub fn set_destination_path(&mut self, path: &str) {
@@ -241,7 +244,8 @@ mod tests {
     use crate::backup_command::BackupCommand;
     use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
-
+    use crate::task::Task;
+    
     #[test]
     fn is_creatable() {
         let _command = BackupCommand::new();

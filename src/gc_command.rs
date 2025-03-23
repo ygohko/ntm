@@ -25,7 +25,7 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 
- use crate::backup_store::BackupStore;
+use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::ErrorCode;
@@ -245,6 +245,7 @@ mod tests {
     use crate::commons::ConvertPath;
     use crate::gc_command::GcCommand;
     use crate::init_command::InitCommand;
+    use crate::task::Task;
 
     #[test]
     fn is_creatable() {

@@ -23,5 +23,5 @@
 use crate::error::Result;
 
 pub trait Task {
-    fn execute(&self) -> Result<()>;
+    fn execute(&mut self) -> Result<()>;
 }
