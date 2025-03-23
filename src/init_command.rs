@@ -27,6 +27,7 @@ use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "init_command";
 
@@ -38,6 +39,24 @@ pub struct InitCommand {
     destination_path: String,
 }
 
+impl Task for InitCommand {
+    fn execute(&self) -> Result<()> {
+        let path = self.destination_path.pushed("Backups");
+        match fs::create_dir_all(&path) {
+            Ok(_) => (),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
+        };
+        let path = self.destination_path.pushed("Objects");
+        match fs::create_dir_all(&path) {
+            Ok(_) => (),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
+        };
+        // TODO: Create ntm.toml.
+
+        Ok(())
+    }
+}
+
 impl InitCommand {
     pub fn new() -> Self {
         InitCommand {
@@ -45,6 +64,7 @@ impl InitCommand {
         }
     }
 
+    /*
     pub fn execute(&self) -> Result<()> {
         let path = self.destination_path.pushed("Backups");
         match fs::create_dir_all(&path) {
@@ -60,6 +80,7 @@ impl InitCommand {
 
         Ok(())
     }
+    */
 
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
