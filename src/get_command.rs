@@ -33,6 +33,7 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
+use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "get_command";
 
@@ -51,19 +52,8 @@ pub struct GetCommand {
     count: i32,
 }
 
-impl GetCommand {
-    pub fn new(backup: &str) -> Self {
-        GetCommand {
-            backup: backup.to_string(),
-            limited_directory: "".to_string(),
-            destination_path: ".".to_string(),
-            gotten_path: ".".to_string(),
-            processed_count: 0,
-            count: 0,
-        }
-    }
-
-    pub fn execute(&mut self) -> Result<()> {
+impl Task for GetCommand {
+    fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
         let path = self.destination_path.pushed("Objects");
         let store = ObjectStore::new(&path);
@@ -156,6 +146,19 @@ impl GetCommand {
 
         Ok(())
     }
+}
+
+impl GetCommand {
+    pub fn new(backup: &str) -> Self {
+        GetCommand {
+            backup: backup.to_string(),
+            limited_directory: "".to_string(),
+            destination_path: ".".to_string(),
+            gotten_path: ".".to_string(),
+            processed_count: 0,
+            count: 0,
+        }
+    }
 
     pub fn set_limited_directory(&mut self, directory: &str) -> () {
         self.limited_directory = directory.to_string();
@@ -180,7 +183,8 @@ mod tests {
     use crate::commons::ConvertPath;
     use crate::get_command::GetCommand;
     use crate::init_command::InitCommand;
-
+    use crate::task::Task;
+    
     #[test]
     fn is_creatable() {
         let _command = GetCommand::new("");

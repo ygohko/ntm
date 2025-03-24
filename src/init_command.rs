@@ -27,6 +27,7 @@ use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "init_command";
 
@@ -38,14 +39,8 @@ pub struct InitCommand {
     destination_path: String,
 }
 
-impl InitCommand {
-    pub fn new() -> Self {
-        InitCommand {
-            destination_path: ".".to_string(),
-        }
-    }
-
-    pub fn execute(&self) -> Result<()> {
+impl Task for InitCommand {
+    fn execute(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Backups");
         match fs::create_dir_all(&path) {
             Ok(_) => (),
@@ -60,6 +55,14 @@ impl InitCommand {
 
         Ok(())
     }
+}
+
+impl InitCommand {
+    pub fn new() -> Self {
+        InitCommand {
+            destination_path: ".".to_string(),
+        }
+    }
 
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
@@ -72,7 +75,8 @@ mod tests {
 
     use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
-
+    use crate::task::Task;
+    
     #[test]
     fn is_creatable() {
         let _command = InitCommand::new();

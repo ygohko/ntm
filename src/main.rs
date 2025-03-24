@@ -32,6 +32,7 @@ mod gc_command;
 mod get_command;
 mod init_command;
 mod object_store;
+mod task;
 
 use clap::Parser;
 use clap::Subcommand;
@@ -41,6 +42,7 @@ use crate::backup_command::BackupCommand;
 use crate::gc_command::GcCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
+use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
 struct InitArguments {
