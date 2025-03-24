@@ -73,7 +73,7 @@ mod tests {
 
     use crate::backup_store::BackupStore;
     use crate::commons::ConvertPath;
-    
+
     #[test]
     fn is_creatable() {
         let temp_dir = TempDir::new("test").unwrap();

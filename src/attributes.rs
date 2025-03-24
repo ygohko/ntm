@@ -51,7 +51,10 @@ mod tests {
     fn is_serializable() {
         let attributes = Attributes::new("/a/b/c/d.txt", 12345);
         let serialized = serde_json::to_string(&attributes).unwrap();
-        assert_eq!(serialized, "{\"path\":\"/a/b/c/d.txt\",\"added\":12345}".to_string());
+        assert_eq!(
+            serialized,
+            "{\"path\":\"/a/b/c/d.txt\",\"added\":12345}".to_string()
+        );
     }
 
     #[test]

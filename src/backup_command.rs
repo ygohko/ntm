@@ -171,12 +171,7 @@ impl BackupCommand {
             }
         }
         let id_path = String::from_path(&path_buf);
-        let string = format!(
-            "p,{},{},{}",
-            id_path,
-            modified,
-            file_size
-        );
+        let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 
         let exists = match store.exists(&id) {
@@ -245,7 +240,7 @@ mod tests {
     use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
     use crate::task::Task;
-    
+
     #[test]
     fn is_creatable() {
         let _command = BackupCommand::new();

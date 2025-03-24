@@ -70,7 +70,7 @@ impl Task for GcCommand {
     fn execute(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Objects");
         self.object_store = Some(ObjectStore::new(&path));
-        
+
         let mut backups_path = self.destination_path.clone();
         backups_path = backups_path.pushed("Backups");
         let backup_store = BackupStore::new(&backups_path);
@@ -121,7 +121,7 @@ impl Task for GcCommand {
         }
 
         println!("{} object(s) removed.", self.removed_count);
-        
+
         Ok(())
     }
 }
@@ -139,7 +139,7 @@ impl GcCommand {
             count: 0,
         }
     }
-    
+
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }
