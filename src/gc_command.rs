@@ -34,6 +34,7 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
+use crate::task::Task;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "gc_command";
@@ -65,21 +66,8 @@ pub struct GcCommand {
     count: i32,
 }
 
-impl GcCommand {
-    pub fn new() -> Self {
-        Self {
-            destination_path: ".".to_string(),
-            limited_count: None,
-            object_store: None,
-            backup_paths: Vec::new(),
-            state: State::new(),
-            processed_count: 0,
-            removed_count: 0,
-            count: 0,
-        }
-    }
-
-    pub fn execute(&mut self) -> Result<()> {
+impl Task for GcCommand {
+    fn execute(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Objects");
         self.object_store = Some(ObjectStore::new(&path));
         
@@ -136,7 +124,22 @@ impl GcCommand {
         
         Ok(())
     }
+}
 
+impl GcCommand {
+    pub fn new() -> Self {
+        Self {
+            destination_path: ".".to_string(),
+            limited_count: None,
+            object_store: None,
+            backup_paths: Vec::new(),
+            state: State::new(),
+            processed_count: 0,
+            removed_count: 0,
+            count: 0,
+        }
+    }
+    
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }
