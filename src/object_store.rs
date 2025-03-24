@@ -50,9 +50,7 @@ impl ObjectStore {
     pub fn new(path: &dyn AsRef<Path>) -> Self {
         let mut path_buf = PathBuf::new();
         path_buf.push(path);
-        ObjectStore {
-            path: path_buf,
-        }
+        ObjectStore { path: path_buf }
     }
 
     pub fn add(&self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
@@ -118,11 +116,11 @@ impl ObjectStore {
         attributes_path += ".attributes";
         if let Err(_) = fs::remove_file(&attributes_path) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_ATTTIBUTE_FAILED));
-        };        
+        };
 
         Ok(())
     }
-    
+
     pub fn bytes(&self, id: &str) -> Result<Vec<u8>> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -291,7 +289,7 @@ mod tests {
         assert_eq!(attributes.path, attributes1.path);
         assert_eq!(attributes.added, attributes1.added);
     }
-    
+
     #[test]
     fn object_existing_is_testable() {
         let Ok(temp_dir) = TempDir::new("test") else {

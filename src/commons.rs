@@ -143,7 +143,7 @@ mod tests {
         let extension = path.extension();
         assert_eq!(extension, "".to_string());
     }
-    
+
     #[test]
     fn head_directries_are_checkable() {
         let path = "a/b/c/d.txt";
