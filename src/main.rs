@@ -106,7 +106,7 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     };
 
-    let begun = SystemTime::now();
+    let started = SystemTime::now();
     if let CommandKind::Init(arguments) = command {
         let mut command = InitCommand::new();
         if let Some(destination) = arguments.destination {
@@ -168,7 +168,7 @@ fn main() -> ExitCode {
         }
     }
     let ended = SystemTime::now();
-    if let Ok(duration) = ended.duration_since(begun) {
+    if let Ok(duration) = ended.duration_since(started) {
         let mut seconds = duration.as_secs();
         let hours = seconds / (60 * 60);
         seconds -= hours * (60 * 60);
