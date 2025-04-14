@@ -37,6 +37,7 @@ mod task;
 use clap::Parser;
 use clap::Subcommand;
 use std::process::ExitCode;
+use std::time::SystemTime;
 
 use crate::backup_command::BackupCommand;
 use crate::gc_command::GcCommand;
@@ -105,6 +106,7 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     };
 
+    let started = SystemTime::now();
     if let CommandKind::Init(arguments) = command {
         let mut command = InitCommand::new();
         if let Some(destination) = arguments.destination {
@@ -164,6 +166,15 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
+    }
+    let ended = SystemTime::now();
+    if let Ok(duration) = ended.duration_since(started) {
+        let mut seconds = duration.as_secs();
+        let hours = seconds / (60 * 60);
+        seconds -= hours * (60 * 60);
+        let minutes = seconds / 60;
+        seconds -= minutes * 60;
+        println!("Process completed in {}:{:02}:{:02}.", hours, minutes, seconds);
     }
 
     ExitCode::SUCCESS
