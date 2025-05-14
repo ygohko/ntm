@@ -174,7 +174,10 @@ fn main() -> ExitCode {
         seconds -= hours * (60 * 60);
         let minutes = seconds / 60;
         seconds -= minutes * 60;
-        println!("Process completed in {}:{:02}:{:02}.", hours, minutes, seconds);
+        println!(
+            "Process completed in {}:{:02}:{:02}.",
+            hours, minutes, seconds
+        );
     }
 
     ExitCode::SUCCESS
