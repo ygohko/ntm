@@ -29,7 +29,7 @@ use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
 
-pub const ERROR_ID: ErrorId = "object_store";
+pub const ERROR_ID: ErrorId = "backup_store";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
