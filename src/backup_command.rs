@@ -163,11 +163,9 @@ impl BackupCommand {
         let mut bytes: Option<Vec<u8>> = None;
         let file_size = metadata.len();
         let mut modified: u64 = 0;
-        let result = metadata.modified();
-        if result.is_ok() {
-            let result = result.unwrap().duration_since(SystemTime::UNIX_EPOCH);
-            if result.is_ok() {
-                modified = result.unwrap().as_secs();
+        if let Ok(system_time) = metadata.modified() {
+            if let Ok(duration) = system_time.duration_since(SystemTime::UNIX_EPOCH) {
+                modified = duration.as_secs();
             }
         }
         let id_path = String::from_path(&path_buf);
