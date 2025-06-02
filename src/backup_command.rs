@@ -26,7 +26,10 @@ use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
+use std::fs::Metadata;
 use std::path::PathBuf;
+#[cfg(not(target_os = "windows"))]
+use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
@@ -227,6 +230,14 @@ fn object_id(bytes: &Vec<u8>) -> String {
     let hex = HexString::from_bytes(&hash_values);
 
     hex.as_string()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn permission(metadata: &Metadata) -> u32 {
+    let permissions = metadata.permissions();
+    let mode = permissions.mode();
+
+    mode & 0o777
 }
 
 #[cfg(test)]
