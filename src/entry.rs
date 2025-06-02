@@ -26,10 +26,10 @@ use serde_derive::Serialize;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Entry {
     pub id: String,
-    pub last_modified: i64,
-    pub permission: i32,
-    pub uid: i32,
-    pub gid: i32,
+    pub last_modified: u64,
+    pub permission: u32,
+    pub uid: u32,
+    pub gid: u32,
 }
 
 #[cfg(test)]
