@@ -201,7 +201,7 @@ impl BackupCommand {
         // TODO: Set other fields.
         let entry = Entry {
             id: id,
-            last_modified: 0,
+            last_modified: modified as i64,
             permission: 0,
             uid: 0,
             gid: 0,
