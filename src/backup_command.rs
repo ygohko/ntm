@@ -171,6 +171,7 @@ impl BackupCommand {
                 modified = duration.as_secs();
             }
         }
+        let permission = permission(&metadata);
         let id_path = String::from_path(&path_buf);
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
@@ -205,7 +206,7 @@ impl BackupCommand {
         let entry = Entry {
             id: id,
             last_modified: modified,
-            permission: 0,
+            permission: permission,
             uid: 0,
             gid: 0,
         };
@@ -238,6 +239,16 @@ fn permission(metadata: &Metadata) -> u32 {
     let mode = permissions.mode();
 
     mode & 0o777
+}
+
+#[cfg(target_os = "windows")]
+fn permission(metadata: &Metadata) -> u32 {
+    let permissions = metadata.permissions();
+    if permissions.readonly() {
+        return 0o444;
+    }
+
+    0o644
 }
 
 #[cfg(test)]
