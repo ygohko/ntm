@@ -26,7 +26,12 @@ use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
+use std::fs::Metadata;
 use std::path::PathBuf;
+#[cfg(not(target_os = "windows"))]
+use std::os::unix::fs::MetadataExt;
+#[cfg(not(target_os = "windows"))]
+use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
@@ -163,13 +168,14 @@ impl BackupCommand {
         let mut bytes: Option<Vec<u8>> = None;
         let file_size = metadata.len();
         let mut modified: u64 = 0;
-        let result = metadata.modified();
-        if result.is_ok() {
-            let result = result.unwrap().duration_since(SystemTime::UNIX_EPOCH);
-            if result.is_ok() {
-                modified = result.unwrap().as_secs();
+        if let Ok(system_time) = metadata.modified() {
+            if let Ok(duration) = system_time.duration_since(SystemTime::UNIX_EPOCH) {
+                modified = duration.as_secs();
             }
         }
+        let permission = permission(&metadata);
+        let uid = uid(&metadata);
+        let gid = gid(&metadata);
         let id_path = String::from_path(&path_buf);
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
@@ -200,13 +206,12 @@ impl BackupCommand {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
         entry_path.push(&path.file_name());
-        // TODO: Set other fields.
         let entry = Entry {
             id: id,
-            last_modified: 0,
-            permission: 0,
-            uid: 0,
-            gid: 0,
+            last_modified: modified,
+            permission: permission,
+            uid: uid,
+            gid: gid,
         };
         let string = match serde_json::to_string(&entry) {
             Ok(string) => string,
@@ -229,6 +234,48 @@ fn object_id(bytes: &Vec<u8>) -> String {
     let hex = HexString::from_bytes(&hash_values);
 
     hex.as_string()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn permission(metadata: &Metadata) -> u32 {
+    let permissions = metadata.permissions();
+    let mode = permissions.mode();
+
+    mode & 0o777
+}
+
+#[cfg(target_os = "windows")]
+fn permission(metadata: &Metadata) -> u32 {
+    let permissions = metadata.permissions();
+    if permissions.readonly() {
+        return 0o444;
+    }
+
+    0o644
+}
+
+#[cfg(not(target_os = "windows"))]
+fn uid(metadata: &Metadata) -> u32 {
+    let uid = metadata.uid();
+
+    uid
+}
+
+#[cfg(target_os = "windows")]
+fn uid(metadata: &Metadata) -> u32 {
+    0
+}
+
+#[cfg(not(target_os = "windows"))]
+fn gid(metadata: &Metadata) -> u32 {
+    let gid = metadata.gid();
+
+    gid
+}
+
+#[cfg(target_os = "windows")]
+fn gid(metadata: &Metadata) -> u32 {
+    0
 }
 
 #[cfg(test)]
