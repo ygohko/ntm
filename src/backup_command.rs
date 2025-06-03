@@ -29,6 +29,8 @@ use std::fs;
 use std::fs::Metadata;
 use std::path::PathBuf;
 #[cfg(not(target_os = "windows"))]
+use std::os::unix::fs::MetadataExt;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
@@ -172,6 +174,8 @@ impl BackupCommand {
             }
         }
         let permission = permission(&metadata);
+        let uid = uid(&metadata);
+        let gid = gid(&metadata);
         let id_path = String::from_path(&path_buf);
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
@@ -202,13 +206,12 @@ impl BackupCommand {
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
         entry_path.push(&path.file_name());
-        // TODO: Set other fields.
         let entry = Entry {
             id: id,
             last_modified: modified,
             permission: permission,
-            uid: 0,
-            gid: 0,
+            uid: uid,
+            gid: gid,
         };
         let string = match serde_json::to_string(&entry) {
             Ok(string) => string,
@@ -249,6 +252,30 @@ fn permission(metadata: &Metadata) -> u32 {
     }
 
     0o644
+}
+
+#[cfg(not(target_os = "windows"))]
+fn uid(metadata: &Metadata) -> u32 {
+    let uid = metadata.uid();
+
+    uid
+}
+
+#[cfg(target_os = "windows")]
+fn uid(metadata: &Metadata) -> u32 {
+    0
+}
+
+#[cfg(not(target_os = "windows"))]
+fn gid(metadata: &Metadata) -> u32 {
+    let gid = metadata.gid();
+
+    gid
+}
+
+#[cfg(target_os = "windows")]
+fn gid(metadata: &Metadata) -> u32 {
+    0
 }
 
 #[cfg(test)]
