@@ -145,9 +145,8 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
-                // TODO: Apply meta data in entry.
-                apply_metadata(&gotten_path.to_string_lossy(), &entry);
-                
+                apply_metadata(&gotten_path.to_string_lossy(), &entry)?;
+
                 self.processed_count += 1;
             }
         }
@@ -205,8 +204,10 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
         return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
     }
 
-    // TODO: Change owner.
-    
+    if let Err(_) = unix_fs::chown(path, Some(entry.uid), Some(entry.gid)) {
+        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    }
+
     Ok(())
 }
 
