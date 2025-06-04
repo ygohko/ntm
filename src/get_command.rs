@@ -138,7 +138,9 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
-
+                // TODO: Apply meta data in entry.
+                apply_metadata(&gotten_path.to_string_lossy(), &entry);
+                
                 self.processed_count += 1;
             }
         }
@@ -172,6 +174,11 @@ impl GetCommand {
     pub fn set_gotten_path(&mut self, path: &str) {
         self.gotten_path = path.to_string();
     }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn apply_metadata(path: &str, entry: &entry) {
+    // TODO: Implement this.
 }
 
 #[cfg(test)]
