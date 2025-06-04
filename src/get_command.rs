@@ -21,7 +21,13 @@
  */
 
 use std::fs;
+use std::fs::File;
+use std::ops::Add;
+use std::os::unix::fs as unix_fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::time::Duration;
+use std::time::SystemTime;
 
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
@@ -42,6 +48,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_BACKUP_NOT_FOUND: ErrorCode = 1;
 pub const ERROR_CODE_READING_ENTRY_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
 
 pub struct GetCommand {
     backup: String,
@@ -133,7 +140,7 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 }
-                match fs::write(gotten_path, bytes) {
+                match fs::write(&gotten_path, bytes) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
@@ -177,8 +184,30 @@ impl GetCommand {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn apply_metadata(path: &str, entry: &entry) {
-    // TODO: Implement this.
+fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+    };
+    let mut modified = SystemTime::UNIX_EPOCH;
+    modified = modified.add(Duration::from_secs(entry.last_modified));
+    if let Err(_) = file.set_modified(modified) {
+        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    }
+
+    let metadata = match fs::metadata(path) {
+        Ok(metadata) => metadata,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+    };
+    let mut permissions = metadata.permissions();
+    permissions.set_mode(entry.permission);
+    if let Err(_) = fs::set_permissions(path, permissions) {
+        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    }
+
+    // TODO: Change owner.
+    
+    Ok(())
 }
 
 #[cfg(test)]
