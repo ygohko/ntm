@@ -145,6 +145,7 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
+                // TODO: Ignore errors?
                 apply_metadata(&gotten_path.to_string_lossy(), &entry)?;
 
                 self.processed_count += 1;
