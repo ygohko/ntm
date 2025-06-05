@@ -21,7 +21,13 @@
  */
 
 use std::fs;
+use std::fs::File;
+use std::ops::Add;
+use std::os::unix::fs as unix_fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::time::Duration;
+use std::time::SystemTime;
 
 use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
@@ -42,6 +48,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_BACKUP_NOT_FOUND: ErrorCode = 1;
 pub const ERROR_CODE_READING_ENTRY_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
 
 pub struct GetCommand {
     backup: String,
@@ -133,11 +140,14 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 }
-                match fs::write(gotten_path, bytes) {
+                match fs::write(&gotten_path, bytes) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
+                if let Err(error) = apply_metadata(&gotten_path.to_string_lossy(), &entry) {
+                    println!("apply_metadata() failed: error: {}", error);
+                }
 
                 self.processed_count += 1;
             }
@@ -174,9 +184,80 @@ impl GetCommand {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+    };
+    let mut modified = SystemTime::UNIX_EPOCH;
+    modified = modified.add(Duration::from_secs(entry.last_modified));
+    if let Err(_) = file.set_modified(modified) {
+        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    }
+
+    if entry.permission != 0 {
+        let metadata = match fs::metadata(path) {
+            Ok(metadata) => metadata,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+        };
+        let mut permissions = metadata.permissions();
+        permissions.set_mode(entry.permission);
+        if let Err(_) = fs::set_permissions(path, permissions) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+        }
+    }
+
+    if entry.uid != 0 && entry.gid != 0 {
+        if let Err(_) = unix_fs::chown(path, Some(entry.uid), Some(entry.gid)) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+    };
+    let mut modified = SystemTime::UNIX_EPOCH;
+    modified = modified.add(Duration::from_secs(entry.last_modified));
+    if let Err(_) = file.set_modified(modified) {
+        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    }
+
+    if entry.permission != 0 {
+        let metadata = match fs::metadata(path) {
+            Ok(metadata) => metadata,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+        };
+        let mut permissions = metadata.permissions();
+        let readonly: bool;
+        if entry.permission & 0o200 {
+            readonly = false;
+        } else {
+            readonly = true;
+        }
+        permissions.set_readonly(readonly);
+    }
+
+    if entry.uid != 0 && entry.gid != 0 {
+        if let Err(_) = fs::set_permissions(path, permissions) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    use std::time::SystemTime;
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
@@ -224,5 +305,62 @@ mod tests {
         command.set_destination_path(&String::from_path(&ntm_path));
         command.set_gotten_path(&String::from_path(&gotten_path));
         command.execute().unwrap();
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn metadata_is_restorable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+        let mut source_path = temp_path.clone();
+        source_path.push("source");
+        fs::create_dir_all(&source_path).unwrap();
+        let mut file_path = source_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "ABCDE").unwrap();
+        let metadata = fs::metadata(&file_path).unwrap();
+        let system_time = metadata.modified().unwrap();
+        let duration = system_time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+        let modified = duration.as_secs();
+        let mut permissions = metadata.permissions();
+        permissions.set_mode(0o777);
+        fs::set_permissions(&file_path, permissions).unwrap();
+
+        let mut ntm_path = temp_path.clone();
+        ntm_path.push("ntm");
+        fs::create_dir_all(&ntm_path).unwrap();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
+        command.execute().unwrap();
+
+        let mut config_path = ntm_path.clone();
+        config_path.push("ntm.toml");
+        let config = format!("source_path = \"{}\"", source_path.display());
+        fs::write(config_path, config).unwrap();
+
+        let mut command = BackupCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
+        command.execute().unwrap();
+        let backup_name = command.name.clone();
+
+        let mut gotten_path = temp_path.clone();
+        gotten_path.push("gotten");
+        fs::create_dir_all(&gotten_path).unwrap();
+        let mut command = GetCommand::new(&command.name);
+        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_gotten_path(&String::from_path(&gotten_path));
+        command.execute().unwrap();
+
+        let mut file_path = gotten_path.clone();
+        file_path.push(&backup_name);
+        file_path.push("a.txt");
+        let metadata = fs::metadata(&file_path).unwrap();
+        let system_time = metadata.modified().unwrap();
+        let duration = system_time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+        let gotten_modified = duration.as_secs();
+        assert_eq!(modified, gotten_modified);
+        let permissions = metadata.permissions();
+        let permission = permissions.mode() & 0o777;
+        assert_eq!(permission, 0o777);
     }
 }
