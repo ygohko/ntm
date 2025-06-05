@@ -218,6 +218,43 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
+    if entry.last_modified == 0 {
+        // Metadata is not set.
+        return Ok(());
+    }
+
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+    };
+    let mut modified = SystemTime::UNIX_EPOCH;
+    modified = modified.add(Duration::from_secs(entry.last_modified));
+    if let Err(_) = file.set_modified(modified) {
+        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    }
+
+    let metadata = match fs::metadata(path) {
+        Ok(metadata) => metadata,
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+    };
+    let mut permissions = metadata.permissions();
+    let readonly: bool;
+    if entry.permission & 0o200 {
+        readonly = false;
+    } else {
+        readonly = true;
+    }
+    permissions.set_readonly(is_readonly);
+
+    if let Err(_) = fs::set_permissions(path, permissions) {
+        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
