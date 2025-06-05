@@ -241,7 +241,7 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
         } else {
             readonly = true;
         }
-        permissions.set_readonly(is_readonly);
+        permissions.set_readonly(readonly);
     }
 
     if entry.uid != 0 && entry.gid != 0 {
@@ -307,6 +307,7 @@ mod tests {
         command.execute().unwrap();
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[test]
     fn metadata_is_restorable() {
         let temp_dir = TempDir::new("test").unwrap();
