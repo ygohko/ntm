@@ -186,11 +186,6 @@ impl GetCommand {
 
 #[cfg(not(target_os = "windows"))]
 fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
-    if entry.last_modified == 0 {
-        // Metadata is not set.
-        return Ok(());
-    }
-
     let file = match File::open(path) {
         Ok(file) => file,
         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
@@ -201,18 +196,22 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
         return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
     }
 
-    let metadata = match fs::metadata(path) {
-        Ok(metadata) => metadata,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
-    };
-    let mut permissions = metadata.permissions();
-    permissions.set_mode(entry.permission);
-    if let Err(_) = fs::set_permissions(path, permissions) {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    if entry.permission != 0 {
+        let metadata = match fs::metadata(path) {
+            Ok(metadata) => metadata,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+        };
+        let mut permissions = metadata.permissions();
+        permissions.set_mode(entry.permission);
+        if let Err(_) = fs::set_permissions(path, permissions) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+        }
     }
 
-    if let Err(_) = unix_fs::chown(path, Some(entry.uid), Some(entry.gid)) {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    if entry.uid != 0 && entry.gid != 0 {
+        if let Err(_) = unix_fs::chown(path, Some(entry.uid), Some(entry.gid)) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+        }
     }
 
     Ok(())
@@ -220,11 +219,6 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
 
 #[cfg(target_os = "windows")]
 fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
-    if entry.last_modified == 0 {
-        // Metadata is not set.
-        return Ok(());
-    }
-
     let file = match File::open(path) {
         Ok(file) => file,
         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
@@ -235,21 +229,25 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
         return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
     }
 
-    let metadata = match fs::metadata(path) {
-        Ok(metadata) => metadata,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
-    };
-    let mut permissions = metadata.permissions();
-    let readonly: bool;
-    if entry.permission & 0o200 {
-        readonly = false;
-    } else {
-        readonly = true;
+    if entry.permission != 0 {
+        let metadata = match fs::metadata(path) {
+            Ok(metadata) => metadata,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+        };
+        let mut permissions = metadata.permissions();
+        let readonly: bool;
+        if entry.permission & 0o200 {
+            readonly = false;
+        } else {
+            readonly = true;
+        }
+        permissions.set_readonly(is_readonly);
     }
-    permissions.set_readonly(is_readonly);
 
-    if let Err(_) = fs::set_permissions(path, permissions) {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    if entry.uid != 0 && entry.gid != 0 {
+        if let Err(_) = fs::set_permissions(path, permissions) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+        }
     }
 
     Ok(())
