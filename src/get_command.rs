@@ -255,9 +255,9 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    // TODO: Add a test for metadata restoration.
-
     use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    use std::time::SystemTime;
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
@@ -305,5 +305,61 @@ mod tests {
         command.set_destination_path(&String::from_path(&ntm_path));
         command.set_gotten_path(&String::from_path(&gotten_path));
         command.execute().unwrap();
+    }
+
+    #[test]
+    fn metadata_is_restorable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+        let mut source_path = temp_path.clone();
+        source_path.push("source");
+        fs::create_dir_all(&source_path).unwrap();
+        let mut file_path = source_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "ABCDE").unwrap();
+        let metadata = fs::metadata(&file_path).unwrap();
+        let system_time = metadata.modified().unwrap();
+        let duration = system_time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+        let modified = duration.as_secs();
+        let mut permissions = metadata.permissions();
+        permissions.set_mode(0o777);
+        fs::set_permissions(&file_path, permissions).unwrap();
+
+        let mut ntm_path = temp_path.clone();
+        ntm_path.push("ntm");
+        fs::create_dir_all(&ntm_path).unwrap();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
+        command.execute().unwrap();
+
+        let mut config_path = ntm_path.clone();
+        config_path.push("ntm.toml");
+        let config = format!("source_path = \"{}\"", source_path.display());
+        fs::write(config_path, config).unwrap();
+
+        let mut command = BackupCommand::new();
+        command.set_destination_path(&String::from_path(&ntm_path));
+        command.execute().unwrap();
+        let backup_name = command.name.clone();
+
+        let mut gotten_path = temp_path.clone();
+        gotten_path.push("gotten");
+        fs::create_dir_all(&gotten_path).unwrap();
+        let mut command = GetCommand::new(&command.name);
+        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_gotten_path(&String::from_path(&gotten_path));
+        command.execute().unwrap();
+
+        let mut file_path = gotten_path.clone();
+        file_path.push(&backup_name);
+        file_path.push("a.txt");
+        let metadata = fs::metadata(&file_path).unwrap();
+        let system_time = metadata.modified().unwrap();
+        let duration = system_time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+        let gotten_modified = duration.as_secs();
+        assert_eq!(modified, gotten_modified);
+        let permissions = metadata.permissions();
+        let permission = permissions.mode() & 0o777;
+        assert_eq!(permission, 0o777);
     }
 }
