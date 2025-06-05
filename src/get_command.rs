@@ -145,8 +145,9 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
-                // TODO: Ignore errors?
-                apply_metadata(&gotten_path.to_string_lossy(), &entry)?;
+                if let Err(error) = apply_metadata(&gotten_path.to_string_lossy(), &entry) {
+                    println!("apply_metadata() failed: error: {}", error);
+                }
 
                 self.processed_count += 1;
             }
@@ -185,6 +186,11 @@ impl GetCommand {
 
 #[cfg(not(target_os = "windows"))]
 fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
+    if entry.last_modified == 0 {
+        // Metadata is not set.
+        return Ok(());
+    }
+
     let file = match File::open(path) {
         Ok(file) => file,
         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
