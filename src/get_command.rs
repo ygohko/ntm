@@ -257,6 +257,8 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    // TODO: Add a test for metadata restoration.
+
     use std::fs;
     use tempdir::TempDir;
 
