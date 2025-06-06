@@ -165,7 +165,6 @@ impl BackupCommand {
             Ok(metadata) => metadata,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
         };
-        let mut bytes: Option<Vec<u8>> = None;
         let file_size = metadata.len();
         let mut modified: u64 = 0;
         if let Ok(system_time) = metadata.modified() {
@@ -185,14 +184,12 @@ impl BackupCommand {
             Err(error) => return Err(error),
         };
         if !exists {
-            if bytes.is_none() {
-                bytes = match fs::read(path_buf.clone()) {
-                    Ok(bytes) => Some(bytes),
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-                };
-            }
+            let bytes = match fs::read(path_buf.clone()) {
+                Ok(bytes) => bytes,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+            };
             let attribute = Attributes::new(&path, self.executing.timestamp());
-            store.add(&id, &bytes.unwrap(), &attribute)?;
+            store.add(&id, &bytes, &attribute)?;
             self.added_count += 1;
         }
         self.processed_count += 1;
