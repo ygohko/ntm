@@ -184,12 +184,16 @@ impl BackupCommand {
             Err(error) => return Err(error),
         };
         if !exists {
-            let bytes = match fs::read(path_buf.clone()) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-            };
-            let attribute = Attributes::new(&path, self.executing.timestamp());
-            store.add(&id, &bytes, &attribute)?;
+            if file_size < 1024 * 1024 * 1024 {
+                let bytes = match fs::read(path_buf.clone()) {
+                    Ok(bytes) => bytes,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+                };
+                let attribute = Attributes::new(&path, self.executing.timestamp());
+                store.add(&id, &bytes, &attribute)?;
+            } else {
+                // TODO Do divided loading if this file is large.
+            }
             self.added_count += 1;
         }
         self.processed_count += 1;
