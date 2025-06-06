@@ -27,11 +27,11 @@ use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
 use std::fs::Metadata;
-use std::path::PathBuf;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
