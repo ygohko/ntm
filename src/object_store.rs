@@ -140,9 +140,12 @@ impl ObjectStore {
         path.push(path3);
         path.push(path4);
         path.push(id);
-        let bytes = match fs::read(path) {
+        let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
+            Err(error) => {
+                println!("path: {}, error: {}", path.display(), error);
+                return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED));
+            },
         };
 
         Ok(bytes)
@@ -215,9 +218,12 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_OBJECT_ALREADY_EXISTS));
         }
 
-        self.adding_file = match OpenOptions::new().write(true).open(&object_path) {
+        self.adding_file = match OpenOptions::new().write(true).create(true).open(&object_path) {
             Ok(file) => Some(file),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+            Err(error) => {
+                println!("object_path: {}, error: {}", object_path.display(), error);
+                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
+            }
         };
 
         let serialized = match serde_json::to_string(&attributes) {
