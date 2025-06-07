@@ -262,7 +262,7 @@ fn uid(metadata: &Metadata) -> u32 {
 }
 
 #[cfg(target_os = "windows")]
-fn uid(metadata: &Metadata) -> u32 {
+fn uid(_metadata: &Metadata) -> u32 {
     0
 }
 
@@ -274,7 +274,7 @@ fn gid(metadata: &Metadata) -> u32 {
 }
 
 #[cfg(target_os = "windows")]
-fn gid(metadata: &Metadata) -> u32 {
+fn gid(_metadata: &Metadata) -> u32 {
     0
 }
 

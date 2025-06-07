@@ -23,7 +23,9 @@
 use std::fs;
 use std::fs::File;
 use std::ops::Add;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::fs as unix_fs;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -236,18 +238,12 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
         };
         let mut permissions = metadata.permissions();
         let readonly: bool;
-        if entry.permission & 0o200 {
+        if (entry.permission & 0o200) != 0 {
             readonly = false;
         } else {
             readonly = true;
         }
         permissions.set_readonly(readonly);
-    }
-
-    if entry.uid != 0 && entry.gid != 0 {
-        if let Err(_) = fs::set_permissions(path, permissions) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
-        }
     }
 
     Ok(())
