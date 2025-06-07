@@ -47,6 +47,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_store;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
 
@@ -186,7 +187,10 @@ impl BackupCommand {
             Err(error) => return Err(error),
         };
         if !exists {
-            if file_size < 1024 * 1024 * 1024 {
+            const DIVIDED_WRITING_THREASHOLD: u64 = 1024; // 1024 * 1024 * 1024;
+            const DIVIDED_WRITING_SIZE: i64 = 100 * 1024; // 100 * 1024 * 1024;
+
+            if file_size < DIVIDED_WRITING_THREASHOLD {
                 let bytes = match fs::read(path_buf.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
@@ -200,24 +204,33 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),                    
                 };
                 let attribute = Attributes::new(&path, self.executing.timestamp());
-                store.begin_adding(&id, &attribute)?;
-
-                while remains > 0 {
-                    let mut reading = remains;
-                    if reading > 100 * 1024 * 1024 {
-                        reading = 100 * 1024 * 1024;
+                let mut needs_writing = true;
+                if let Err(error) = store.begin_adding(&id, &attribute) {
+                    if error.id == object_store::ERROR_ID && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS {
+                        needs_writing = false;
+                    } else {
+                        return Err(error);
                     }
-                    let mut bytes: Vec<u8> = Vec::new();
-                    bytes.resize(reading as usize, 0);
-                    if let Err(_) = file.read(&mut bytes) {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
-                    }
-                    store.write_adding(&bytes)?;
-
-                    remains -= reading;
                 }
 
-                store.end_adding();
+                if needs_writing {
+                    while remains > 0 {
+                        let mut reading = remains;
+                        if reading > DIVIDED_WRITING_SIZE {
+                            reading = DIVIDED_WRITING_SIZE;
+                        }
+                        let mut bytes: Vec<u8> = Vec::new();
+                        bytes.resize(reading as usize, 0);
+                        if let Err(_) = file.read(&mut bytes) {
+                            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
+                        }
+                        store.write_adding(&bytes)?;
+
+                        remains -= reading;
+                    }
+
+                    store.end_adding();
+                }
             }
             self.added_count += 1;
         }
