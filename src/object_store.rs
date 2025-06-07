@@ -21,6 +21,9 @@
  */
 
 use std::fs;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -41,16 +44,21 @@ pub const ERROR_CODE_REMOVING_OBJECT_FAILED: ErrorCode = 3;
 pub const ERROR_CODE_READING_ATTTIBUTE_FAILED: ErrorCode = 4;
 pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 5;
 pub const ERROR_CODE_REMOVING_ATTTIBUTE_FAILED: ErrorCode = 6;
+pub const ERROR_CODE_OBJECT_ALREADY_EXISTS: ErrorCode = 7;
 
 pub struct ObjectStore {
     path: PathBuf,
+    adding_file: Option<File>,
 }
 
 impl ObjectStore {
     pub fn new(path: &dyn AsRef<Path>) -> Self {
         let mut path_buf = PathBuf::new();
         path_buf.push(path);
-        ObjectStore { path: path_buf }
+        ObjectStore {
+            path: path_buf,
+            adding_file: None,
+        }
     }
 
     pub fn add(&self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
@@ -182,21 +190,68 @@ impl ObjectStore {
         Ok(exists)
     }
 
-    fn begin_adding(&self, id: &str, attributes: &Attributes) -> Result<()> {
-        // TODO: Implement this.
+    fn begin_adding(&mut self, id: &str, attributes: &Attributes) -> Result<()> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = self.path.clone();
+        path.push(path1);
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+        match fs::create_dir_all(path.clone()) {
+            Ok(_) => (),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+        }
+
+        let mut object_path = path.clone();
+        object_path.push(id);
+        let exists = match object_path.try_exists() {
+            Ok(exists) => exists,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+        };
+        if exists {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_OBJECT_ALREADY_EXISTS));
+        }
+
+        self.adding_file = match OpenOptions::new().write(true).open(&object_path) {
+            Ok(file) => Some(file),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+        };
+
+        let serialized = match serde_json::to_string(&attributes) {
+            Ok(serialized) => serialized,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED)),
+        };
+        let mut attributes_path = path.clone();
+        let attributes_name = id.to_string() + ".attributes";
+        attributes_path.push(attributes_name);
+        if let Err(_) = fs::write(&attributes_path, &serialized) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
+        }
 
         Ok(())
     }
 
     fn write_adding(&self, bytes: &Vec<u8>) -> Result<()> {
-        // TODO: Implement this.
+        if self.adding_file.is_none() {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
+        }
 
+        if let Err(_) = self.adding_file.as_ref().unwrap().write(bytes) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
+        }
+        
         Ok(())
     }
 
-    fn end_adding(&self) -> Result<()> {
-        // TODO: Implement this.
-
+    fn end_adding(&mut self) -> Result<()> {
+        if self.adding_file.is_none() {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
+        }
+        self.adding_file = None;
+        
         Ok(())
     }
 }
