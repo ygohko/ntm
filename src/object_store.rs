@@ -190,7 +190,7 @@ impl ObjectStore {
         Ok(exists)
     }
 
-    fn begin_adding(&mut self, id: &str, attributes: &Attributes) -> Result<()> {
+    pub fn begin_adding(&mut self, id: &str, attributes: &Attributes) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -234,7 +234,7 @@ impl ObjectStore {
         Ok(())
     }
 
-    fn write_adding(&self, bytes: &Vec<u8>) -> Result<()> {
+    pub fn write_adding(&self, bytes: &Vec<u8>) -> Result<()> {
         if self.adding_file.is_none() {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
         }
@@ -246,13 +246,11 @@ impl ObjectStore {
         Ok(())
     }
 
-    fn end_adding(&mut self) -> Result<()> {
+    pub fn end_adding(&mut self) {
         if self.adding_file.is_none() {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
+            return;
         }
         self.adding_file = None;
-        
-        Ok(())
     }
 }
 

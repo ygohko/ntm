@@ -27,6 +27,8 @@ use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
 use std::fs::Metadata;
+use std::fs::OpenOptions;
+use std::io::Read;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
@@ -69,7 +71,7 @@ pub struct BackupCommand {
 impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
         let path = self.destination_path.pushed("Objects");
-        let store = ObjectStore::new(&path);
+        let mut store = ObjectStore::new(&path);
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let path = self.destination_path.pushed("ntm.toml");
         let bytes = match fs::read(&path) {
@@ -115,7 +117,7 @@ impl Task for BackupCommand {
             };
 
             if !done {
-                if let Err(error) = self.process_file(&path, &store, &config.source_path) {
+                if let Err(error) = self.process_file(&path, &mut store, &config.source_path) {
                     println!("process_file() failed: error: {}", error);
                 }
             }
@@ -147,7 +149,7 @@ impl BackupCommand {
     fn process_file(
         &mut self,
         path: &String,
-        store: &ObjectStore,
+        store: &mut ObjectStore,
         source_path: &String,
     ) -> Result<()> {
         if self.count == 0 {
@@ -192,7 +194,30 @@ impl BackupCommand {
                 let attribute = Attributes::new(&path, self.executing.timestamp());
                 store.add(&id, &bytes, &attribute)?;
             } else {
-                // TODO Do divided loading if this file is large.
+                let mut remains: i64 = file_size as i64;
+                let mut file = match OpenOptions::new().read(true).open(&path_buf) {
+                    Ok(file) => file,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),                    
+                };
+                let attribute = Attributes::new(&path, self.executing.timestamp());
+                store.begin_adding(&id, &attribute)?;
+
+                while remains > 0 {
+                    let mut reading = remains;
+                    if reading > 100 * 1024 * 1024 {
+                        reading = 100 * 1024 * 1024;
+                    }
+                    let mut bytes: Vec<u8> = Vec::new();
+                    bytes.resize(reading as usize, 0);
+                    if let Err(_) = file.read(&mut bytes) {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
+                    }
+                    store.write_adding(&bytes)?;
+
+                    remains -= reading;
+                }
+
+                store.end_adding();
             }
             self.added_count += 1;
         }
