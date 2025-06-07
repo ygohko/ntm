@@ -181,6 +181,24 @@ impl ObjectStore {
 
         Ok(exists)
     }
+
+    fn begin_adding(&self, id: &str, attributes: &Attributes) -> Result<()> {
+        // TODO: Implement this.
+
+        Ok(())
+    }
+
+    fn write_adding(&self, bytes: &Vec<u8>) -> Result<()> {
+        // TODO: Implement this.
+
+        Ok(())
+    }
+
+    fn end_adding(&self) -> Result<()> {
+        // TODO: Implement this.
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
