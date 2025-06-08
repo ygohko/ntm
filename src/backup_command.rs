@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use chrono::DateTime;
 use chrono::Local;
 use hex_string::HexString;
@@ -72,11 +73,11 @@ pub struct BackupCommand {
 
 impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
-        let mut path = PathBuf::from(&self.destination_path);
+        let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        let mut store = ObjectStore::new(&String::from_path(&path));
+        let mut store = ObjectStore::new(path.as_str());
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
-        let mut path = PathBuf::from(&self.destination_path);
+        let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
