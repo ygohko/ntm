@@ -24,7 +24,6 @@ use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::Path;
 use std::path::PathBuf;
 
 use crate::attributes::Attributes;

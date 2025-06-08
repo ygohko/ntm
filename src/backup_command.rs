@@ -39,7 +39,6 @@ use std::time::SystemTime;
 
 use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
-use crate::commons::OperatePath;
 use crate::commons::OperatePath2;
 use crate::config::Config;
 use crate::entry::Entry;
