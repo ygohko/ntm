@@ -35,7 +35,6 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
@@ -168,7 +167,7 @@ impl BackupCommand {
         let path_directries = path_buf.directories();
         self.count += 1;
         self.count %= 100;
-        let mut path_buf = PathBuf::new();
+        let mut path_buf = Utf8PathBuf::new();
         path_buf.push(&source_path);
         path_buf.push(path.clone());
         let metadata = match path_buf.metadata() {
@@ -243,7 +242,7 @@ impl BackupCommand {
         }
         self.processed_count += 1;
 
-        let mut entry_path = PathBuf::from(&self.destination_path);
+        let mut entry_path = Utf8PathBuf::from(&self.destination_path);
         entry_path.push("Backups");
         entry_path.push(self.name.clone());
         entry_path.push(&path_directries);
