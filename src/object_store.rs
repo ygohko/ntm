@@ -275,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn objetc_is_addable() {
+    fn object_is_addable() {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
         };
@@ -292,7 +292,7 @@ mod tests {
     }
 
     #[test]
-    fn objetc_is_removable() {
+    fn object_is_removable() {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
         };
@@ -381,5 +381,24 @@ mod tests {
 
         let exists = store.exists(&id).unwrap();
         assert_eq!(exists, true);
+    }
+
+    #[test]
+    fn object_is_divided_addable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let mut store = ObjectStore::new(&path);
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attribute = Attributes::new("", 0);
+        store.begin_adding(&id, &attribute).unwrap();
+        store.write_adding(&bytes).unwrap();
+        store.end_adding();
     }
 }
