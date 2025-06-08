@@ -20,11 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
 
 use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
@@ -63,7 +63,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -107,7 +107,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -131,7 +131,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -150,7 +150,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -173,7 +173,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -192,7 +192,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
