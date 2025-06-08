@@ -187,10 +187,10 @@ impl BackupCommand {
             Err(error) => return Err(error),
         };
         if !exists {
-            const DIVIDED_WRITING_THREASHOLD: u64 = 1024 * 1024 * 1024;
+            const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
             const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
 
-            if file_size < DIVIDED_WRITING_THREASHOLD {
+            if file_size < DIVIDED_WRITING_THRESHOLD {
                 let bytes = match fs::read(path_buf.clone()) {
                     Ok(bytes) => bytes,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
