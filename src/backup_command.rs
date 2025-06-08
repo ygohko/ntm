@@ -25,6 +25,7 @@ use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
+use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
 use std::fs::OpenOptions;
