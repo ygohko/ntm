@@ -20,28 +20,29 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::path;
 use std::path::Path;
 use std::path::PathBuf;
 
 // TODO: Rename this.
-pub trait OperatePath2 {
-    fn file_name_lossy(&self) -> String;
-    fn directories_lossy(&self) -> String;
+pub trait OperatePath3 {
+    fn file_name_or_empty(&self) -> String;
+    fn directories(&self) -> String;
 }
 
-impl OperatePath2 for PathBuf {
-    fn file_name_lossy(&self) -> String {
+impl OperatePath3 for Utf8PathBuf {
+    fn file_name_or_empty(&self) -> String {
         let file_name = match self.file_name() {
             Some(file_name) => file_name,
             None => return "".to_string(),
         };
 
-        file_name.to_string_lossy().to_string()
+        file_name.to_string()
     }
 
-    fn directories_lossy(&self) -> String {
-        let path = String::from_path(&self);
+    fn directories(&self) -> String {
+        let path = self.as_str().to_string();
         let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
         if split.len() < 1 {
             return "".to_string();

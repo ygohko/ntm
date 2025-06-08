@@ -40,7 +40,7 @@ use std::time::SystemTime;
 
 use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
-use crate::commons::OperatePath2;
+use crate::commons::OperatePath3;
 use crate::config::Config;
 use crate::entry::Entry;
 use crate::error::Error;
@@ -163,9 +163,9 @@ impl BackupCommand {
                 self.processed_count, self.added_count, path
             );
         }
-        let path_buf = PathBuf::from(&path);
-        let path_file_name = path_buf.file_name_lossy();
-        let path_directries = path_buf.directories_lossy();
+        let path_buf = Utf8PathBuf::from(&path);
+        let path_file_name = path_buf.file_name_or_empty();
+        let path_directries = path_buf.directories();
         self.count += 1;
         self.count %= 100;
         let mut path_buf = PathBuf::new();
