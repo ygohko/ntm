@@ -25,6 +25,7 @@ use std::path;
 use std::path::Path;
 
 // TODO: Rename this.
+// TODO: Add tests.
 pub trait OperatePath3 {
     fn file_name_or_empty(&self) -> String;
     fn directories(&self) -> String;
@@ -52,6 +53,7 @@ impl OperatePath3 for Utf8PathBuf {
     }
 }
 
+// TODO: Remove this.
 pub trait OperatePath {
     fn pushed(&self, path: &str) -> String;
     fn directories(&self) -> String;
