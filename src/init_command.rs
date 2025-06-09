@@ -20,9 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::fs;
 
-use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -41,12 +41,14 @@ pub struct InitCommand {
 
 impl Task for InitCommand {
     fn execute(&mut self) -> Result<()> {
-        let path = self.destination_path.pushed("Backups");
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("Backups");
         match fs::create_dir_all(&path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
-        let path = self.destination_path.pushed("Objects");
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("Objects");
         match fs::create_dir_all(&path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
