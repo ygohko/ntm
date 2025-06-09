@@ -64,8 +64,9 @@ pub struct GetCommand {
 impl Task for GetCommand {
     fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
-        let path = self.destination_path.pushed("Objects");
-        let store = ObjectStore::new(&path);
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("Objects");
+        let store = ObjectStore::new(&path.as_str());
         let mut backup_path = Utf8PathBuf::from(&self.destination_path);
         backup_path.push("Backups");
         backup_path.push(&self.backup);
