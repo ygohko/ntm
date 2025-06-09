@@ -23,7 +23,6 @@
 use camino::Utf8PathBuf;
 use std::path;
 use std::path::Path;
-use std::path::PathBuf;
 
 // TODO: Rename this.
 pub trait OperatePath3 {
@@ -59,8 +58,6 @@ pub trait OperatePath {
     fn file_name(&self) -> String;
     fn extension(&self) -> String;
     fn is_begun(&self, path: &str) -> bool;
-    #[allow(dead_code)]
-    fn to_path_buf(&self) -> PathBuf;
 }
 
 impl OperatePath for str {
@@ -107,13 +104,6 @@ impl OperatePath for str {
 
         false
     }
-
-    fn to_path_buf(&self) -> PathBuf {
-        let mut result = PathBuf::new();
-        result.push(self);
-
-        result
-    }
 }
 
 pub trait ConvertPath {
@@ -129,7 +119,7 @@ impl ConvertPath for String {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use camino::Utf8PathBuf;
 
     use crate::commons::ConvertPath;
     use crate::commons::OperatePath;
@@ -182,15 +172,8 @@ mod tests {
     }
 
     #[test]
-    fn path_buf_is_gettable() {
-        let path = "a/b/c/d.txt";
-        let path_buf: PathBuf = path.to_path_buf();
-        assert_eq!(path_buf, PathBuf::from("a/b/c/d.txt"));
-    }
-
-    #[test]
     fn string_is_gettable_from_path() {
-        let path_buf = PathBuf::from("a/b/c/d.txt");
+        let path_buf = Utf8PathBuf::from("a/b/c/d.txt");
         let path: String = String::from_path(&path_buf);
         assert_eq!(path, "a/b/c/d.txt".to_string());
     }
