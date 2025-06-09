@@ -130,6 +130,7 @@ impl FilePathProducer {
 
 #[cfg(test)]
 mod tests {
+    use camino::Utf8PathBuf;
     use std::fs;
     use tempdir::TempDir;
 
@@ -156,12 +157,11 @@ mod tests {
         let Ok(_) = fs::write(&path, "ABCDE") else {
             panic!();
         };
-        let path = String::from_path(&temp_dir.path());
-        let path = path.pushed("b");
+        let mut path = temp_dir.path().join("b");
         let Ok(_) = fs::create_dir_all(&path) else {
             panic!();
         };
-        let path = path.pushed("c.txt");
+        path.push("c.txt");
         let Ok(_) = fs::write(&path, "FGHIJ") else {
             panic!();
         };
