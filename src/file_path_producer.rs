@@ -152,8 +152,7 @@ mod tests {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
         };
-        let path = String::from_path(&temp_dir.path());
-        let path = path.pushed("a.txt");
+        let path = temp_dir.path().join("a.txt");
         let Ok(_) = fs::write(&path, "ABCDE") else {
             panic!();
         };
