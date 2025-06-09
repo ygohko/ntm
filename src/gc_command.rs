@@ -215,7 +215,8 @@ impl GcCommand {
 
         for backup_path in &self.backup_paths {
             let mut option: Option<String> = None;
-            let entry_path = backup_path.pushed(&attributes.path);
+            let mut entry_path = Utf8PathBuf::from(&backup_path);
+            entry_path.push(&attributes.path);
             if let Ok(serialized) = fs::read_to_string(&entry_path) {
                 option = match serde_json::from_str::<Entry>(&serialized) {
                     Ok(entry) => Some(entry.id),
