@@ -20,11 +20,13 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use chrono::DateTime;
 use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
+use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
 use std::fs::OpenOptions;
@@ -33,12 +35,11 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
-use crate::commons::OperatePath;
+use crate::commons::OperatePath3;
 use crate::config::Config;
 use crate::entry::Entry;
 use crate::error::Error;
@@ -71,10 +72,12 @@ pub struct BackupCommand {
 
 impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
-        let path = self.destination_path.pushed("Objects");
-        let mut store = ObjectStore::new(&path);
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("Objects");
+        let mut store = ObjectStore::new(path.as_str());
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
-        let path = self.destination_path.pushed("ntm.toml");
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("ntm.toml");
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
@@ -159,9 +162,12 @@ impl BackupCommand {
                 self.processed_count, self.added_count, path
             );
         }
+        let path_buf = Utf8PathBuf::from(&path);
+        let path_file_name = path_buf.file_name_or_empty();
+        let path_directries = path_buf.directories();
         self.count += 1;
         self.count %= 100;
-        let mut path_buf = PathBuf::new();
+        let mut path_buf = Utf8PathBuf::new();
         path_buf.push(&source_path);
         path_buf.push(path.clone());
         let metadata = match path_buf.metadata() {
@@ -236,15 +242,15 @@ impl BackupCommand {
         }
         self.processed_count += 1;
 
-        let mut entry_path = PathBuf::from(&self.destination_path);
+        let mut entry_path = Utf8PathBuf::from(&self.destination_path);
         entry_path.push("Backups");
         entry_path.push(self.name.clone());
-        entry_path.push(path.directories());
+        entry_path.push(&path_directries);
         match fs::create_dir_all(entry_path.clone()) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
         };
-        entry_path.push(&path.file_name());
+        entry_path.push(&path_file_name);
         let entry = Entry {
             id: id,
             last_modified: modified,

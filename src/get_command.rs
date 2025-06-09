@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::fs;
 use std::fs::File;
 use std::ops::Add;
@@ -27,7 +28,6 @@ use std::ops::Add;
 use std::os::unix::fs as unix_fs;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -64,12 +64,13 @@ pub struct GetCommand {
 impl Task for GetCommand {
     fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
-        let path = self.destination_path.pushed("Objects");
-        let store = ObjectStore::new(&path);
-        let mut backup_path = PathBuf::from(&self.destination_path);
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("Objects");
+        let store = ObjectStore::new(&path.as_str());
+        let mut backup_path = Utf8PathBuf::from(&self.destination_path);
         backup_path.push("Backups");
         backup_path.push(&self.backup);
-        let mut path = PathBuf::new();
+        let mut path = Utf8PathBuf::new();
         path.push(&backup_path);
         let exists = match path.try_exists() {
             Ok(exists) => exists,
@@ -101,7 +102,7 @@ impl Task for GetCommand {
             };
 
             if !done {
-                let mut entry_path = PathBuf::new();
+                let mut entry_path = Utf8PathBuf::new();
                 entry_path.push(&backup_path);
                 if self.limited_directory != "".to_string() {
                     entry_path.push(&self.limited_directory);
@@ -111,7 +112,7 @@ impl Task for GetCommand {
                     println!(
                         "Processing ({}): {}",
                         self.processed_count,
-                        entry_path.display()
+                        entry_path
                     );
                 }
                 self.count += 1;
@@ -130,7 +131,7 @@ impl Task for GetCommand {
                     // TODO: Skipping file that object is not found may be needed.
                     Err(error) => return Err(error),
                 };
-                let mut gotten_path = PathBuf::from(&self.gotten_path);
+                let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
                 gotten_path.push(&self.backup);
                 if self.limited_directory != "".to_string() {
                     gotten_path.push(&self.limited_directory);
@@ -147,7 +148,7 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
-                if let Err(error) = apply_metadata(&gotten_path.to_string_lossy(), &entry) {
+                if let Err(error) = apply_metadata(&gotten_path.as_str(), &entry) {
                     println!("apply_metadata() failed: error: {}", error);
                 }
 

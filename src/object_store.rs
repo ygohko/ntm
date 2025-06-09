@@ -20,12 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
 
 use crate::attributes::Attributes;
 use crate::commons::ConvertPath;
@@ -47,16 +46,14 @@ pub const ERROR_CODE_REMOVING_ATTTIBUTE_FAILED: ErrorCode = 6;
 pub const ERROR_CODE_OBJECT_ALREADY_EXISTS: ErrorCode = 7;
 
 pub struct ObjectStore {
-    path: PathBuf,
+    path: String,
     adding_file: Option<File>,
 }
 
 impl ObjectStore {
-    pub fn new(path: &dyn AsRef<Path>) -> Self {
-        let mut path_buf = PathBuf::new();
-        path_buf.push(path);
+    pub fn new(path: &str) -> Self {
         ObjectStore {
-            path: path_buf,
+            path: path.to_string(),
             adding_file: None,
         }
     }
@@ -66,7 +63,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = self.path.clone();
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -110,7 +107,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = self.path.clone();
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -134,7 +131,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = self.path.clone();
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -153,7 +150,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = self.path.clone();
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -176,7 +173,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = self.path.clone();
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -195,7 +192,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = self.path.clone();
+        let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
         path.push(path3);
@@ -259,6 +256,7 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
+    use crate::commons::ConvertPath;
     use crate::object_store::Attributes;
     use crate::object_store::ObjectStore;
 
@@ -271,7 +269,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let _store = ObjectStore::new(&path);
+        let _store = ObjectStore::new(&String::from_path(&path));
     }
 
     #[test]
@@ -283,7 +281,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path);
+        let store = ObjectStore::new(&String::from_path(&path));
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -300,7 +298,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path);
+        let store = ObjectStore::new(&String::from_path(&path));
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -318,7 +316,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path);
+        let store = ObjectStore::new(&String::from_path(&path));
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -345,7 +343,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path);
+        let store = ObjectStore::new(&String::from_path(&path));
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -370,7 +368,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path);
+        let store = ObjectStore::new(&String::from_path(&path));
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -392,7 +390,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let mut store = ObjectStore::new(&path);
+        let mut store = ObjectStore::new(&String::from_path(&path));
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];

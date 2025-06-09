@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::fs;
@@ -68,24 +69,25 @@ pub struct GcCommand {
 
 impl Task for GcCommand {
     fn execute(&mut self) -> Result<()> {
-        let path = self.destination_path.pushed("Objects");
-        self.object_store = Some(ObjectStore::new(&path));
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("Objects");
+        self.object_store = Some(ObjectStore::new(&path.as_str()));
 
-        let mut backups_path = self.destination_path.clone();
-        backups_path = backups_path.pushed("Backups");
-        let backup_store = BackupStore::new(&backups_path);
+        let mut backups_path = Utf8PathBuf::from(&self.destination_path);
+        backups_path.push("Backups");
+        let backup_store = BackupStore::new(&backups_path.as_str());
         let names = match backup_store.names() {
             Ok(names) => names,
             Err(error) => return Err(error),
         };
         for name in names {
-            let backup_path = backups_path.pushed(&name);
-            self.backup_paths.push(backup_path);
+            let backup_path = backups_path.join(&name);
+            self.backup_paths.push(backup_path.as_str().to_string());
         }
 
         let mut offset = 0;
-        let mut state_path = self.destination_path.clone();
-        state_path = state_path.pushed("state.json");
+        let mut state_path = Utf8PathBuf::from(&self.destination_path);
+        state_path.push("state.json");
         if let Ok(serialized) = fs::read_to_string(&state_path) {
             if let Ok(state) = serde_json::from_str::<State>(&serialized) {
                 let string = &state.last_processed_id[0..4];
@@ -106,8 +108,8 @@ impl Task for GcCommand {
 
             if (i & 0xFF) == 0 {
                 if let Ok(serialized) = serde_json::to_string(&self.state) {
-                    let mut path = self.destination_path.clone();
-                    path = path.pushed("state.json");
+                    let mut path = Utf8PathBuf::from(&self.destination_path);
+                    path.push("state.json");
                     if let Err(_) = fs::write(&path, &serialized) {
                         println!("Warning: Writing state failed.");
                     }
@@ -151,14 +153,14 @@ impl GcCommand {
     fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
         let path1 = format!("{:02x}", index1);
         let path2 = format!("{:02x}", index2);
-        let mut object_path = self.destination_path.clone();
-        object_path = object_path.pushed("Objects");
-        object_path = object_path.pushed(&path1);
-        object_path = object_path.pushed(&path2);
+        let mut object_path = Utf8PathBuf::from(&self.destination_path);
+        object_path.push("Objects");
+        object_path.push(&path1);
+        object_path.push(&path2);
         if !Path::new(&object_path).exists() {
             return Ok(());
         }
-        let mut producer = FilePathProducer::new(&object_path);
+        let mut producer = FilePathProducer::new(&object_path.as_str());
         let mut done = false;
         while !done {
             let option = match producer.next() {
@@ -176,10 +178,10 @@ impl GcCommand {
 
             if let Some(produced_path) = option {
                 if produced_path.extension() == "" {
-                    let mut path = path1.clone();
-                    path = path.pushed(&path2);
-                    path = path.pushed(&produced_path);
-                    if let Err(error) = self.process_object(&path) {
+                    let mut path = Utf8PathBuf::from(&path1);
+                    path.push(&path2);
+                    path.push(&produced_path);
+                    if let Err(error) = self.process_object(path.as_str()) {
                         println!(
                             "Warning: error caused when processing objects. error: {}",
                             error
@@ -213,7 +215,8 @@ impl GcCommand {
 
         for backup_path in &self.backup_paths {
             let mut option: Option<String> = None;
-            let entry_path = backup_path.pushed(&attributes.path);
+            let mut entry_path = Utf8PathBuf::from(&backup_path);
+            entry_path.push(&attributes.path);
             if let Ok(serialized) = fs::read_to_string(&entry_path) {
                 option = match serde_json::from_str::<Entry>(&serialized) {
                     Ok(entry) => Some(entry.id),
