@@ -26,8 +26,8 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 
+use crate::commons::OperatePath3;
 use crate::attributes::Attributes;
-use crate::commons::ConvertPath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -117,8 +117,8 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_OBJECT_FAILED));
         }
 
-        let mut attributes_path = String::from_path(&path);
-        attributes_path += ".attributes";
+        let mut attributes_path = path.as_str().to_string();
+        attributes_path.push_str(".attributes");
         if let Err(_) = fs::remove_file(&attributes_path) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_ATTTIBUTE_FAILED));
         };

@@ -22,8 +22,8 @@
 
 use std::fs;
 
-use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
+use crate::commons::OperatePath3;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -55,8 +55,7 @@ impl BackupStore {
             if let Ok(entry) = result {
                 if let Ok(metadata) = entry.metadata() {
                     if metadata.is_dir() {
-                        let path = String::from_path(&entry.path());
-                        names.push(path.file_name());
+                        names.push(entry.path().file_name_or_empty());
                     }
                 }
             }

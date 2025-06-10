@@ -38,7 +38,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
-use crate::commons::ConvertPath;
 use crate::commons::OperatePath3;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -184,7 +183,7 @@ impl BackupCommand {
         let permission = permission(&metadata);
         let uid = uid(&metadata);
         let gid = gid(&metadata);
-        let id_path = String::from_path(&path_buf);
+        let id_path = path_buf.as_str();
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 

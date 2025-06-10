@@ -31,8 +31,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::commons::ConvertPath;
-use crate::commons::OperatePath;
+use crate::commons::OperatePath3;
 use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
@@ -83,7 +82,7 @@ impl Task for GetCommand {
         if self.limited_directory != "".to_string() {
             path.push(&self.limited_directory);
         }
-        let mut producer = FilePathProducer::new(&String::from_path(&path));
+        let mut producer = FilePathProducer::new(&path.as_str());
         let mut done = false;
         while !done {
             let path = match producer.next() {
@@ -137,7 +136,7 @@ impl Task for GetCommand {
                     gotten_path.push(&self.limited_directory);
                 }
                 gotten_path.push(&path);
-                let directories = String::from_path(&gotten_path).directories();
+                let directories = gotten_path.directories();
                 match fs::create_dir_all(&directories) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.

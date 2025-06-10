@@ -23,6 +23,7 @@
 use camino::Utf8PathBuf;
 use std::path;
 use std::path::Path;
+use std::path::PathBuf;
 
 // TODO: Rename this.
 // TODO: Add tests.
@@ -53,9 +54,30 @@ impl OperatePath3 for Utf8PathBuf {
     }
 }
 
+impl OperatePath3 for PathBuf {
+    fn file_name_or_empty(&self) -> String {
+        let file_name = match self.file_name() {
+            Some(file_name) => file_name.to_string_lossy().to_string(),
+            None => return "".to_string(),
+        };
+
+        file_name
+    }
+
+    fn directories(&self) -> String {
+        let path = self.to_string_lossy().to_string();
+        let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
+        if split.len() < 1 {
+            return "".to_string();
+        }
+        split.pop();
+
+        split.join(path::MAIN_SEPARATOR_STR)
+    }
+}
+
 // TODO: Remove this.
 pub trait OperatePath {
-    fn pushed(&self, path: &str) -> String;
     fn directories(&self) -> String;
     fn file_name(&self) -> String;
     fn extension(&self) -> String;
@@ -63,12 +85,6 @@ pub trait OperatePath {
 }
 
 impl OperatePath for str {
-    fn pushed(&self, path: &str) -> String {
-        let result = self.to_string() + path::MAIN_SEPARATOR_STR + path;
-
-        result
-    }
-
     fn directories(&self) -> String {
         let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
         if split.len() < 1 {
@@ -105,17 +121,6 @@ impl OperatePath for str {
         }
 
         false
-    }
-}
-
-pub trait ConvertPath {
-    // TODO: Rename to from_lossy()?
-    fn from_path(path: &dyn AsRef<Path>) -> String;
-}
-
-impl ConvertPath for String {
-    fn from_path(path: &dyn AsRef<Path>) -> String {
-        path.as_ref().to_string_lossy().to_string()
     }
 }
 
