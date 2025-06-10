@@ -248,7 +248,6 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
-    use crate::commons::ConvertPath;
     use crate::gc_command::GcCommand;
     use crate::init_command::InitCommand;
     use crate::task::Task;

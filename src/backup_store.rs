@@ -71,7 +71,6 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_store::BackupStore;
-    use crate::commons::ConvertPath;
 
     #[test]
     fn is_creatable() {

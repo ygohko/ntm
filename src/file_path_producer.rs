@@ -134,7 +134,6 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::commons::ConvertPath;
     use crate::commons::OperatePath;
     use crate::file_path_producer;
     use crate::file_path_producer::FilePathProducer;

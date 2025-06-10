@@ -257,7 +257,6 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
-    use crate::commons::ConvertPath;
     use crate::get_command::GetCommand;
     use crate::init_command::InitCommand;
     use crate::task::Task;
@@ -344,7 +343,7 @@ mod tests {
         fs::create_dir_all(&gotten_path).unwrap();
         let mut command = GetCommand::new(&command.name);
         command.set_destination_path(&String::from_path(&ntm_path));
-        command.set_gotten_path(&String::from_path(&gotten_path));
+        command.set_gotten_path(&gotten_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut file_path = gotten_path.clone();

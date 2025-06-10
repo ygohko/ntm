@@ -128,7 +128,6 @@ impl OperatePath for str {
 mod tests {
     use camino::Utf8PathBuf;
 
-    use crate::commons::ConvertPath;
     use crate::commons::OperatePath;
 
     #[test]
