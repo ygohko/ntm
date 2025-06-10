@@ -131,13 +131,6 @@ mod tests {
     use crate::commons::OperatePath;
 
     #[test]
-    fn is_pushable() {
-        let path = "a";
-        let path = path.pushed("b");
-        assert_eq!(path, "a/b".to_string());
-    }
-
-    #[test]
     fn directories_are_gettable() {
         let path = "a/b/c/d.txt";
         let directories = path.directories();
@@ -175,12 +168,5 @@ mod tests {
         let path = "a/b/c/d.txt";
         assert_eq!(path.is_begun("a/b"), true);
         assert_eq!(path.is_begun("a/c"), false);
-    }
-
-    #[test]
-    fn string_is_gettable_from_path() {
-        let path_buf = Utf8PathBuf::from("a/b/c/d.txt");
-        let path: String = String::from_path(&path_buf);
-        assert_eq!(path, "a/b/c/d.txt".to_string());
     }
 }

@@ -281,7 +281,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -290,15 +290,15 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut gotten_path = temp_path.clone();
         gotten_path.push("gotten");
         fs::create_dir_all(&gotten_path).unwrap();
         let mut command = GetCommand::new(&command.name);
-        command.set_destination_path(&String::from_path(&ntm_path));
-        command.set_gotten_path(&String::from_path(&gotten_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_gotten_path(&gotten_path.to_string_lossy().to_string());
         command.execute().unwrap();
     }
 
@@ -325,7 +325,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -334,7 +334,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
         let backup_name = command.name.clone();
 
@@ -342,7 +342,7 @@ mod tests {
         gotten_path.push("gotten");
         fs::create_dir_all(&gotten_path).unwrap();
         let mut command = GetCommand::new(&command.name);
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.set_gotten_path(&gotten_path.to_string_lossy().to_string());
         command.execute().unwrap();
 

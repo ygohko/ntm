@@ -272,7 +272,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -281,7 +281,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut backup_path = ntm_path.clone();
@@ -289,7 +289,7 @@ mod tests {
         backup_path.push(&command.name);
         fs::remove_dir_all(&backup_path).unwrap();
         let mut command = GcCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
     }
 }
