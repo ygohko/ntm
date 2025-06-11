@@ -22,7 +22,6 @@
 
 use camino::Utf8PathBuf;
 use std::path;
-use std::path::Path;
 use std::path::PathBuf;
 
 // TODO: Rename this.
