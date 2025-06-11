@@ -97,31 +97,10 @@ impl OperatePath3 for PathBuf {
 
 // TODO: Remove this.
 pub trait OperatePath {
-    fn file_name(&self) -> String;
-    fn extension(&self) -> String;
     fn is_begun(&self, path: &str) -> bool;
 }
 
 impl OperatePath for str {
-    fn file_name(&self) -> String {
-        let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
-        if split.len() < 1 {
-            return "".to_string();
-        }
-
-        split.pop().unwrap().to_string()
-    }
-
-    fn extension(&self) -> String {
-        let file_name = self.file_name();
-        let mut split: Vec<_> = file_name.split(".").collect();
-        if split.len() < 2 {
-            return "".to_string();
-        }
-
-        split.pop().unwrap().to_string()
-    }
-
     fn is_begun(&self, path: &str) -> bool {
         // TODO: Improve implementation.
         if self.find(path) == Some(0) {
@@ -137,28 +116,6 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use crate::commons::OperatePath;
-
-    #[test]
-    fn file_name_is_gettable() {
-        let path = "a/b/c/d.txt";
-        let file_name = path.file_name();
-        assert_eq!(file_name, "d.txt".to_string());
-
-        let path = "a.txt";
-        let file_name = path.file_name();
-        assert_eq!(file_name, "a.txt".to_string());
-    }
-
-    #[test]
-    fn extension_is_gettable() {
-        let path = "a/b/c/d.txt";
-        let extension = path.extension();
-        assert_eq!(extension, "txt".to_string());
-
-        let path = "a/b/c/d";
-        let extension = path.extension();
-        assert_eq!(extension, "".to_string());
-    }
 
     #[test]
     fn head_directries_are_checkable() {
