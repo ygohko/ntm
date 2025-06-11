@@ -28,6 +28,7 @@ use std::path::Path;
 
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
+use crate::commons::OperatePath3;
 use crate::entry::Entry;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -151,12 +152,12 @@ impl GcCommand {
     }
 
     fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
-        let path1 = format!("{:02x}", index1);
-        let path2 = format!("{:02x}", index2);
+        let directory1 = format!("{:02x}", index1);
+        let directory2 = format!("{:02x}", index2);
         let mut object_path = Utf8PathBuf::from(&self.destination_path);
         object_path.push("Objects");
-        object_path.push(&path1);
-        object_path.push(&path2);
+        object_path.push(&directory1);
+        object_path.push(&directory2);
         if !Path::new(&object_path).exists() {
             return Ok(());
         }
@@ -177,9 +178,12 @@ impl GcCommand {
             };
 
             if let Some(produced_path) = option {
-                if produced_path.extension() == "" {
-                    let mut path = Utf8PathBuf::from(&path1);
-                    path.push(&path2);
+                let path = Utf8PathBuf::from(&produced_path);
+                let extension = path.extension_or_empty();
+                let file_name = path.file_name_or_empty();
+                if extension == "" {
+                    let mut path = Utf8PathBuf::from(&directory1);
+                    path.push(&directory2);
                     path.push(&produced_path);
                     if let Err(error) = self.process_object(path.as_str()) {
                         println!(
@@ -188,9 +192,10 @@ impl GcCommand {
                         );
                     }
                     self.processed_count += 1;
-                    self.state.last_processed_id = produced_path.file_name();
+                    self.state.last_processed_id = file_name;
                 }
             }
+
         }
 
         Ok(())
@@ -207,7 +212,8 @@ impl GcCommand {
         self.count += 1;
         self.count %= 100;
 
-        let object_id = path.file_name();
+        let path1 = Utf8PathBuf::from(&path);
+        let object_id = path1.file_name_or_empty();
         let attributes = match object_store.attributes(&object_id) {
             Ok(attributes) => attributes,
             Err(error) => return Err(error),

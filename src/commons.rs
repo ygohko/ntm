@@ -29,6 +29,7 @@ use std::path::PathBuf;
 // TODO: Add tests.
 pub trait OperatePath3 {
     fn file_name_or_empty(&self) -> String;
+    fn extension_or_empty(&self) -> String;
     fn directories(&self) -> String;
 }
 
@@ -40,6 +41,15 @@ impl OperatePath3 for Utf8PathBuf {
         };
 
         file_name.to_string()
+    }
+
+    fn extension_or_empty(&self) -> String {
+        let extension = match self.extension() {
+            Some(extension) => extension,
+            None => return "".to_string(),
+        };
+
+        extension.to_string()
     }
 
     fn directories(&self) -> String {
@@ -62,6 +72,15 @@ impl OperatePath3 for PathBuf {
         };
 
         file_name
+    }
+
+    fn extension_or_empty(&self) -> String {
+        let extension = match self.extension() {
+            Some(extension) => extension.to_string_lossy().to_string(),
+            None => return "".to_string(),
+        };
+
+        extension
     }
 
     fn directories(&self) -> String {
