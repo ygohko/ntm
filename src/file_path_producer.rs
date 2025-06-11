@@ -103,6 +103,8 @@ impl FilePathProducer {
                                 for directory in &self.excluded_directories {
                                     if path1.is_begun(directory) {
                                         needed = false;
+
+                                        // TODO: Can we break here?
                                     }
                                 }
                                 if needed {

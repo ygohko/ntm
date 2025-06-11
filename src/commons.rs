@@ -27,6 +27,8 @@ use std::path::PathBuf;
 
 // TODO: Rename this.
 // TODO: Add tests.
+// TODO: Add to_string_easy().
+// TODO: directories() should be migrated to parent()?
 pub trait OperatePath3 {
     fn file_name_or_empty(&self) -> String;
     fn extension_or_empty(&self) -> String;
