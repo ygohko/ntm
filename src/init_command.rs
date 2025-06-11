@@ -75,7 +75,6 @@ impl InitCommand {
 mod tests {
     use tempdir::TempDir;
 
-    use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
     use crate::task::Task;
 
@@ -88,7 +87,7 @@ mod tests {
     fn is_executable() {
         let temp_dir = TempDir::new("test").unwrap();
         let mut command = InitCommand::new();
-        command.destination_path = String::from_path(&temp_dir.path());
+        command.destination_path = temp_dir.path().to_string_lossy().to_string();
         command.execute().unwrap();
     }
 }

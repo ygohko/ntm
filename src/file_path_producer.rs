@@ -134,7 +134,6 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::commons::ConvertPath;
     use crate::commons::OperatePath;
     use crate::file_path_producer;
     use crate::file_path_producer::FilePathProducer;
@@ -144,7 +143,7 @@ mod tests {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
         };
-        let path = String::from_path(&temp_dir.path());
+        let path = temp_dir.path().to_string_lossy().to_string();
         let _producer = FilePathProducer::new(&path);
     }
 
@@ -165,7 +164,7 @@ mod tests {
         let Ok(_) = fs::write(&path, "FGHIJ") else {
             panic!();
         };
-        let path = String::from_path(&temp_dir.path());
+        let path = temp_dir.path().to_string_lossy().to_string();
         let mut producer = FilePathProducer::new(&path);
         let Ok(path) = producer.next() else {
             panic!();

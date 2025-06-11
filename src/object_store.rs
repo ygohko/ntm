@@ -26,8 +26,8 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 
+use crate::commons::OperatePath3;
 use crate::attributes::Attributes;
-use crate::commons::ConvertPath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -117,8 +117,8 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_OBJECT_FAILED));
         }
 
-        let mut attributes_path = String::from_path(&path);
-        attributes_path += ".attributes";
+        let mut attributes_path = path.as_str().to_string();
+        attributes_path.push_str(".attributes");
         if let Err(_) = fs::remove_file(&attributes_path) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_ATTTIBUTE_FAILED));
         };
@@ -256,7 +256,6 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::commons::ConvertPath;
     use crate::object_store::Attributes;
     use crate::object_store::ObjectStore;
 
@@ -269,7 +268,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let _store = ObjectStore::new(&String::from_path(&path));
+        let _store = ObjectStore::new(&path.to_string_lossy().to_string());
     }
 
     #[test]
@@ -281,7 +280,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&String::from_path(&path));
+        let store = ObjectStore::new(&path.to_string_lossy().to_string());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -298,7 +297,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&String::from_path(&path));
+        let store = ObjectStore::new(&path.to_string_lossy().to_string());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -316,7 +315,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&String::from_path(&path));
+        let store = ObjectStore::new(&path.to_string_lossy().to_string());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -343,7 +342,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&String::from_path(&path));
+        let store = ObjectStore::new(&path.to_string_lossy().to_string());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -368,7 +367,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&String::from_path(&path));
+        let store = ObjectStore::new(&path.to_string_lossy().to_string());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -390,7 +389,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let mut store = ObjectStore::new(&String::from_path(&path));
+        let mut store = ObjectStore::new(&path.to_string_lossy().to_string());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];

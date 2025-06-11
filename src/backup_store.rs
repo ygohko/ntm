@@ -22,8 +22,8 @@
 
 use std::fs;
 
-use crate::commons::ConvertPath;
 use crate::commons::OperatePath;
+use crate::commons::OperatePath3;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -55,8 +55,7 @@ impl BackupStore {
             if let Ok(entry) = result {
                 if let Ok(metadata) = entry.metadata() {
                     if metadata.is_dir() {
-                        let path = String::from_path(&entry.path());
-                        names.push(path.file_name());
+                        names.push(entry.path().file_name_or_empty());
                     }
                 }
             }
@@ -72,14 +71,13 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_store::BackupStore;
-    use crate::commons::ConvertPath;
 
     #[test]
     fn is_creatable() {
         let temp_dir = TempDir::new("test").unwrap();
         let path = temp_dir.path().join("Backups");
         fs::create_dir_all(&path).unwrap();
-        let _store = BackupStore::new(&String::from_path(&path));
+        let _store = BackupStore::new(&path.to_string_lossy().to_string());
     }
 
     #[test]
@@ -95,7 +93,7 @@ mod tests {
         let mut backup_path = path.clone();
         backup_path.push("33333333-3333");
         fs::create_dir_all(&backup_path).unwrap();
-        let store = BackupStore::new(&String::from_path(&path));
+        let store = BackupStore::new(&path.to_string_lossy().to_string());
         let names = store.names().unwrap();
         assert_eq!(names.len(), 3);
         assert!(names.contains(&"11111111-1111".to_string()));

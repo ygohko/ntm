@@ -31,8 +31,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::commons::ConvertPath;
-use crate::commons::OperatePath;
+use crate::commons::OperatePath3;
 use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
@@ -83,7 +82,7 @@ impl Task for GetCommand {
         if self.limited_directory != "".to_string() {
             path.push(&self.limited_directory);
         }
-        let mut producer = FilePathProducer::new(&String::from_path(&path));
+        let mut producer = FilePathProducer::new(&path.as_str());
         let mut done = false;
         while !done {
             let path = match producer.next() {
@@ -137,7 +136,7 @@ impl Task for GetCommand {
                     gotten_path.push(&self.limited_directory);
                 }
                 gotten_path.push(&path);
-                let directories = String::from_path(&gotten_path).directories();
+                let directories = gotten_path.directories();
                 match fs::create_dir_all(&directories) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
@@ -258,7 +257,6 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
-    use crate::commons::ConvertPath;
     use crate::get_command::GetCommand;
     use crate::init_command::InitCommand;
     use crate::task::Task;
@@ -283,7 +281,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -292,15 +290,15 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut gotten_path = temp_path.clone();
         gotten_path.push("gotten");
         fs::create_dir_all(&gotten_path).unwrap();
         let mut command = GetCommand::new(&command.name);
-        command.set_destination_path(&String::from_path(&ntm_path));
-        command.set_gotten_path(&String::from_path(&gotten_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_gotten_path(&gotten_path.to_string_lossy().to_string());
         command.execute().unwrap();
     }
 
@@ -327,7 +325,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -336,7 +334,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
         let backup_name = command.name.clone();
 
@@ -344,8 +342,8 @@ mod tests {
         gotten_path.push("gotten");
         fs::create_dir_all(&gotten_path).unwrap();
         let mut command = GetCommand::new(&command.name);
-        command.set_destination_path(&String::from_path(&ntm_path));
-        command.set_gotten_path(&String::from_path(&gotten_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_gotten_path(&gotten_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut file_path = gotten_path.clone();

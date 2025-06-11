@@ -38,7 +38,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
-use crate::commons::ConvertPath;
 use crate::commons::OperatePath3;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -184,7 +183,7 @@ impl BackupCommand {
         let permission = permission(&metadata);
         let uid = uid(&metadata);
         let gid = gid(&metadata);
-        let id_path = String::from_path(&path_buf);
+        let id_path = path_buf.as_str();
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 
@@ -329,7 +328,6 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
-    use crate::commons::ConvertPath;
     use crate::init_command::InitCommand;
     use crate::task::Task;
 
@@ -353,7 +351,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -362,7 +360,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&String::from_path(&ntm_path));
+        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
         command.execute().unwrap();
     }
 }
