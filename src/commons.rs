@@ -78,23 +78,12 @@ impl OperatePath3 for PathBuf {
 
 // TODO: Remove this.
 pub trait OperatePath {
-    fn directories(&self) -> String;
     fn file_name(&self) -> String;
     fn extension(&self) -> String;
     fn is_begun(&self, path: &str) -> bool;
 }
 
 impl OperatePath for str {
-    fn directories(&self) -> String {
-        let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
-        if split.len() < 1 {
-            return "".to_string();
-        }
-        split.pop();
-
-        split.join(path::MAIN_SEPARATOR_STR)
-    }
-
     fn file_name(&self) -> String {
         let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
         if split.len() < 1 {
@@ -129,17 +118,6 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use crate::commons::OperatePath;
-
-    #[test]
-    fn directories_are_gettable() {
-        let path = "a/b/c/d.txt";
-        let directories = path.directories();
-        assert_eq!(directories, "a/b/c".to_string());
-
-        let path = "d.txt";
-        let directories = path.directories();
-        assert_eq!(directories, "".to_string());
-    }
 
     #[test]
     fn file_name_is_gettable() {
