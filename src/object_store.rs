@@ -281,7 +281,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_lossy().to_string());
+        let store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -298,7 +298,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_lossy().to_string());
+        let store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -316,7 +316,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_lossy().to_string());
+        let store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -343,7 +343,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_lossy().to_string());
+        let store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -368,7 +368,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_lossy().to_string());
+        let store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -390,7 +390,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let mut store = ObjectStore::new(&path.to_string_lossy().to_string());
+        let mut store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
