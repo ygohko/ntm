@@ -97,5 +97,41 @@ impl OperatePath for PathBuf {
 
 #[cfg(test)]
 mod tests {
-    // TODO: Add tests for new OperatePath trait.
+    use camino::Utf8PathBuf;
+    use std::path::PathBuf;
+
+    use crate::commons::OperatePath;
+    
+    #[test]
+    fn file_name_is_gettable() {
+        let path = Utf8PathBuf::from("/a/b/c.txt");
+        let file_name = path.file_name_or_empty();
+        assert_eq!(file_name, "c.txt");
+
+        let path = PathBuf::from("/a/b/c.txt");
+        let file_name = path.file_name_or_empty();
+        assert_eq!(file_name, "c.txt");
+    }
+
+    #[test]
+    fn extension_is_gettable() {
+        let path = Utf8PathBuf::from("/a/b/c.txt");
+        let extension = path.extension_or_empty();
+        assert_eq!(extension, "txt");
+
+        let path = PathBuf::from("/a/b/c.txt");
+        let extension = path.extension_or_empty();
+        assert_eq!(extension, "txt");
+    }
+    
+    #[test]
+    fn directories_are_gettable() {
+        let path = Utf8PathBuf::from("/a/b/c.txt");
+        let directories = path.directories();
+        assert_eq!(directories, "/a/b");
+
+        let path = PathBuf::from("/a/b/c.txt");
+        let directories = path.directories();
+        assert_eq!(directories, "/a/b");
+    }
 }
