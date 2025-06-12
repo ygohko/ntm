@@ -22,7 +22,7 @@
 
 use std::fs;
 
-use crate::commons::OperatePath3;
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;

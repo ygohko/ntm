@@ -24,17 +24,16 @@ use camino::Utf8PathBuf;
 use std::path;
 use std::path::PathBuf;
 
-// TODO: Rename this.
 // TODO: Add tests.
 // TODO: Add to_string_easy().
 // TODO: directories() should be migrated to parent()?
-pub trait OperatePath3 {
+pub trait OperatePath {
     fn file_name_or_empty(&self) -> String;
     fn extension_or_empty(&self) -> String;
     fn directories(&self) -> String;
 }
 
-impl OperatePath3 for Utf8PathBuf {
+impl OperatePath for Utf8PathBuf {
     fn file_name_or_empty(&self) -> String {
         let file_name = match self.file_name() {
             Some(file_name) => file_name,
@@ -65,7 +64,7 @@ impl OperatePath3 for Utf8PathBuf {
     }
 }
 
-impl OperatePath3 for PathBuf {
+impl OperatePath for PathBuf {
     fn file_name_or_empty(&self) -> String {
         let file_name = match self.file_name() {
             Some(file_name) => file_name.to_string_lossy().to_string(),

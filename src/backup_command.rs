@@ -38,7 +38,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
-use crate::commons::OperatePath3;
+use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
 use crate::error::Error;

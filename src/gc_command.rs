@@ -27,7 +27,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::backup_store::BackupStore;
-use crate::commons::OperatePath3;
+use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
