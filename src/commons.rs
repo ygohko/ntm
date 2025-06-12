@@ -135,11 +135,11 @@ mod tests {
     #[test]
     fn directories_are_gettable() {
         let path = Utf8PathBuf::from("/a/b/c.txt");
-        let directories = path.directories();
-        assert_eq!(directories, "/a/b");
+        let string = path.to_string_easy();
+        assert_eq!(string, "/a/b/c.txt");
 
         let path = PathBuf::from("/a/b/c.txt");
-        let directories = path.directories();
-        assert_eq!(directories, "/a/b");
+        let string = path.to_string_easy();
+        assert_eq!(string, "/a/b/c.txt");
     }
 }
