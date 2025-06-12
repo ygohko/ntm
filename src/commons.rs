@@ -24,13 +24,13 @@ use camino::Utf8PathBuf;
 use std::path;
 use std::path::PathBuf;
 
-// TODO: Add tests.
 // TODO: Add to_string_easy().
 // TODO: directories() should be migrated to parent()?
 pub trait OperatePath {
     fn file_name_or_empty(&self) -> String;
     fn extension_or_empty(&self) -> String;
     fn directories(&self) -> String;
+    fn to_string_easy(&self) -> String;
 }
 
 impl OperatePath for Utf8PathBuf {
@@ -62,6 +62,10 @@ impl OperatePath for Utf8PathBuf {
 
         split.join(path::MAIN_SEPARATOR_STR)
     }
+
+    fn to_string_easy(&self) -> String {
+        self.as_str().to_string()
+    }
 }
 
 impl OperatePath for PathBuf {
@@ -92,6 +96,10 @@ impl OperatePath for PathBuf {
         split.pop();
 
         split.join(path::MAIN_SEPARATOR_STR)
+    }
+
+    fn to_string_easy(&self) -> String {
+        self.to_string_lossy().to_string()
     }
 }
 

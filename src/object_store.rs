@@ -27,6 +27,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 use crate::attributes::Attributes;
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -116,7 +117,7 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_OBJECT_FAILED));
         }
 
-        let mut attributes_path = path.as_str().to_string();
+        let mut attributes_path = path.to_string_easy();
         attributes_path.push_str(".attributes");
         if let Err(_) = fs::remove_file(&attributes_path) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_ATTTIBUTE_FAILED));
@@ -255,6 +256,7 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
+    use crate::commons::OperatePath;
     use crate::object_store::Attributes;
     use crate::object_store::ObjectStore;
 
@@ -267,7 +269,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let _store = ObjectStore::new(&path.to_string_lossy().to_string());
+        let _store = ObjectStore::new(&path.to_string_easy());
     }
 
     #[test]
