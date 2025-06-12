@@ -73,7 +73,7 @@ impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        let mut store = ObjectStore::new(path.as_str());
+        let mut store = ObjectStore::new(&path.to_string_easy());
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
@@ -183,7 +183,7 @@ impl BackupCommand {
         let permission = permission(&metadata);
         let uid = uid(&metadata);
         let gid = gid(&metadata);
-        let id_path = path_buf.as_str();
+        let id_path = path_buf.to_string_easy();
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 

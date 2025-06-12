@@ -71,18 +71,18 @@ impl Task for GcCommand {
     fn execute(&mut self) -> Result<()> {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        self.object_store = Some(ObjectStore::new(&path.as_str()));
+        self.object_store = Some(ObjectStore::new(&path.to_string_easy()));
 
         let mut backups_path = Utf8PathBuf::from(&self.destination_path);
         backups_path.push("Backups");
-        let backup_store = BackupStore::new(&backups_path.as_str());
+        let backup_store = BackupStore::new(&backups_path.to_string_easy());
         let names = match backup_store.names() {
             Ok(names) => names,
             Err(error) => return Err(error),
         };
         for name in names {
             let backup_path = backups_path.join(&name);
-            self.backup_paths.push(backup_path.as_str().to_string());
+            self.backup_paths.push(backup_path.to_string_easy());
         }
 
         let mut offset = 0;
@@ -160,7 +160,7 @@ impl GcCommand {
         if !Path::new(&object_path).exists() {
             return Ok(());
         }
-        let mut producer = FilePathProducer::new(&object_path.as_str());
+        let mut producer = FilePathProducer::new(&object_path.to_string_easy());
         let mut done = false;
         while !done {
             let option = match producer.next() {
@@ -184,7 +184,7 @@ impl GcCommand {
                     let mut path = Utf8PathBuf::from(&directory1);
                     path.push(&directory2);
                     path.push(&produced_path);
-                    if let Err(error) = self.process_object(path.as_str()) {
+                    if let Err(error) = self.process_object(&path.to_string_easy()) {
                         println!(
                             "Warning: error caused when processing objects. error: {}",
                             error

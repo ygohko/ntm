@@ -65,7 +65,7 @@ impl Task for GetCommand {
         // TODO: Return error if path is invalid.
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        let store = ObjectStore::new(&path.as_str());
+        let store = ObjectStore::new(&path.to_string_easy());
         let mut backup_path = Utf8PathBuf::from(&self.destination_path);
         backup_path.push("Backups");
         backup_path.push(&self.backup);
@@ -82,7 +82,7 @@ impl Task for GetCommand {
         if self.limited_directory != "".to_string() {
             path.push(&self.limited_directory);
         }
-        let mut producer = FilePathProducer::new(&path.as_str());
+        let mut producer = FilePathProducer::new(&path.to_string_easy());
         let mut done = false;
         while !done {
             let path = match producer.next() {
@@ -147,7 +147,7 @@ impl Task for GetCommand {
                     // TODO: Skipping file that writing is failed may be needed.
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                 };
-                if let Err(error) = apply_metadata(&gotten_path.as_str(), &entry) {
+                if let Err(error) = apply_metadata(&gotten_path.to_string_easy(), &entry) {
                     println!("apply_metadata() failed: error: {}", error);
                 }
 
