@@ -22,17 +22,18 @@
 
 use camino::Utf8PathBuf;
 use std::path;
-use std::path::Path;
 use std::path::PathBuf;
 
-// TODO: Rename this.
 // TODO: Add tests.
-pub trait OperatePath3 {
+// TODO: Add to_string_easy().
+// TODO: directories() should be migrated to parent()?
+pub trait OperatePath {
     fn file_name_or_empty(&self) -> String;
+    fn extension_or_empty(&self) -> String;
     fn directories(&self) -> String;
 }
 
-impl OperatePath3 for Utf8PathBuf {
+impl OperatePath for Utf8PathBuf {
     fn file_name_or_empty(&self) -> String {
         let file_name = match self.file_name() {
             Some(file_name) => file_name,
@@ -40,6 +41,15 @@ impl OperatePath3 for Utf8PathBuf {
         };
 
         file_name.to_string()
+    }
+
+    fn extension_or_empty(&self) -> String {
+        let extension = match self.extension() {
+            Some(extension) => extension,
+            None => return "".to_string(),
+        };
+
+        extension.to_string()
     }
 
     fn directories(&self) -> String {
@@ -54,7 +64,7 @@ impl OperatePath3 for Utf8PathBuf {
     }
 }
 
-impl OperatePath3 for PathBuf {
+impl OperatePath for PathBuf {
     fn file_name_or_empty(&self) -> String {
         let file_name = match self.file_name() {
             Some(file_name) => file_name.to_string_lossy().to_string(),
@@ -62,6 +72,15 @@ impl OperatePath3 for PathBuf {
         };
 
         file_name
+    }
+
+    fn extension_or_empty(&self) -> String {
+        let extension = match self.extension() {
+            Some(extension) => extension.to_string_lossy().to_string(),
+            None => return "".to_string(),
+        };
+
+        extension
     }
 
     fn directories(&self) -> String {
@@ -76,97 +95,43 @@ impl OperatePath3 for PathBuf {
     }
 }
 
-// TODO: Remove this.
-pub trait OperatePath {
-    fn directories(&self) -> String;
-    fn file_name(&self) -> String;
-    fn extension(&self) -> String;
-    fn is_begun(&self, path: &str) -> bool;
-}
-
-impl OperatePath for str {
-    fn directories(&self) -> String {
-        let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
-        if split.len() < 1 {
-            return "".to_string();
-        }
-        split.pop();
-
-        split.join(path::MAIN_SEPARATOR_STR)
-    }
-
-    fn file_name(&self) -> String {
-        let mut split: Vec<_> = self.split(path::MAIN_SEPARATOR_STR).collect();
-        if split.len() < 1 {
-            return "".to_string();
-        }
-
-        split.pop().unwrap().to_string()
-    }
-
-    fn extension(&self) -> String {
-        let file_name = self.file_name();
-        let mut split: Vec<_> = file_name.split(".").collect();
-        if split.len() < 2 {
-            return "".to_string();
-        }
-
-        split.pop().unwrap().to_string()
-    }
-
-    fn is_begun(&self, path: &str) -> bool {
-        // TODO: Improve implementation.
-        if self.find(path) == Some(0) {
-            return true;
-        }
-
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use camino::Utf8PathBuf;
+    use std::path::PathBuf;
 
     use crate::commons::OperatePath;
-
-    #[test]
-    fn directories_are_gettable() {
-        let path = "a/b/c/d.txt";
-        let directories = path.directories();
-        assert_eq!(directories, "a/b/c".to_string());
-
-        let path = "d.txt";
-        let directories = path.directories();
-        assert_eq!(directories, "".to_string());
-    }
-
+    
     #[test]
     fn file_name_is_gettable() {
-        let path = "a/b/c/d.txt";
-        let file_name = path.file_name();
-        assert_eq!(file_name, "d.txt".to_string());
+        let path = Utf8PathBuf::from("/a/b/c.txt");
+        let file_name = path.file_name_or_empty();
+        assert_eq!(file_name, "c.txt");
 
-        let path = "a.txt";
-        let file_name = path.file_name();
-        assert_eq!(file_name, "a.txt".to_string());
+        let path = PathBuf::from("/a/b/c.txt");
+        let file_name = path.file_name_or_empty();
+        assert_eq!(file_name, "c.txt");
     }
 
     #[test]
     fn extension_is_gettable() {
-        let path = "a/b/c/d.txt";
-        let extension = path.extension();
-        assert_eq!(extension, "txt".to_string());
+        let path = Utf8PathBuf::from("/a/b/c.txt");
+        let extension = path.extension_or_empty();
+        assert_eq!(extension, "txt");
 
-        let path = "a/b/c/d";
-        let extension = path.extension();
-        assert_eq!(extension, "".to_string());
+        let path = PathBuf::from("/a/b/c.txt");
+        let extension = path.extension_or_empty();
+        assert_eq!(extension, "txt");
     }
-
+    
     #[test]
-    fn head_directries_are_checkable() {
-        let path = "a/b/c/d.txt";
-        assert_eq!(path.is_begun("a/b"), true);
-        assert_eq!(path.is_begun("a/c"), false);
+    fn directories_are_gettable() {
+        let path = Utf8PathBuf::from("/a/b/c.txt");
+        let directories = path.directories();
+        assert_eq!(directories, "/a/b");
+
+        let path = PathBuf::from("/a/b/c.txt");
+        let directories = path.directories();
+        assert_eq!(directories, "/a/b");
     }
 }

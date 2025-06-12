@@ -31,7 +31,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::commons::OperatePath3;
+use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;

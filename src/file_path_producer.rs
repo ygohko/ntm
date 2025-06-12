@@ -20,10 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::fs;
 use std::path::Path;
 
-use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -99,10 +99,12 @@ impl FilePathProducer {
                                 self.file_paths.push(path);
                             } else if is_dir {
                                 let mut needed = true;
-                                let path1 = path[self.prefix_length..].to_string();
+                                let path1 = Utf8PathBuf::from(&path[self.prefix_length..].to_string());
                                 for directory in &self.excluded_directories {
-                                    if path1.is_begun(directory) {
+                                    if path1.starts_with(&directory) {
                                         needed = false;
+
+                                        // TODO: Can we break here?
                                     }
                                 }
                                 if needed {
@@ -130,11 +132,9 @@ impl FilePathProducer {
 
 #[cfg(test)]
 mod tests {
-    use camino::Utf8PathBuf;
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::commons::OperatePath;
     use crate::file_path_producer;
     use crate::file_path_producer::FilePathProducer;
 
