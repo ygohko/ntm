@@ -24,7 +24,6 @@ use camino::Utf8PathBuf;
 use std::fs;
 use std::path::Path;
 
-use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -133,11 +132,9 @@ impl FilePathProducer {
 
 #[cfg(test)]
 mod tests {
-    use camino::Utf8PathBuf;
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::commons::OperatePath;
     use crate::file_path_producer;
     use crate::file_path_producer::FilePathProducer;
 

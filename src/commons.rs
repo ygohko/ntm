@@ -96,32 +96,7 @@ impl OperatePath3 for PathBuf {
     }
 }
 
-// TODO: Remove this.
-pub trait OperatePath {
-    fn is_begun(&self, path: &str) -> bool;
-}
-
-impl OperatePath for str {
-    fn is_begun(&self, path: &str) -> bool {
-        // TODO: Improve implementation.
-        if self.find(path) == Some(0) {
-            return true;
-        }
-
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use camino::Utf8PathBuf;
-
-    use crate::commons::OperatePath;
-
-    #[test]
-    fn head_directries_are_checkable() {
-        let path = "a/b/c/d.txt";
-        assert_eq!(path.is_begun("a/b"), true);
-        assert_eq!(path.is_begun("a/c"), false);
-    }
+    // TODO: Add tests for new OperatePath trait.
 }
