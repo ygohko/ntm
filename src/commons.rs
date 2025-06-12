@@ -22,6 +22,7 @@
 
 use camino::Utf8PathBuf;
 use std::path;
+use std::path::Path;
 use std::path::PathBuf;
 
 // TODO: Add to_string_easy().
@@ -69,6 +70,41 @@ impl OperatePath for Utf8PathBuf {
 }
 
 impl OperatePath for PathBuf {
+    fn file_name_or_empty(&self) -> String {
+        let file_name = match self.file_name() {
+            Some(file_name) => file_name.to_string_lossy().to_string(),
+            None => return "".to_string(),
+        };
+
+        file_name
+    }
+
+    fn extension_or_empty(&self) -> String {
+        let extension = match self.extension() {
+            Some(extension) => extension.to_string_lossy().to_string(),
+            None => return "".to_string(),
+        };
+
+        extension
+    }
+
+    fn directories(&self) -> String {
+        let path = self.to_string_lossy().to_string();
+        let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
+        if split.len() < 1 {
+            return "".to_string();
+        }
+        split.pop();
+
+        split.join(path::MAIN_SEPARATOR_STR)
+    }
+
+    fn to_string_easy(&self) -> String {
+        self.to_string_lossy().to_string()
+    }
+}
+
+impl OperatePath for Path {
     fn file_name_or_empty(&self) -> String {
         let file_name = match self.file_name() {
             Some(file_name) => file_name.to_string_lossy().to_string(),

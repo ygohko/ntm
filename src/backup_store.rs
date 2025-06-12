@@ -70,13 +70,14 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_store::BackupStore;
+    use crate::commons::OperatePath;
 
     #[test]
     fn is_creatable() {
         let temp_dir = TempDir::new("test").unwrap();
         let path = temp_dir.path().join("Backups");
         fs::create_dir_all(&path).unwrap();
-        let _store = BackupStore::new(&path.to_string_lossy().to_string());
+        let _store = BackupStore::new(&path.to_string_easy());
     }
 
     #[test]
