@@ -73,7 +73,7 @@ impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        let mut store = ObjectStore::new(path.as_str());
+        let mut store = ObjectStore::new(&path.to_string_easy());
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
@@ -183,7 +183,7 @@ impl BackupCommand {
         let permission = permission(&metadata);
         let uid = uid(&metadata);
         let gid = gid(&metadata);
-        let id_path = path_buf.as_str();
+        let id_path = path_buf.to_string_easy();
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 
@@ -328,6 +328,7 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
+    use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
     use crate::task::Task;
 
@@ -351,7 +352,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -360,7 +361,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
     }
 }

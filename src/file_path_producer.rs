@@ -24,6 +24,7 @@ use camino::Utf8PathBuf;
 use std::fs;
 use std::path::Path;
 
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -92,7 +93,7 @@ impl FilePathProducer {
                                     println!("error: {}", error);
                                 }
                             };
-                            let path = entry.path().to_string_lossy().to_string();
+                            let path = entry.path().to_string_easy();
                             if is_file {
                                 // TODO: Add a method to remove some head directories.
                                 let path = path[self.prefix_length..].to_string();
@@ -135,6 +136,7 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
+    use crate::commons::OperatePath;
     use crate::file_path_producer;
     use crate::file_path_producer::FilePathProducer;
 
@@ -143,7 +145,7 @@ mod tests {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
         };
-        let path = temp_dir.path().to_string_lossy().to_string();
+        let path = temp_dir.path().to_string_easy();
         let _producer = FilePathProducer::new(&path);
     }
 
@@ -164,7 +166,7 @@ mod tests {
         let Ok(_) = fs::write(&path, "FGHIJ") else {
             panic!();
         };
-        let path = temp_dir.path().to_string_lossy().to_string();
+        let path = temp_dir.path().to_string_easy();
         let mut producer = FilePathProducer::new(&path);
         let Ok(path) = producer.next() else {
             panic!();

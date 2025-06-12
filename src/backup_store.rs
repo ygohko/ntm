@@ -70,13 +70,14 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_store::BackupStore;
+    use crate::commons::OperatePath;
 
     #[test]
     fn is_creatable() {
         let temp_dir = TempDir::new("test").unwrap();
         let path = temp_dir.path().join("Backups");
         fs::create_dir_all(&path).unwrap();
-        let _store = BackupStore::new(&path.to_string_lossy().to_string());
+        let _store = BackupStore::new(&path.to_string_easy());
     }
 
     #[test]
@@ -92,7 +93,7 @@ mod tests {
         let mut backup_path = path.clone();
         backup_path.push("33333333-3333");
         fs::create_dir_all(&backup_path).unwrap();
-        let store = BackupStore::new(&path.to_string_lossy().to_string());
+        let store = BackupStore::new(&path.to_string_easy());
         let names = store.names().unwrap();
         assert_eq!(names.len(), 3);
         assert!(names.contains(&"11111111-1111".to_string()));

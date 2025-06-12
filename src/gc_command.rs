@@ -71,18 +71,18 @@ impl Task for GcCommand {
     fn execute(&mut self) -> Result<()> {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        self.object_store = Some(ObjectStore::new(&path.as_str()));
+        self.object_store = Some(ObjectStore::new(&path.to_string_easy()));
 
         let mut backups_path = Utf8PathBuf::from(&self.destination_path);
         backups_path.push("Backups");
-        let backup_store = BackupStore::new(&backups_path.as_str());
+        let backup_store = BackupStore::new(&backups_path.to_string_easy());
         let names = match backup_store.names() {
             Ok(names) => names,
             Err(error) => return Err(error),
         };
         for name in names {
             let backup_path = backups_path.join(&name);
-            self.backup_paths.push(backup_path.as_str().to_string());
+            self.backup_paths.push(backup_path.to_string_easy());
         }
 
         let mut offset = 0;
@@ -160,7 +160,7 @@ impl GcCommand {
         if !Path::new(&object_path).exists() {
             return Ok(());
         }
-        let mut producer = FilePathProducer::new(&object_path.as_str());
+        let mut producer = FilePathProducer::new(&object_path.to_string_easy());
         let mut done = false;
         while !done {
             let option = match producer.next() {
@@ -184,7 +184,7 @@ impl GcCommand {
                     let mut path = Utf8PathBuf::from(&directory1);
                     path.push(&directory2);
                     path.push(&produced_path);
-                    if let Err(error) = self.process_object(path.as_str()) {
+                    if let Err(error) = self.process_object(&path.to_string_easy()) {
                         println!(
                             "Warning: error caused when processing objects. error: {}",
                             error
@@ -253,6 +253,7 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
+    use crate::commons::OperatePath;
     use crate::gc_command::GcCommand;
     use crate::init_command::InitCommand;
     use crate::task::Task;
@@ -277,7 +278,7 @@ mod tests {
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
         let mut command = InitCommand::new();
-        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
@@ -286,7 +287,7 @@ mod tests {
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupCommand::new();
-        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
 
         let mut backup_path = ntm_path.clone();
@@ -294,7 +295,7 @@ mod tests {
         backup_path.push(&command.name);
         fs::remove_dir_all(&backup_path).unwrap();
         let mut command = GcCommand::new();
-        command.set_destination_path(&ntm_path.to_string_lossy().to_string());
+        command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
     }
 }

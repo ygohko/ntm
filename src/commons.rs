@@ -22,15 +22,15 @@
 
 use camino::Utf8PathBuf;
 use std::path;
+use std::path::Path;
 use std::path::PathBuf;
 
-// TODO: Add tests.
-// TODO: Add to_string_easy().
 // TODO: directories() should be migrated to parent()?
 pub trait OperatePath {
     fn file_name_or_empty(&self) -> String;
     fn extension_or_empty(&self) -> String;
     fn directories(&self) -> String;
+    fn to_string_easy(&self) -> String;
 }
 
 impl OperatePath for Utf8PathBuf {
@@ -61,6 +61,10 @@ impl OperatePath for Utf8PathBuf {
         split.pop();
 
         split.join(path::MAIN_SEPARATOR_STR)
+    }
+
+    fn to_string_easy(&self) -> String {
+        self.as_str().to_string()
     }
 }
 
@@ -93,11 +97,51 @@ impl OperatePath for PathBuf {
 
         split.join(path::MAIN_SEPARATOR_STR)
     }
+
+    fn to_string_easy(&self) -> String {
+        self.to_string_lossy().to_string()
+    }
+}
+
+impl OperatePath for Path {
+    fn file_name_or_empty(&self) -> String {
+        let file_name = match self.file_name() {
+            Some(file_name) => file_name.to_string_lossy().to_string(),
+            None => return "".to_string(),
+        };
+
+        file_name
+    }
+
+    fn extension_or_empty(&self) -> String {
+        let extension = match self.extension() {
+            Some(extension) => extension.to_string_lossy().to_string(),
+            None => return "".to_string(),
+        };
+
+        extension
+    }
+
+    fn directories(&self) -> String {
+        let path = self.to_string_lossy().to_string();
+        let mut split: Vec<_> = path.split(path::MAIN_SEPARATOR_STR).collect();
+        if split.len() < 1 {
+            return "".to_string();
+        }
+        split.pop();
+
+        split.join(path::MAIN_SEPARATOR_STR)
+    }
+
+    fn to_string_easy(&self) -> String {
+        self.to_string_lossy().to_string()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use camino::Utf8PathBuf;
+    use std::path::Path;
     use std::path::PathBuf;
 
     use crate::commons::OperatePath;
@@ -111,6 +155,10 @@ mod tests {
         let path = PathBuf::from("/a/b/c.txt");
         let file_name = path.file_name_or_empty();
         assert_eq!(file_name, "c.txt");
+
+        let path = Path::new("/a/b/c.txt");
+        let file_name = path.file_name_or_empty();
+        assert_eq!(file_name, "c.txt");
     }
 
     #[test]
@@ -122,16 +170,24 @@ mod tests {
         let path = PathBuf::from("/a/b/c.txt");
         let extension = path.extension_or_empty();
         assert_eq!(extension, "txt");
+
+        let path = Path::new("/a/b/c.txt");
+        let extension = path.extension_or_empty();
+        assert_eq!(extension, "txt");
     }
     
     #[test]
     fn directories_are_gettable() {
         let path = Utf8PathBuf::from("/a/b/c.txt");
-        let directories = path.directories();
-        assert_eq!(directories, "/a/b");
+        let string = path.to_string_easy();
+        assert_eq!(string, "/a/b/c.txt");
 
         let path = PathBuf::from("/a/b/c.txt");
-        let directories = path.directories();
-        assert_eq!(directories, "/a/b");
+        let string = path.to_string_easy();
+        assert_eq!(string, "/a/b/c.txt");
+
+        let path = Path::new("/a/b/c.txt");
+        let string = path.to_string_easy();
+        assert_eq!(string, "/a/b/c.txt");
     }
 }
