@@ -25,7 +25,6 @@ use std::path;
 use std::path::Path;
 use std::path::PathBuf;
 
-// TODO: Add to_string_easy().
 // TODO: directories() should be migrated to parent()?
 pub trait OperatePath {
     fn file_name_or_empty(&self) -> String;
