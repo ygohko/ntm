@@ -145,7 +145,7 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::commons::OperatePath;
-    
+
     #[test]
     fn file_name_is_gettable() {
         let path = Utf8PathBuf::from("/a/b/c.txt");
@@ -175,7 +175,7 @@ mod tests {
         let extension = path.extension_or_empty();
         assert_eq!(extension, "txt");
     }
-    
+
     #[test]
     fn directories_are_gettable() {
         let path = Utf8PathBuf::from("/a/b/c.txt");

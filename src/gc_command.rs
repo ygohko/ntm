@@ -194,7 +194,6 @@ impl GcCommand {
                     self.state.last_processed_id = file_name;
                 }
             }
-
         }
 
         Ok(())

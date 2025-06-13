@@ -212,7 +212,11 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_OBJECT_ALREADY_EXISTS));
         }
 
-        self.adding_file = match OpenOptions::new().write(true).create(true).open(&object_path) {
+        self.adding_file = match OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&object_path)
+        {
             Ok(file) => Some(file),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
         };

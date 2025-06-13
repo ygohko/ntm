@@ -206,12 +206,14 @@ impl BackupCommand {
                 let mut remains: i64 = file_size as i64;
                 let mut file = match OpenOptions::new().read(true).open(&path_buf) {
                     Ok(file) => file,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),                    
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
                 let attribute = Attributes::new(&path, self.executing.timestamp());
                 let mut needs_writing = true;
                 if let Err(error) = store.begin_adding(&id, &attribute) {
-                    if error.id == object_store::ERROR_ID && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS {
+                    if error.id == object_store::ERROR_ID
+                        && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
+                    {
                         needs_writing = false;
                     } else {
                         return Err(error);
