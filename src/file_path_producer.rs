@@ -100,7 +100,8 @@ impl FilePathProducer {
                                 self.file_paths.push(path);
                             } else if is_dir {
                                 let mut needed = true;
-                                let path1 = Utf8PathBuf::from(&path[self.prefix_length..].to_string());
+                                let path1 =
+                                    Utf8PathBuf::from(&path[self.prefix_length..].to_string());
                                 for directory in &self.excluded_directories {
                                     if path1.starts_with(&directory) {
                                         needed = false;

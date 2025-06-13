@@ -108,11 +108,7 @@ impl Task for GetCommand {
                 }
                 entry_path.push(&path);
                 if self.count == 0 {
-                    println!(
-                        "Processing ({}): {}",
-                        self.processed_count,
-                        entry_path
-                    );
+                    println!("Processing ({}): {}", self.processed_count, entry_path);
                 }
                 self.count += 1;
                 self.count %= 100;
