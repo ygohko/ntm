@@ -25,12 +25,10 @@ use camino::Utf8PathBuf;
 use std::path::Path;
 use std::path::PathBuf;
 
-// TODO: directories() should be migrated to parent()?
 pub trait OperatePath {
     fn file_name_or_empty(&self) -> String;
     fn extension_or_empty(&self) -> String;
-    // TODO: Rename to parent_or_empty().
-    fn directories(&self) -> String;
+    fn parent_or_empty(&self) -> String;
     fn to_string_easy(&self) -> String;
 }
 
@@ -53,7 +51,7 @@ impl OperatePath for Utf8PathBuf {
         extension.to_string()
     }
 
-    fn directories(&self) -> String {
+    fn parent_or_empty(&self) -> String {
         let parent = match self.parent() {
             Some(parent) => parent,
             None => return "".to_string(),
@@ -86,7 +84,7 @@ impl OperatePath for Utf8Path {
         extension.to_string()
     }
 
-    fn directories(&self) -> String {
+    fn parent_or_empty(&self) -> String {
         let parent = match self.parent() {
             Some(parent) => parent,
             None => return "".to_string(),
@@ -119,7 +117,7 @@ impl OperatePath for PathBuf {
         extension
     }
 
-    fn directories(&self) -> String {
+    fn parent_or_empty(&self) -> String {
         let parent = match self.parent() {
             Some(parent) => parent,
             None => return "".to_string(),
@@ -152,7 +150,7 @@ impl OperatePath for Path {
         extension
     }
 
-    fn directories(&self) -> String {
+    fn parent_or_empty(&self) -> String {
         let parent = match self.parent() {
             Some(parent) => parent,
             None => return "".to_string(),

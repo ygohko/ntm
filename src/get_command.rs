@@ -132,7 +132,7 @@ impl Task for GetCommand {
                     gotten_path.push(&self.limited_directory);
                 }
                 gotten_path.push(&path);
-                let directories = gotten_path.directories();
+                let directories = gotten_path.parent_or_empty();
                 match fs::create_dir_all(&directories) {
                     Ok(_) => (),
                     // TODO: Skipping file that writing is failed may be needed.
