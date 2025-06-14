@@ -163,7 +163,7 @@ impl BackupCommand {
         }
         let path_buf = Utf8PathBuf::from(&path);
         let path_file_name = path_buf.file_name_or_empty();
-        let path_directries = path_buf.directories();
+        let path_directries = path_buf.parent_or_empty();
         self.count += 1;
         self.count %= 100;
         let mut path_buf = Utf8PathBuf::new();
