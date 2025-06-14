@@ -26,6 +26,7 @@ use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
+use std::cell::RefCell;
 use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
@@ -35,6 +36,9 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
+use std::rc::Rc;
+use std::sync::mpsc::Receiver;
+use std::thread;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
@@ -58,6 +62,40 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
+
+struct BackgroundExecuter {
+    receiver: Receiver<Rc<RefCell<dyn Task>>>,
+}
+
+impl Task for BackgroundExecuter {
+    fn execute(&mut self) -> Result<()> {
+        thread::spawn(move || {
+            let mut done = false;
+            while !done {
+                let ref_cell = match self.receiver.recv() {
+                    Ok(task) => task,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
+                };
+                let mut1 = ref_cell.borrow_mut();
+                if let Err(error) = mut1.execute() {
+                    println!("error: {}", error);
+                }
+            }
+
+            Ok(())
+        });
+
+        Ok(())
+    }
+}
+
+impl BackgroundExecuter {
+    fn new(receiver: Receiver<Rc<RefCell<dyn Task>>>) -> Self {
+        Self {
+            receiver: receiver,
+        }
+    }
+}
 
 struct EntrySaver {
     entry: Entry,
@@ -276,7 +314,6 @@ impl BackupCommand {
         }
         self.processed_count += 1;
 
-        // TODO: Move to EnterySaver.
         let mut entry_path = Utf8PathBuf::from(&self.destination_path);
         entry_path.push("Backups");
         entry_path.push(self.name.clone());
