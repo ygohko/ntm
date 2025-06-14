@@ -59,6 +59,39 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
+struct EntrySaver {
+    entry: Entry,
+    path: String,
+}
+
+impl Task for EntrySaver {
+    fn execute(&mut self) -> Result<()> {
+        let path = Utf8PathBuf::from(&self.path);
+        let parent = path.parent_or_empty();
+        if let Err(_) = fs::create_dir_all(&parent) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
+        }
+        let string = match serde_json::to_string(&self.entry) {
+            Ok(string) => string,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+        };
+        if let Err(_) = fs::write(&path, string.as_bytes()) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
+        }
+
+        Ok(())
+    }
+}
+
+impl EntrySaver {
+    fn new(entry: &Entry, path: &String) -> Self {
+        Self {
+            entry: entry.clone(),
+            path: path.clone(),
+        }
+    }
+}
+
 pub struct BackupCommand {
     pub name: String,
     executing: DateTime<Local>,
@@ -243,10 +276,23 @@ impl BackupCommand {
         }
         self.processed_count += 1;
 
+        // TODO: Move to EnterySaver.
         let mut entry_path = Utf8PathBuf::from(&self.destination_path);
         entry_path.push("Backups");
         entry_path.push(self.name.clone());
         entry_path.push(&path_directries);
+        entry_path.push(&path_file_name);
+        let entry = Entry {
+            id: id,
+            last_modified: modified,
+            permission: permission,
+            uid: uid,
+            gid: gid,
+        };
+        let mut saver = EntrySaver::new(&entry, &entry_path.to_string_easy());
+        saver.execute()?;
+
+        /*
         match fs::create_dir_all(entry_path.clone()) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
@@ -266,7 +312,8 @@ impl BackupCommand {
         match fs::write(&entry_path, string.as_bytes()) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-        };
+    	};
+        */
 
         Ok(())
     }
