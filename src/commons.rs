@@ -167,6 +167,7 @@ impl OperatePath for Path {
 #[cfg(test)]
 mod tests {
     use camino::Utf8PathBuf;
+    use camino::Utf8Path;
     use std::path::Path;
     use std::path::PathBuf;
 
@@ -175,6 +176,10 @@ mod tests {
     #[test]
     fn file_name_is_gettable() {
         let path = Utf8PathBuf::from("/a/b/c.txt");
+        let file_name = path.file_name_or_empty();
+        assert_eq!(file_name, "c.txt");
+
+        let path = Utf8Path::new("/a/b/c.txt");
         let file_name = path.file_name_or_empty();
         assert_eq!(file_name, "c.txt");
 
@@ -193,6 +198,10 @@ mod tests {
         let extension = path.extension_or_empty();
         assert_eq!(extension, "txt");
 
+        let path = Utf8Path::new("/a/b/c.txt");
+        let extension = path.extension_or_empty();
+        assert_eq!(extension, "txt");
+
         let path = PathBuf::from("/a/b/c.txt");
         let extension = path.extension_or_empty();
         assert_eq!(extension, "txt");
@@ -203,8 +212,12 @@ mod tests {
     }
 
     #[test]
-    fn directories_are_gettable() {
+    fn parent_directories_are_gettable() {
         let path = Utf8PathBuf::from("/a/b/c.txt");
+        let string = path.to_string_easy();
+        assert_eq!(string, "/a/b/c.txt");
+
+        let path = Utf8Path::new("/a/b/c.txt");
         let string = path.to_string_easy();
         assert_eq!(string, "/a/b/c.txt");
 
