@@ -35,6 +35,10 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
+use std::sync::mpsc;
+use std::sync::mpsc::Sender;
+use std::thread;
+use std::thread::JoinHandle;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
@@ -59,8 +63,99 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
+struct BackgroundExecuter {
+    sender: Option<Sender<Box<dyn Task + Send>>>,
+    handle: Option<JoinHandle<Result<()>>>,
+}
+
+impl Task for BackgroundExecuter {
+    fn execute(&mut self) -> Result<()> {
+        let (sender, receiver) = mpsc::channel();
+        self.sender = Some(sender);
+
+        let handle = thread::spawn(move || {
+            let mut result: Result<()> = Ok(());
+            let mut done = false;
+            while !done {
+                if let Ok(mut task) = receiver.recv() {
+                    if let Err(error) = task.execute() {
+                        println!("error: {}", error);
+                    }
+                } else {
+                    // TODO: Add a error code.
+                    result = Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
+                    done = true;
+                }
+            }
+
+            result
+        });
+        self.handle = Some(handle);
+
+        Ok(())
+    }
+}
+
+impl BackgroundExecuter {
+    fn new() -> Self {
+        Self {
+            sender: None,
+            handle: None,
+        }
+    }
+
+    fn terminate(&mut self) -> Result<()> {
+        if self.handle.is_none() {
+            return Ok(());
+        }
+        self.sender = None;
+        let handle = self.handle.take();
+        if let Err(_) = handle.unwrap().join() {
+            // TODO: Add a error code.
+            return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
+        }
+
+        Ok(())
+    }
+}
+
+struct EntrySaver {
+    entry: Entry,
+    path: String,
+}
+
+impl Task for EntrySaver {
+    fn execute(&mut self) -> Result<()> {
+        let path = Utf8PathBuf::from(&self.path);
+        let parent = path.parent_or_empty();
+        if let Err(_) = fs::create_dir_all(&parent) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
+        }
+        let string = match serde_json::to_string(&self.entry) {
+            Ok(string) => string,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
+        };
+        if let Err(_) = fs::write(&path, string.as_bytes()) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
+        }
+
+        Ok(())
+    }
+}
+
+impl EntrySaver {
+    fn new(entry: &Entry, path: &String) -> Self {
+        Self {
+            entry: entry.clone(),
+            path: path.clone(),
+        }
+    }
+}
+
 pub struct BackupCommand {
+    // TODO: Add getter method.
     pub name: String,
+    executer: BackgroundExecuter,
     executing: DateTime<Local>,
     destination_path: String,
     excluded_directories: Vec<String>,
@@ -71,6 +166,7 @@ pub struct BackupCommand {
 
 impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
+        self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         let mut store = ObjectStore::new(&path.to_string_easy());
@@ -125,6 +221,7 @@ impl Task for BackupCommand {
                 }
             }
         }
+        self.executer.terminate()?;
 
         println!("{} object(s) added.", self.added_count);
 
@@ -136,6 +233,7 @@ impl BackupCommand {
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
+            executer: BackgroundExecuter::new(),
             executing: Local::now(),
             destination_path: ".".to_string(),
             excluded_directories: vec![],
@@ -247,10 +345,6 @@ impl BackupCommand {
         entry_path.push("Backups");
         entry_path.push(self.name.clone());
         entry_path.push(&path_directries);
-        match fs::create_dir_all(entry_path.clone()) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-        };
         entry_path.push(&path_file_name);
         let entry = Entry {
             id: id,
@@ -259,14 +353,12 @@ impl BackupCommand {
             uid: uid,
             gid: gid,
         };
-        let string = match serde_json::to_string(&entry) {
-            Ok(string) => string,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-        };
-        match fs::write(&entry_path, string.as_bytes()) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-        };
+        let saver = Box::new(EntrySaver::new(&entry, &entry_path.to_string_easy()));
+        if let Some(sender) = &self.executer.sender {
+            if let Err(error) = sender.send(saver) {
+                println!("Sending a task failed. error: {}", error);
+            }
+        }
 
         Ok(())
     }
