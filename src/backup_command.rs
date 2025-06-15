@@ -38,6 +38,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
+use std::thread::JoinHandle;
 use std::time::SystemTime;
 
 use crate::attributes::Attributes;
@@ -64,6 +65,7 @@ pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 struct BackgroundExecuter {
     sender: Option<Sender<Box<dyn Task + Send>>>,
+    handle: Option<JoinHandle<Result<()>>>,
 }
 
 impl Task for BackgroundExecuter {
@@ -71,7 +73,7 @@ impl Task for BackgroundExecuter {
         let (sender, receiver) = mpsc::channel();
         self.sender = Some(sender);
 
-        thread::spawn(move || {
+        let handle = thread::spawn(move || {
             let mut result: Result<()> = Ok(());
             let mut done = false;
             while !done {
@@ -88,6 +90,7 @@ impl Task for BackgroundExecuter {
 
             result
         });
+        self.handle = Some(handle);
 
         Ok(())
     }
@@ -97,7 +100,22 @@ impl BackgroundExecuter {
     fn new() -> Self {
         Self {
             sender: None,
+            handle: None,
         }
+    }
+
+    fn terminate(&mut self) -> Result<()> {
+        if self.handle.is_none() {
+            return Ok(());
+        }
+        self.sender = None;
+        let handle = self.handle.take();
+        if let Err(_) = handle.unwrap().join() {
+            // TODO: Add a error code.
+            return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
+        }
+
+        Ok(())
     }
 }
 
@@ -203,6 +221,7 @@ impl Task for BackupCommand {
                 }
             }
         }
+        self.executer.terminate()?;
 
         println!("{} object(s) added.", self.added_count);
 
