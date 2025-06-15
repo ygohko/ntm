@@ -36,6 +36,8 @@ use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::sync::RwLock;
@@ -164,6 +166,7 @@ struct ObjectAdder {
     source_path: String,
     file_size: u64,
     time_stamp: i64,
+    added_count: Arc<AtomicI64>,
 }
 
 impl Task for ObjectAdder {
@@ -225,6 +228,8 @@ impl Task for ObjectAdder {
 
                 store.end_adding();
             }
+
+            self.added_count.fetch_add(1, Ordering::SeqCst);
         }
 
         Ok(())
@@ -232,7 +237,7 @@ impl Task for ObjectAdder {
 }
 
 impl ObjectAdder {
-    fn new(store: &Arc<RwLock<ObjectStore>>, id: &str, path: &str, source_path: &str, file_size: u64, time_stamp: i64) -> Self {
+    fn new(store: &Arc<RwLock<ObjectStore>>, id: &str, path: &str, source_path: &str, file_size: u64, time_stamp: i64, added_count: &Arc<AtomicI64>) -> Self {
         Self {
             store: store.clone(),
             id: id.to_string(),
@@ -240,6 +245,7 @@ impl ObjectAdder {
             source_path: source_path.to_string(),
             file_size: file_size,
             time_stamp: time_stamp,
+            added_count: added_count.clone(),
         }
     }
 }
@@ -252,7 +258,7 @@ pub struct BackupCommand {
     destination_path: String,
     excluded_directories: Vec<String>,
     processed_count: i64,
-    added_count: i64,
+    added_count: Arc<AtomicI64>,
     count: i32,
 }
 
@@ -316,7 +322,7 @@ impl Task for BackupCommand {
         println!("Waiting for background tasks...");
         self.executer.terminate()?;
 
-        println!("{} object(s) added.", self.added_count);
+        println!("{} object(s) added.", self.added_count.load(Ordering::Relaxed));
 
         Ok(())
     }
@@ -331,7 +337,7 @@ impl BackupCommand {
             destination_path: ".".to_string(),
             excluded_directories: vec![],
             processed_count: 0,
-            added_count: 0,
+            added_count: Arc::new(AtomicI64::new(0)),
             count: 0,
         }
     }
@@ -349,7 +355,7 @@ impl BackupCommand {
         if self.count == 0 {
             println!(
                 "Processing ({}, {}): {}",
-                self.processed_count, self.added_count, path
+                self.processed_count, self.added_count.load(Ordering::Relaxed), path
             );
         }
         let path_buf = Utf8PathBuf::from(&path);
@@ -384,7 +390,8 @@ impl BackupCommand {
             &path,
             &source_path,
             file_size,
-            self.executing.timestamp()
+            self.executing.timestamp(),
+            &self.added_count,
         ));
         if let Some(sender) = &self.executer.sender {
             if let Err(error) = sender.send(adder) {
