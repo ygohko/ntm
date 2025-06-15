@@ -56,6 +56,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::object_adder::ObjectAdder;
 use crate::object_store;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
@@ -162,6 +163,7 @@ impl EntrySaver {
 */
 
 // TODO: Move to object_adder.rs.
+/*
 struct ObjectAdder {
     store: Arc<RwLock<ObjectStore>>,
     id: String,
@@ -259,6 +261,7 @@ impl ObjectAdder {
         }
     }
 }
+*/
 
 pub struct BackupCommand {
     // TODO: Add getter method.

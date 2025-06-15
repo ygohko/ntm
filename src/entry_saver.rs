@@ -35,6 +35,7 @@ pub const ERROR_ID: ErrorId = "entry_saver";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_WRITING_ENTRY_FAILED: ErrorCode = 1;
 
 pub struct EntrySaver {
     entry: Entry,
@@ -46,14 +47,14 @@ impl Task for EntrySaver {
         let path = Utf8PathBuf::from(&self.path);
         let parent = path.parent_or_empty();
         if let Err(_) = fs::create_dir_all(&parent) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ENTRY_FAILED));
         }
         let string = match serde_json::to_string(&self.entry) {
             Ok(string) => string,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ENTRY_FAILED)),
         };
         if let Err(_) = fs::write(&path, string.as_bytes()) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ENTRY_FAILED));
         }
 
         Ok(())

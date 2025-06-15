@@ -32,6 +32,7 @@ mod file_path_producer;
 mod gc_command;
 mod get_command;
 mod init_command;
+mod object_adder;
 mod object_store;
 mod task;
 
