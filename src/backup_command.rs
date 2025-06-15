@@ -35,8 +35,13 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
+use std::sync::Arc;
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
+use std::sync::mpsc::SyncSender;
+use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::SystemTime;
@@ -63,14 +68,15 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
+// TODO: Move to background_executer.rs.
 struct BackgroundExecuter {
-    sender: Option<Sender<Box<dyn Task + Send>>>,
+    sender: Option<SyncSender<Box<dyn Task + Send>>>,
     handle: Option<JoinHandle<Result<()>>>,
 }
 
 impl Task for BackgroundExecuter {
     fn execute(&mut self) -> Result<()> {
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::sync_channel(5000);
         self.sender = Some(sender);
 
         let handle = thread::spawn(move || {
@@ -119,6 +125,7 @@ impl BackgroundExecuter {
     }
 }
 
+// TODO: Move to entry_saver.rs.
 struct EntrySaver {
     entry: Entry,
     path: String,
@@ -144,10 +151,101 @@ impl Task for EntrySaver {
 }
 
 impl EntrySaver {
-    fn new(entry: &Entry, path: &String) -> Self {
+    fn new(entry: &Entry, path: &str) -> Self {
         Self {
             entry: entry.clone(),
-            path: path.clone(),
+            path: path.to_string(),
+        }
+    }
+}
+
+// TODO: Move to entry_saver.rs.
+struct ObjectAdder {
+    store: Arc<RwLock<ObjectStore>>,
+    id: String,
+    path: String,
+    source_path: String,
+    file_size: u64,
+    time_stamp: i64,
+    added_count: Arc<AtomicI64>,
+}
+
+impl Task for ObjectAdder {
+    fn execute(&mut self) -> Result<()> {
+        const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
+        const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
+
+        let mut store = self.store.write().unwrap();
+        let exists = match store.exists(&self.id) {
+            Ok(exists) => exists,
+            Err(error) => return Err(error),
+        };
+        if exists {
+            return Ok(());
+        }
+        
+        let mut joined_path = Utf8PathBuf::from(&self.source_path);
+        joined_path.push(&self.path);
+        if self.file_size < DIVIDED_WRITING_THRESHOLD {
+            let bytes = match fs::read(&joined_path) {
+                Ok(bytes) => bytes,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+            };
+            let attribute = Attributes::new(&self.path, self.time_stamp);
+            store.add(&self.id, &bytes, &attribute)?;
+        } else {
+            let mut remains: i64 = self.file_size as i64;
+            let mut file = match OpenOptions::new().read(true).open(&joined_path) {
+                Ok(file) => file,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+            };
+            let attribute = Attributes::new(&self.path, self.time_stamp);
+            let mut needs_writing = true;
+            if let Err(error) = store.begin_adding(&self.id, &attribute) {
+                if error.id == object_store::ERROR_ID
+                    && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
+                {
+                    needs_writing = false;
+                } else {
+                    return Err(error);
+                }
+            }
+
+            if needs_writing {
+                while remains > 0 {
+                    let mut reading = remains;
+                    if reading > DIVIDED_WRITING_SIZE {
+                        reading = DIVIDED_WRITING_SIZE;
+                    }
+                    let mut bytes: Vec<u8> = Vec::new();
+                    bytes.resize(reading as usize, 0);
+                    if let Err(_) = file.read(&mut bytes) {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
+                    }
+                    store.write_adding(&bytes)?;
+
+                    remains -= reading;
+                }
+
+                store.end_adding();
+            }
+        }
+        self.added_count.fetch_add(1, Ordering::SeqCst);
+
+        Ok(())
+    }
+}
+
+impl ObjectAdder {
+    fn new(store: &Arc<RwLock<ObjectStore>>, id: &str, path: &str, source_path: &str, file_size: u64, time_stamp: i64, added_count: &Arc<AtomicI64>) -> Self {
+        Self {
+            store: store.clone(),
+            id: id.to_string(),
+            path: path.to_string(),
+            source_path: source_path.to_string(),
+            file_size: file_size,
+            time_stamp: time_stamp,
+            added_count: added_count.clone(),
         }
     }
 }
@@ -160,7 +258,7 @@ pub struct BackupCommand {
     destination_path: String,
     excluded_directories: Vec<String>,
     processed_count: i64,
-    added_count: i64,
+    added_count: Arc<AtomicI64>,
     count: i32,
 }
 
@@ -169,7 +267,7 @@ impl Task for BackupCommand {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        let mut store = ObjectStore::new(&path.to_string_easy());
+        let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
@@ -216,14 +314,15 @@ impl Task for BackupCommand {
             };
 
             if !done {
-                if let Err(error) = self.process_file(&path, &mut store, &config.source_path) {
+                if let Err(error) = self.process_file(&path, &store, &config.source_path) {
                     println!("process_file() failed: error: {}", error);
                 }
             }
         }
+        println!("Waiting for background tasks...");
         self.executer.terminate()?;
 
-        println!("{} object(s) added.", self.added_count);
+        println!("{} object(s) added.", self.added_count.load(Ordering::Relaxed));
 
         Ok(())
     }
@@ -238,7 +337,7 @@ impl BackupCommand {
             destination_path: ".".to_string(),
             excluded_directories: vec![],
             processed_count: 0,
-            added_count: 0,
+            added_count: Arc::new(AtomicI64::new(0)),
             count: 0,
         }
     }
@@ -250,13 +349,13 @@ impl BackupCommand {
     fn process_file(
         &mut self,
         path: &String,
-        store: &mut ObjectStore,
+        store: &Arc<RwLock<ObjectStore>>,
         source_path: &String,
     ) -> Result<()> {
         if self.count == 0 {
             println!(
                 "Processing ({}, {}): {}",
-                self.processed_count, self.added_count, path
+                self.processed_count, self.added_count.load(Ordering::Relaxed), path
             );
         }
         let path_buf = Utf8PathBuf::from(&path);
@@ -285,59 +384,19 @@ impl BackupCommand {
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 
-        let exists = match store.exists(&id) {
-            Ok(exists) => exists,
-            Err(error) => return Err(error),
-        };
-        if !exists {
-            const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
-            const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
-
-            if file_size < DIVIDED_WRITING_THRESHOLD {
-                let bytes = match fs::read(path_buf.clone()) {
-                    Ok(bytes) => bytes,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-                };
-                let attribute = Attributes::new(&path, self.executing.timestamp());
-                store.add(&id, &bytes, &attribute)?;
-            } else {
-                let mut remains: i64 = file_size as i64;
-                let mut file = match OpenOptions::new().read(true).open(&path_buf) {
-                    Ok(file) => file,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-                };
-                let attribute = Attributes::new(&path, self.executing.timestamp());
-                let mut needs_writing = true;
-                if let Err(error) = store.begin_adding(&id, &attribute) {
-                    if error.id == object_store::ERROR_ID
-                        && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
-                    {
-                        needs_writing = false;
-                    } else {
-                        return Err(error);
-                    }
-                }
-
-                if needs_writing {
-                    while remains > 0 {
-                        let mut reading = remains;
-                        if reading > DIVIDED_WRITING_SIZE {
-                            reading = DIVIDED_WRITING_SIZE;
-                        }
-                        let mut bytes: Vec<u8> = Vec::new();
-                        bytes.resize(reading as usize, 0);
-                        if let Err(_) = file.read(&mut bytes) {
-                            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
-                        }
-                        store.write_adding(&bytes)?;
-
-                        remains -= reading;
-                    }
-
-                    store.end_adding();
-                }
+        let adder = Box::new(ObjectAdder::new(
+            &store.clone(),
+            &id,
+            &path,
+            &source_path,
+            file_size,
+            self.executing.timestamp(),
+            &self.added_count,
+        ));
+        if let Some(sender) = &self.executer.sender {
+            if let Err(error) = sender.send(adder) {
+                println!("Sending a task failed. error: {}", error);
             }
-            self.added_count += 1;
         }
         self.processed_count += 1;
 
