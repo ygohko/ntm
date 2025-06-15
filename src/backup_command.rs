@@ -100,7 +100,7 @@ fn execute_background_executer(receiver: Receiver<Box<dyn Task + Send>>) -> Resu
 }
 
 impl BackgroundExecuter {
-    fn new(receiver: Receiver<Box<dyn Task + Send>>) -> Self {
+    fn new() -> Self {
         Self {
             sender: None,
         }
@@ -141,7 +141,9 @@ impl EntrySaver {
 }
 
 pub struct BackupCommand {
+    // TODO: Add getter method.
     pub name: String,
+    executer: BackgroundExecuter,
     executing: DateTime<Local>,
     destination_path: String,
     excluded_directories: Vec<String>,
@@ -217,6 +219,7 @@ impl BackupCommand {
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
+            executer: BackgroundExecuter::new(),
             executing: Local::now(),
             destination_path: ".".to_string(),
             excluded_directories: vec![],
@@ -336,8 +339,13 @@ impl BackupCommand {
             uid: uid,
             gid: gid,
         };
-        let mut saver = EntrySaver::new(&entry, &entry_path.to_string_easy());
-        saver.execute()?;
+        let mut saver = Box::new(EntrySaver::new(&entry, &entry_path.to_string_easy()));
+        if let Some(sender) = &self.executer.sender {
+            sender.send(saver);
+        }
+
+
+        // saver.execute()?;
 
         /*
         match fs::create_dir_all(entry_path.clone()) {
