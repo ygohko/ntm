@@ -40,6 +40,7 @@ use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
+use std::sync::mpsc::SyncSender;
 use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
@@ -69,13 +70,13 @@ pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 // TODO: Move to background_executer.rs.
 struct BackgroundExecuter {
-    sender: Option<Sender<Box<dyn Task + Send>>>,
+    sender: Option<SyncSender<Box<dyn Task + Send>>>,
     handle: Option<JoinHandle<Result<()>>>,
 }
 
 impl Task for BackgroundExecuter {
     fn execute(&mut self) -> Result<()> {
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::sync_channel(5000);
         self.sender = Some(sender);
 
         let handle = thread::spawn(move || {
@@ -228,9 +229,8 @@ impl Task for ObjectAdder {
 
                 store.end_adding();
             }
-
-            self.added_count.fetch_add(1, Ordering::SeqCst);
         }
+        self.added_count.fetch_add(1, Ordering::SeqCst);
 
         Ok(())
     }
