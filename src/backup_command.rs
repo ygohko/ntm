@@ -398,65 +398,6 @@ impl BackupCommand {
                 println!("Sending a task failed. error: {}", error);
             }
         }
-
-        /*
-        let mut store1 = store.borrow_mut();
-        let exists = match store1.exists(&id) {
-            Ok(exists) => exists,
-            Err(error) => return Err(error),
-        };
-        if !exists {
-            const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
-            const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
-
-            if file_size < DIVIDED_WRITING_THRESHOLD {
-                let bytes = match fs::read(path_buf.clone()) {
-                    Ok(bytes) => bytes,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-                };
-                let attribute = Attributes::new(&path, self.executing.timestamp());
-                store1.add(&id, &bytes, &attribute)?;
-            } else {
-                let mut remains: i64 = file_size as i64;
-                let mut file = match OpenOptions::new().read(true).open(&path_buf) {
-                    Ok(file) => file,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-                };
-                let attribute = Attributes::new(&path, self.executing.timestamp());
-                let mut needs_writing = true;
-                if let Err(error) = store1.begin_adding(&id, &attribute) {
-                    if error.id == object_store::ERROR_ID
-                        && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
-                    {
-                        needs_writing = false;
-                    } else {
-                        return Err(error);
-                    }
-                }
-
-                if needs_writing {
-                    while remains > 0 {
-                        let mut reading = remains;
-                        if reading > DIVIDED_WRITING_SIZE {
-                            reading = DIVIDED_WRITING_SIZE;
-                        }
-                        let mut bytes: Vec<u8> = Vec::new();
-                        bytes.resize(reading as usize, 0);
-                        if let Err(_) = file.read(&mut bytes) {
-                            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
-                        }
-                        store1.write_adding(&bytes)?;
-
-                        remains -= reading;
-                    }
-
-                    store1.end_adding();
-                }
-            }
-            self.added_count += 1;
-        }
-        */
-        // TODO: Update added_count.
         self.processed_count += 1;
 
         let mut entry_path = Utf8PathBuf::from(&self.destination_path);
