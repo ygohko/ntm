@@ -154,6 +154,7 @@ pub struct BackupCommand {
 
 impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
+        self.executer.execute();
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         let mut store = ObjectStore::new(&path.to_string_easy());
