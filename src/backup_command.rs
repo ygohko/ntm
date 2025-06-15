@@ -156,6 +156,7 @@ impl EntrySaver {
     }
 }
 
+// TODO: Move to entry_saver.rs.
 struct ObjectAdder {
     store: Rc<RefCell<ObjectStore>>,
     id: String,
@@ -377,6 +378,21 @@ impl BackupCommand {
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 
+        let adder = Box::new(ObjectAdder::new(
+            &store.clone(),
+            &id,
+            &path,
+            &source_path,
+            file_size,
+            self.executing.timestamp()
+        ));
+        if let Some(sender) = &self.executer.sender {
+            if let Err(error) = sender.send(adder) {
+                println!("Sending a task failed. error: {}", error);
+            }
+        }
+
+        /*
         let mut store1 = store.borrow_mut();
         let exists = match store1.exists(&id) {
             Ok(exists) => exists,
@@ -432,6 +448,8 @@ impl BackupCommand {
             }
             self.added_count += 1;
         }
+        */
+        // TODO: Update added_count.
         self.processed_count += 1;
 
         let mut entry_path = Utf8PathBuf::from(&self.destination_path);
