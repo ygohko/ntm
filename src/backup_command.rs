@@ -26,6 +26,7 @@ use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
+use std::cell::RefCell;
 use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
@@ -35,6 +36,7 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
+use std::rc::Rc;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
@@ -63,6 +65,7 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
+// TODO: Move to background_executer.rs.
 struct BackgroundExecuter {
     sender: Option<Sender<Box<dyn Task + Send>>>,
     handle: Option<JoinHandle<Result<()>>>,
@@ -119,6 +122,7 @@ impl BackgroundExecuter {
     }
 }
 
+// TODO: Move to entry_saver.rs.
 struct EntrySaver {
     entry: Entry,
     path: String,
@@ -144,10 +148,32 @@ impl Task for EntrySaver {
 }
 
 impl EntrySaver {
-    fn new(entry: &Entry, path: &String) -> Self {
+    fn new(entry: &Entry, path: &str) -> Self {
         Self {
             entry: entry.clone(),
-            path: path.clone(),
+            path: path.to_string(),
+        }
+    }
+}
+
+struct ObjectAdder {
+    // TODO: Handle ObjectStore.
+    path: String,
+    file_size: usize,
+}
+
+impl Task for ObjectAdder {
+    fn execute(&mut self) -> Result<()> {
+        // TODO: Implement this.
+        Ok(())
+    }
+}
+
+impl ObjectAdder {
+    fn new(path: &str, file_size: usize) -> Self {
+        Self {
+            path: path.to_string(),
+            file_size: file_size,
         }
     }
 }
@@ -169,7 +195,7 @@ impl Task for BackupCommand {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        let mut store = ObjectStore::new(&path.to_string_easy());
+        let store = Rc::new(RefCell::new(ObjectStore::new(&path.to_string_easy())));
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
@@ -216,11 +242,12 @@ impl Task for BackupCommand {
             };
 
             if !done {
-                if let Err(error) = self.process_file(&path, &mut store, &config.source_path) {
+                if let Err(error) = self.process_file(&path, &store, &config.source_path) {
                     println!("process_file() failed: error: {}", error);
                 }
             }
         }
+        println!("Waiting for background tasks...");
         self.executer.terminate()?;
 
         println!("{} object(s) added.", self.added_count);
@@ -250,7 +277,7 @@ impl BackupCommand {
     fn process_file(
         &mut self,
         path: &String,
-        store: &mut ObjectStore,
+        store: &Rc<RefCell<ObjectStore>>,
         source_path: &String,
     ) -> Result<()> {
         if self.count == 0 {
@@ -285,7 +312,8 @@ impl BackupCommand {
         let string = format!("p,{},{},{}", id_path, modified, file_size);
         let id = object_id(&string.as_bytes().to_vec());
 
-        let exists = match store.exists(&id) {
+        let mut store1 = store.borrow_mut();
+        let exists = match store1.exists(&id) {
             Ok(exists) => exists,
             Err(error) => return Err(error),
         };
@@ -299,7 +327,7 @@ impl BackupCommand {
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
                 };
                 let attribute = Attributes::new(&path, self.executing.timestamp());
-                store.add(&id, &bytes, &attribute)?;
+                store1.add(&id, &bytes, &attribute)?;
             } else {
                 let mut remains: i64 = file_size as i64;
                 let mut file = match OpenOptions::new().read(true).open(&path_buf) {
@@ -308,7 +336,7 @@ impl BackupCommand {
                 };
                 let attribute = Attributes::new(&path, self.executing.timestamp());
                 let mut needs_writing = true;
-                if let Err(error) = store.begin_adding(&id, &attribute) {
+                if let Err(error) = store1.begin_adding(&id, &attribute) {
                     if error.id == object_store::ERROR_ID
                         && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
                     {
@@ -329,12 +357,12 @@ impl BackupCommand {
                         if let Err(_) = file.read(&mut bytes) {
                             return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
                         }
-                        store.write_adding(&bytes)?;
+                        store1.write_adding(&bytes)?;
 
                         remains -= reading;
                     }
 
-                    store.end_adding();
+                    store1.end_adding();
                 }
             }
             self.added_count += 1;
