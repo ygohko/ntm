@@ -157,23 +157,88 @@ impl EntrySaver {
 }
 
 struct ObjectAdder {
-    // TODO: Handle ObjectStore.
+    store: Rc<RefCell<ObjectStore>>,
+    id: String,
     path: String,
-    file_size: usize,
+    source_path: String,
+    file_size: u64,
+    time_stamp: i64,
 }
 
 impl Task for ObjectAdder {
     fn execute(&mut self) -> Result<()> {
-        // TODO: Implement this.
+        const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
+        const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
+
+        let mut store = self.store.borrow_mut();
+        let exists = match store.exists(&self.id) {
+            Ok(exists) => exists,
+            Err(error) => return Err(error),
+        };
+        if exists {
+            return Ok(());
+        }
+        
+        let mut joined_path = Utf8PathBuf::from(&self.source_path);
+        joined_path.push(&self.path);
+        if self.file_size < DIVIDED_WRITING_THRESHOLD {
+            let bytes = match fs::read(&joined_path) {
+                Ok(bytes) => bytes,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+            };
+            let attribute = Attributes::new(&self.path, self.time_stamp);
+            store.add(&self.id, &bytes, &attribute)?;
+        } else {
+            let mut remains: i64 = self.file_size as i64;
+            let mut file = match OpenOptions::new().read(true).open(&joined_path) {
+                Ok(file) => file,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
+            };
+            let attribute = Attributes::new(&self.path, self.time_stamp);
+            let mut needs_writing = true;
+            if let Err(error) = store.begin_adding(&self.id, &attribute) {
+                if error.id == object_store::ERROR_ID
+                    && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
+                {
+                    needs_writing = false;
+                } else {
+                    return Err(error);
+                }
+            }
+
+            if needs_writing {
+                while remains > 0 {
+                    let mut reading = remains;
+                    if reading > DIVIDED_WRITING_SIZE {
+                        reading = DIVIDED_WRITING_SIZE;
+                    }
+                    let mut bytes: Vec<u8> = Vec::new();
+                    bytes.resize(reading as usize, 0);
+                    if let Err(_) = file.read(&mut bytes) {
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
+                    }
+                    store.write_adding(&bytes)?;
+
+                    remains -= reading;
+                }
+
+                store.end_adding();
+            }
+        }
+
         Ok(())
     }
 }
 
 impl ObjectAdder {
-    fn new(path: &str, file_size: usize) -> Self {
+    fn new(store: &Rc<RefCell<ObjectStore>>, id: &str, path: &str, source_path: &str, file_size: u64, time_stamp: i64) -> Self {
         Self {
+            store: store.clone(),
+            id: id.to_string(),
             path: path.to_string(),
+            source_path: source_path.to_string(),
             file_size: file_size,
+            time_stamp: time_stamp,
         }
     }
 }
