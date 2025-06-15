@@ -26,7 +26,6 @@ use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
-use std::cell::RefCell;
 use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
@@ -36,9 +35,10 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
+use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::SystemTime;
@@ -158,7 +158,7 @@ impl EntrySaver {
 
 // TODO: Move to entry_saver.rs.
 struct ObjectAdder {
-    store: Rc<RefCell<ObjectStore>>,
+    store: Arc<RwLock<ObjectStore>>,
     id: String,
     path: String,
     source_path: String,
@@ -171,7 +171,7 @@ impl Task for ObjectAdder {
         const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
         const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
 
-        let mut store = self.store.borrow_mut();
+        let mut store = self.store.write().unwrap();
         let exists = match store.exists(&self.id) {
             Ok(exists) => exists,
             Err(error) => return Err(error),
@@ -232,7 +232,7 @@ impl Task for ObjectAdder {
 }
 
 impl ObjectAdder {
-    fn new(store: &Rc<RefCell<ObjectStore>>, id: &str, path: &str, source_path: &str, file_size: u64, time_stamp: i64) -> Self {
+    fn new(store: &Arc<RwLock<ObjectStore>>, id: &str, path: &str, source_path: &str, file_size: u64, time_stamp: i64) -> Self {
         Self {
             store: store.clone(),
             id: id.to_string(),
@@ -261,7 +261,7 @@ impl Task for BackupCommand {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
-        let store = Rc::new(RefCell::new(ObjectStore::new(&path.to_string_easy())));
+        let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
@@ -343,7 +343,7 @@ impl BackupCommand {
     fn process_file(
         &mut self,
         path: &String,
-        store: &Rc<RefCell<ObjectStore>>,
+        store: &Arc<RwLock<ObjectStore>>,
         source_path: &String,
     ) -> Result<()> {
         if self.count == 0 {
