@@ -26,7 +26,6 @@ use chrono::Local;
 use hex_string::HexString;
 use sha2::Digest;
 use sha2::Sha256;
-use std::cell::RefCell;
 use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
@@ -36,9 +35,7 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
-use std::rc::Rc;
 use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::SystemTime;
@@ -74,29 +71,26 @@ impl Task for BackgroundExecuter {
         let (sender, receiver) = mpsc::channel();
         self.sender = Some(sender);
 
-        execute_background_executer(receiver)?;
+        thread::spawn(move || {
+            let mut result: Result<()> = Ok(());
+            let mut done = false;
+            while !done {
+                if let Ok(mut task) = receiver.recv() {
+                    if let Err(error) = task.execute() {
+                        println!("error: {}", error);
+                    }
+                } else {
+                    // TODO: Add a error code.
+                    result = Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
+                    done = true;
+                }
+            }
+
+            result
+        });
 
         Ok(())
     }
-}
-
-fn execute_background_executer(receiver: Receiver<Box<dyn Task + Send>>) -> Result<()> {
-    thread::spawn(move || {
-        let mut done = false;
-        while !done {
-            let mut task = match receiver.recv() {
-                Ok(task) => task,
-                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
-            };
-            if let Err(error) = task.execute() {
-                println!("error: {}", error);
-            }
-        }
-
-        Ok(())
-    });
-
-    Ok(())
 }
 
 impl BackgroundExecuter {
@@ -154,7 +148,7 @@ pub struct BackupCommand {
 
 impl Task for BackupCommand {
     fn execute(&mut self) -> Result<()> {
-        self.executer.execute();
+        self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         let mut store = ObjectStore::new(&path.to_string_easy());
@@ -340,36 +334,12 @@ impl BackupCommand {
             uid: uid,
             gid: gid,
         };
-        let mut saver = Box::new(EntrySaver::new(&entry, &entry_path.to_string_easy()));
+        let saver = Box::new(EntrySaver::new(&entry, &entry_path.to_string_easy()));
         if let Some(sender) = &self.executer.sender {
-            sender.send(saver);
+            if let Err(error) = sender.send(saver) {
+                println!("Sending a task failed. error: {}", error);
+            }
         }
-
-
-        // saver.execute()?;
-
-        /*
-        match fs::create_dir_all(entry_path.clone()) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-        };
-        entry_path.push(&path_file_name);
-        let entry = Entry {
-            id: id,
-            last_modified: modified,
-            permission: permission,
-            uid: uid,
-            gid: gid,
-        };
-        let string = match serde_json::to_string(&entry) {
-            Ok(string) => string,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-        };
-        match fs::write(&entry_path, string.as_bytes()) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-    	};
-        */
 
         Ok(())
     }
