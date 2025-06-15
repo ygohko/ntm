@@ -26,6 +26,7 @@ mod backup_store;
 mod commons;
 mod config;
 mod entry;
+mod entry_saver;
 mod error;
 mod file_path_producer;
 mod gc_command;

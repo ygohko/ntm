@@ -49,6 +49,7 @@ use crate::attributes::Attributes;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
+use crate::entry_saver::EntrySaver;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -125,6 +126,7 @@ impl BackgroundExecuter {
 }
 
 // TODO: Move to entry_saver.rs.
+/*
 struct EntrySaver {
     entry: Entry,
     path: String,
@@ -157,8 +159,9 @@ impl EntrySaver {
         }
     }
 }
+*/
 
-// TODO: Move to entry_saver.rs.
+// TODO: Move to object_adder.rs.
 struct ObjectAdder {
     store: Arc<RwLock<ObjectStore>>,
     id: String,
