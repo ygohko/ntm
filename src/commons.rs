@@ -166,8 +166,8 @@ impl OperatePath for Path {
 
 #[cfg(test)]
 mod tests {
-    use camino::Utf8PathBuf;
     use camino::Utf8Path;
+    use camino::Utf8PathBuf;
     use std::path::Path;
     use std::path::PathBuf;
 

@@ -35,12 +35,12 @@ use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
-use std::sync::Arc;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::sync::mpsc::SyncSender;
+use std::sync::Arc;
 use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
@@ -183,7 +183,7 @@ impl Task for ObjectAdder {
         if exists {
             return Ok(());
         }
-        
+
         let mut joined_path = Utf8PathBuf::from(&self.source_path);
         joined_path.push(&self.path);
         if self.file_size < DIVIDED_WRITING_THRESHOLD {
@@ -237,7 +237,15 @@ impl Task for ObjectAdder {
 }
 
 impl ObjectAdder {
-    fn new(store: &Arc<RwLock<ObjectStore>>, id: &str, path: &str, source_path: &str, file_size: u64, time_stamp: i64, added_count: &Arc<AtomicI64>) -> Self {
+    fn new(
+        store: &Arc<RwLock<ObjectStore>>,
+        id: &str,
+        path: &str,
+        source_path: &str,
+        file_size: u64,
+        time_stamp: i64,
+        added_count: &Arc<AtomicI64>,
+    ) -> Self {
         Self {
             store: store.clone(),
             id: id.to_string(),
@@ -322,7 +330,10 @@ impl Task for BackupCommand {
         println!("Waiting for background tasks...");
         self.executer.terminate()?;
 
-        println!("{} object(s) added.", self.added_count.load(Ordering::Relaxed));
+        println!(
+            "{} object(s) added.",
+            self.added_count.load(Ordering::Relaxed)
+        );
 
         Ok(())
     }
@@ -355,7 +366,9 @@ impl BackupCommand {
         if self.count == 0 {
             println!(
                 "Processing ({}, {}): {}",
-                self.processed_count, self.added_count.load(Ordering::Relaxed), path
+                self.processed_count,
+                self.added_count.load(Ordering::Relaxed),
+                path
             );
         }
         let path_buf = Utf8PathBuf::from(&path);
