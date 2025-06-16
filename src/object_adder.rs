@@ -42,6 +42,8 @@ pub const ERROR_ID: ErrorId = "object_adder";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 
 pub struct ObjectAdder {
     store: Arc<RwLock<ObjectStore>>,
@@ -72,7 +74,7 @@ impl Task for ObjectAdder {
         if self.file_size < DIVIDED_WRITING_THRESHOLD {
             let bytes = match fs::read(&joined_path) {
                 Ok(bytes) => bytes,
-                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
             };
             let attribute = Attributes::new(&self.path, self.time_stamp);
             store.add(&self.id, &bytes, &attribute)?;
@@ -80,13 +82,13 @@ impl Task for ObjectAdder {
             let mut remains: i64 = self.file_size as i64;
             let mut file = match OpenOptions::new().read(true).open(&joined_path) {
                 Ok(file) => file,
-                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
             };
             let attribute = Attributes::new(&self.path, self.time_stamp);
             let mut needs_writing = true;
             if let Err(error) = store.begin_adding(&self.id, &attribute) {
                 if error.id == object_store::ERROR_ID
-                    && error.code == object_store::ERROR_CODE_GENERAL
+                    && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
                 {
                     needs_writing = false;
                 } else {
@@ -103,7 +105,7 @@ impl Task for ObjectAdder {
                     let mut bytes: Vec<u8> = Vec::new();
                     bytes.resize(reading as usize, 0);
                     if let Err(_) = file.read(&mut bytes) {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
+                        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
                     }
                     store.write_adding(&bytes)?;
 
