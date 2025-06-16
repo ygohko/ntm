@@ -21,16 +21,19 @@
  */
 
 mod attributes;
+mod background_executer;
 mod backup_command;
 mod backup_store;
 mod commons;
 mod config;
 mod entry;
+mod entry_saver;
 mod error;
 mod file_path_producer;
 mod gc_command;
 mod get_command;
 mod init_command;
+mod object_adder;
 mod object_store;
 mod task;
 

@@ -29,34 +29,28 @@ use sha2::Sha256;
 use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
-use std::fs::OpenOptions;
-use std::io::Read;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
-use std::sync::mpsc;
-use std::sync::mpsc::Sender;
-use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::thread;
-use std::thread::JoinHandle;
 use std::time::SystemTime;
 
-use crate::attributes::Attributes;
+use crate::background_executer::BackgroundExecuter;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
+use crate::entry_saver::EntrySaver;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
-use crate::object_store;
+use crate::object_adder::ObjectAdder;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
 
@@ -66,197 +60,6 @@ pub const ERROR_ID: ErrorId = "backup_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
-pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
-
-// TODO: Move to background_executer.rs.
-struct BackgroundExecuter {
-    sender: Option<SyncSender<Box<dyn Task + Send>>>,
-    handle: Option<JoinHandle<Result<()>>>,
-}
-
-impl Task for BackgroundExecuter {
-    fn execute(&mut self) -> Result<()> {
-        let (sender, receiver) = mpsc::sync_channel(5000);
-        self.sender = Some(sender);
-
-        let handle = thread::spawn(move || {
-            let mut result: Result<()> = Ok(());
-            let mut done = false;
-            while !done {
-                if let Ok(mut task) = receiver.recv() {
-                    if let Err(error) = task.execute() {
-                        println!("error: {}", error);
-                    }
-                } else {
-                    // TODO: Add a error code.
-                    result = Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
-                    done = true;
-                }
-            }
-
-            result
-        });
-        self.handle = Some(handle);
-
-        Ok(())
-    }
-}
-
-impl BackgroundExecuter {
-    fn new() -> Self {
-        Self {
-            sender: None,
-            handle: None,
-        }
-    }
-
-    fn terminate(&mut self) -> Result<()> {
-        if self.handle.is_none() {
-            return Ok(());
-        }
-        self.sender = None;
-        let handle = self.handle.take();
-        if let Err(_) = handle.unwrap().join() {
-            // TODO: Add a error code.
-            return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
-        }
-
-        Ok(())
-    }
-}
-
-// TODO: Move to entry_saver.rs.
-struct EntrySaver {
-    entry: Entry,
-    path: String,
-}
-
-impl Task for EntrySaver {
-    fn execute(&mut self) -> Result<()> {
-        let path = Utf8PathBuf::from(&self.path);
-        let parent = path.parent_or_empty();
-        if let Err(_) = fs::create_dir_all(&parent) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
-        }
-        let string = match serde_json::to_string(&self.entry) {
-            Ok(string) => string,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED)),
-        };
-        if let Err(_) = fs::write(&path, string.as_bytes()) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_DESTINATION_FAILED));
-        }
-
-        Ok(())
-    }
-}
-
-impl EntrySaver {
-    fn new(entry: &Entry, path: &str) -> Self {
-        Self {
-            entry: entry.clone(),
-            path: path.to_string(),
-        }
-    }
-}
-
-// TODO: Move to entry_saver.rs.
-struct ObjectAdder {
-    store: Arc<RwLock<ObjectStore>>,
-    id: String,
-    path: String,
-    source_path: String,
-    file_size: u64,
-    time_stamp: i64,
-    added_count: Arc<AtomicI64>,
-}
-
-impl Task for ObjectAdder {
-    fn execute(&mut self) -> Result<()> {
-        const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
-        const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
-
-        let mut store = self.store.write().unwrap();
-        let exists = match store.exists(&self.id) {
-            Ok(exists) => exists,
-            Err(error) => return Err(error),
-        };
-        if exists {
-            return Ok(());
-        }
-
-        let mut joined_path = Utf8PathBuf::from(&self.source_path);
-        joined_path.push(&self.path);
-        if self.file_size < DIVIDED_WRITING_THRESHOLD {
-            let bytes = match fs::read(&joined_path) {
-                Ok(bytes) => bytes,
-                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-            };
-            let attribute = Attributes::new(&self.path, self.time_stamp);
-            store.add(&self.id, &bytes, &attribute)?;
-        } else {
-            let mut remains: i64 = self.file_size as i64;
-            let mut file = match OpenOptions::new().read(true).open(&joined_path) {
-                Ok(file) => file,
-                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-            };
-            let attribute = Attributes::new(&self.path, self.time_stamp);
-            let mut needs_writing = true;
-            if let Err(error) = store.begin_adding(&self.id, &attribute) {
-                if error.id == object_store::ERROR_ID
-                    && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
-                {
-                    needs_writing = false;
-                } else {
-                    return Err(error);
-                }
-            }
-
-            if needs_writing {
-                while remains > 0 {
-                    let mut reading = remains;
-                    if reading > DIVIDED_WRITING_SIZE {
-                        reading = DIVIDED_WRITING_SIZE;
-                    }
-                    let mut bytes: Vec<u8> = Vec::new();
-                    bytes.resize(reading as usize, 0);
-                    if let Err(_) = file.read(&mut bytes) {
-                        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED));
-                    }
-                    store.write_adding(&bytes)?;
-
-                    remains -= reading;
-                }
-
-                store.end_adding();
-            }
-        }
-        self.added_count.fetch_add(1, Ordering::SeqCst);
-
-        Ok(())
-    }
-}
-
-impl ObjectAdder {
-    fn new(
-        store: &Arc<RwLock<ObjectStore>>,
-        id: &str,
-        path: &str,
-        source_path: &str,
-        file_size: u64,
-        time_stamp: i64,
-        added_count: &Arc<AtomicI64>,
-    ) -> Self {
-        Self {
-            store: store.clone(),
-            id: id.to_string(),
-            path: path.to_string(),
-            source_path: source_path.to_string(),
-            file_size: file_size,
-            time_stamp: time_stamp,
-            added_count: added_count.clone(),
-        }
-    }
-}
 
 pub struct BackupCommand {
     // TODO: Add getter method.
