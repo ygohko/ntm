@@ -29,8 +29,6 @@ use sha2::Sha256;
 use std::convert::From;
 use std::fs;
 use std::fs::Metadata;
-use std::fs::OpenOptions;
-use std::io::Read;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
 #[cfg(not(target_os = "windows"))]
@@ -45,7 +43,6 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::SystemTime;
 
-use crate::attributes::Attributes;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -57,7 +54,6 @@ use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_adder::ObjectAdder;
-use crate::object_store;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
 
@@ -67,7 +63,6 @@ pub const ERROR_ID: ErrorId = "backup_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
-pub const ERROR_CODE_WRITING_DESTINATION_FAILED: ErrorCode = 3;
 
 // TODO: Move to background_executer.rs.
 struct BackgroundExecuter {
