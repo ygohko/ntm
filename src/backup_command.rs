@@ -35,12 +35,8 @@ use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
-use std::sync::mpsc;
-use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::thread;
-use std::thread::JoinHandle;
 use std::time::SystemTime;
 
 use crate::background_executer::BackgroundExecuter;
@@ -64,65 +60,6 @@ pub const ERROR_ID: ErrorId = "backup_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
-
-/*
-// TODO: Move to background_executer.rs.
-struct BackgroundExecuter {
-    sender: Option<SyncSender<Box<dyn Task + Send>>>,
-    handle: Option<JoinHandle<Result<()>>>,
-}
-
-impl Task for BackgroundExecuter {
-    fn execute(&mut self) -> Result<()> {
-        let (sender, receiver) = mpsc::sync_channel(5000);
-        self.sender = Some(sender);
-
-        let handle = thread::spawn(move || {
-            let mut result: Result<()> = Ok(());
-            let mut done = false;
-            while !done {
-                if let Ok(mut task) = receiver.recv() {
-                    if let Err(error) = task.execute() {
-                        println!("error: {}", error);
-                    }
-                } else {
-                    // TODO: Add a error code.
-                    result = Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
-                    done = true;
-                }
-            }
-
-            result
-        });
-        self.handle = Some(handle);
-
-        Ok(())
-    }
-}
-
-impl BackgroundExecuter {
-    fn new() -> Self {
-        Self {
-            sender: None,
-            handle: None,
-        }
-    }
-
-    fn terminate(&mut self) -> Result<()> {
-        if self.handle.is_none() {
-            return Ok(());
-        }
-        self.sender = None;
-        let handle = self.handle.take();
-        if let Err(_) = handle.unwrap().join() {
-            // TODO: Add a error code.
-            return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL));
-        }
-
-        Ok(())
-    }
-}
-*/
 
 pub struct BackupCommand {
     // TODO: Add getter method.
