@@ -21,6 +21,7 @@
  */
 
 mod attributes;
+mod background_executer;
 mod backup_command;
 mod backup_store;
 mod commons;

@@ -43,6 +43,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::SystemTime;
 
+use crate::background_executer::BackgroundExecuter;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -64,6 +65,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 
+/*
 // TODO: Move to background_executer.rs.
 struct BackgroundExecuter {
     sender: Option<SyncSender<Box<dyn Task + Send>>>,
@@ -120,6 +122,7 @@ impl BackgroundExecuter {
         Ok(())
     }
 }
+*/
 
 pub struct BackupCommand {
     // TODO: Add getter method.
