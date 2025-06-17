@@ -82,7 +82,8 @@ mod tests {
     #[test]
     fn is_creatable() {
         let temp_dir = TempDir::new("test").unwrap();
-        let temp_path = temp_dir.path().to_string_easy();
+        let mut temp_path = temp_dir.path().to_path_buf();
+        temp_path.push("a.txt");
         let entry = Entry {
             id: "01abcdef".to_string(),
             last_modified: 12345,
@@ -90,6 +91,22 @@ mod tests {
             uid: 1000,
             gid: 1000,
         };
-        let _saver = EntrySaver::new(&entry, &temp_path);
+        let _saver = EntrySaver::new(&entry, &temp_path.to_string_easy());
+    }
+
+    #[test]
+    fn is_executable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let mut temp_path = temp_dir.path().to_path_buf();
+        temp_path.push("a.txt");
+        let entry = Entry {
+            id: "01abcdef".to_string(),
+            last_modified: 12345,
+            permission: 0o777,
+            uid: 1000,
+            gid: 1000,
+        };
+        let mut saver = EntrySaver::new(&entry, &temp_path.to_string_easy());
+        saver.execute().unwrap();
     }
 }
