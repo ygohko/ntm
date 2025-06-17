@@ -92,3 +92,21 @@ impl BackgroundExecuter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::background_executer::BackgroundExecuter;
+    use crate::task::Task;
+
+    #[test]
+    fn is_creatable() {
+        let _executer = BackgroundExecuter::new();
+    }
+
+    #[test]
+    fn is_executable() {
+        let mut executer = BackgroundExecuter::new();
+        executer.execute().unwrap();
+        executer.terminate().unwrap();
+    }
+}
