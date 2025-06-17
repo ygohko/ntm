@@ -69,3 +69,27 @@ impl EntrySaver {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use tempdir::TempDir;
+
+    use crate::commons::OperatePath;
+    use crate::entry::Entry;
+    use crate::entry_saver::EntrySaver;
+    use crate::task::Task;
+
+    #[test]
+    fn is_creatable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = temp_dir.path().to_string_easy();
+        let entry = Entry {
+            id: "01abcdef".to_string(),
+            last_modified: 12345,
+            permission: 0o777,
+            uid: 1000,
+            gid: 1000,
+        };
+        let _saver = EntrySaver::new(&entry, &temp_path);
+    }
+}
