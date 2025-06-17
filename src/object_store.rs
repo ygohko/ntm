@@ -48,13 +48,20 @@ pub const ERROR_CODE_OBJECT_ALREADY_EXISTS: ErrorCode = 7;
 pub struct ObjectStore {
     path: String,
     adding_file: Option<File>,
+    existing_ids: Vec<Vec<String>>,
 }
 
 impl ObjectStore {
     pub fn new(path: &str) -> Self {
+        let mut existing_ids: Vec<Vec<String>> = Vec::new();
+        for i in 0..65536 {
+            existing_ids.push(Vec::new());
+        }
+
         ObjectStore {
             path: path.to_string(),
             adding_file: None,
+            existing_ids: existing_ids,
         }
     }
 
@@ -173,6 +180,16 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
+        let result1 = path1.parse::<u32>();
+        let result2 = path2.parse::<u32>();
+        if result1.is_ok() && result2.is_ok() {
+            let index = (result1.unwrap() * 0x100 + result2.unwrap()) as usize;
+            let ids = &self.existing_ids[index];
+            if ids.into_iter().position(|id1| {id1 == id}).is_some() {
+                return Ok(true);
+            }
+        }
+
         let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
