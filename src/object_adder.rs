@@ -178,4 +178,28 @@ mod tests {
             &added_count
         );
     }
+
+    #[test]
+    fn is_executable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+        let mut store_path = temp_path.clone();
+        store_path.push("Objects");
+        fs::create_dir_all(&store_path).unwrap();
+        let store = Arc::new(RwLock::new(ObjectStore::new(&store_path.to_string_easy())));
+        let mut file_path = temp_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "abcdef").unwrap();
+        let added_count = Arc::new(AtomicI64::new(0));
+        let mut adder = ObjectAdder::new(
+            &store,
+            "12345678",
+            "a.txt",
+            &temp_path.to_string_easy(),
+            6,
+            12345678,
+            &added_count
+        );
+        adder.execute().unwrap();
+    }
 }
