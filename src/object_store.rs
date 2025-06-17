@@ -44,6 +44,7 @@ pub const ERROR_CODE_READING_ATTTIBUTE_FAILED: ErrorCode = 4;
 pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 5;
 pub const ERROR_CODE_REMOVING_ATTTIBUTE_FAILED: ErrorCode = 6;
 pub const ERROR_CODE_OBJECT_ALREADY_EXISTS: ErrorCode = 7;
+pub const ERROR_CODE_INVALID_OBJECT_ID: ErrorCode = 8;
 
 pub struct ObjectStore {
     path: String,
@@ -54,7 +55,7 @@ pub struct ObjectStore {
 impl ObjectStore {
     pub fn new(path: &str) -> Self {
         let mut existing_ids: Vec<Vec<String>> = Vec::new();
-        for i in 0..65536 {
+        for _ in 0..65536 {
             existing_ids.push(Vec::new());
         }
 
@@ -65,11 +66,24 @@ impl ObjectStore {
         }
     }
 
-    pub fn add(&self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
+    pub fn add(&mut self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
+        let Ok(index1) = u32::from_str_radix(path1, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let Ok(index2) = u32::from_str_radix(path2, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let index = (index1 * 0x100 + index2) as usize;
+        let ids = &mut self.existing_ids[index];
+        if ids.into_iter().position(|id1| {id1 == id}).is_some() {
+            return Ok(());
+        }
+        ids.push(id.to_string());
+
         let mut path = Utf8PathBuf::from(&self.path);
         path.push(path1);
         path.push(path2);
@@ -180,14 +194,16 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let result1 = path1.parse::<u32>();
-        let result2 = path2.parse::<u32>();
-        if result1.is_ok() && result2.is_ok() {
-            let index = (result1.unwrap() * 0x100 + result2.unwrap()) as usize;
-            let ids = &self.existing_ids[index];
-            if ids.into_iter().position(|id1| {id1 == id}).is_some() {
-                return Ok(true);
-            }
+        let Ok(index1) = u32::from_str_radix(path1, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let Ok(index2) = u32::from_str_radix(path2, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let index = (index1 * 0x100 + index2) as usize;
+        let ids = &self.existing_ids[index];
+        if ids.into_iter().position(|id1| {id1 == id}).is_some() {
+            return Ok(true);
         }
 
         let mut path = Utf8PathBuf::from(&self.path);
@@ -302,7 +318,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_easy());
+        let mut store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -319,7 +335,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_easy());
+        let mut store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -337,7 +353,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_easy());
+        let mut store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -364,7 +380,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_easy());
+        let mut store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
@@ -389,7 +405,7 @@ mod tests {
         if let Err(_) = fs::create_dir_all(&path) {
             panic!();
         }
-        let store = ObjectStore::new(&path.to_string_easy());
+        let mut store = ObjectStore::new(&path.to_string_easy());
 
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
