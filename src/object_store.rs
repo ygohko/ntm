@@ -45,6 +45,8 @@ pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 5;
 pub const ERROR_CODE_REMOVING_ATTTIBUTE_FAILED: ErrorCode = 6;
 pub const ERROR_CODE_OBJECT_ALREADY_EXISTS: ErrorCode = 7;
 pub const ERROR_CODE_INVALID_OBJECT_ID: ErrorCode = 8;
+pub const ERROR_CODE_READING_CACHED_FAILED: ErrorCode = 9;
+pub const ERROR_CODE_WRITING_CACHED_FAILED: ErrorCode = 10;
 
 const EXISTING_IDS_TABLE_COUNT: usize = 0x100 * 0x100;
 
@@ -299,6 +301,35 @@ impl ObjectStore {
         self.adding_file = None;
     }
 
+    pub fn load_existing_ids(&mut self) -> Result<()> {
+        let path = Utf8PathBuf::from(&self.path).parent_or_empty();
+        let mut path = Utf8PathBuf::from(path);
+        path.push("existing_ids.json");
+        let Ok(serialized) = fs::read_to_string(&path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CACHED_FAILED));
+        };
+
+        let serializable: SerializableExistingIds = match serde_json::from_str(&serialized) {
+            Ok(serializable) => serializable,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CACHED_FAILED)),
+        };
+        for id in serializable.ids {
+            let path1 = &id[0..2];
+            let path2 = &id[2..4];
+            let Ok(index1) = u32::from_str_radix(path1, 16) else {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+            };
+            let Ok(index2) = u32::from_str_radix(path2, 16) else {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+            };
+            let index = (index1 * 0x100 + index2) as usize;
+            self.existing_ids[index].push(id);
+        }
+
+        Ok(())
+    }
+    
+    // TODO: Rename to save_cached()?
     pub fn save_existing_ids(&self) -> Result<()> {
         let mut serializable = SerializableExistingIds {
             ids: Vec::new(),
