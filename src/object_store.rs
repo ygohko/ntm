@@ -46,6 +46,16 @@ pub const ERROR_CODE_REMOVING_ATTTIBUTE_FAILED: ErrorCode = 6;
 pub const ERROR_CODE_OBJECT_ALREADY_EXISTS: ErrorCode = 7;
 pub const ERROR_CODE_INVALID_OBJECT_ID: ErrorCode = 8;
 
+const EXISTING_IDS_TABLE_COUNT: usize = 0x100 * 0x100;
+
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+
+#[derive(Serialize, Deserialize, Clone)]
+struct SerializableExistingIds {
+    ids: Vec<String>,
+}
+
 pub struct ObjectStore {
     path: String,
     adding_file: Option<File>,
@@ -55,7 +65,7 @@ pub struct ObjectStore {
 impl ObjectStore {
     pub fn new(path: &str) -> Self {
         let mut existing_ids: Vec<Vec<String>> = Vec::new();
-        for _ in 0..65536 {
+        for _ in 0..EXISTING_IDS_TABLE_COUNT {
             existing_ids.push(Vec::new());
         }
 
@@ -79,6 +89,7 @@ impl ObjectStore {
         };
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
+        // TODO: Use iter()?
         if ids.into_iter().position(|id1| {id1 == id}).is_some() {
             return Ok(());
         }
@@ -201,6 +212,7 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
+        // TODO: Use iter()?
         let ids = &self.existing_ids[index];
         if ids.into_iter().position(|id1| {id1 == id}).is_some() {
             return Ok(true);
@@ -285,6 +297,29 @@ impl ObjectStore {
             return;
         }
         self.adding_file = None;
+    }
+
+    pub fn save_existing_ids(&self) -> Result<()> {
+        let mut serializable = SerializableExistingIds {
+            ids: Vec::new(),
+        };
+        for i in 0..EXISTING_IDS_TABLE_COUNT {
+            let ids = &self.existing_ids[i];
+            for id in ids {
+                serializable.ids.push(id.clone());
+            }
+        }
+        let serialized = serde_json::to_string(&serializable);
+
+        let path = Utf8PathBuf::from(&self.path).parent_or_empty();
+        let mut path = Utf8PathBuf::from(path);
+        path.push("existing_ids.json");
+        if let Err(_) = fs::write_string(&path, serialized) {
+            // TODO: Add a error code?
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
+        }
+
+        Ok(())
     }
 }
 
