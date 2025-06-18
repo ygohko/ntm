@@ -286,6 +286,12 @@ impl ObjectStore {
         }
         self.adding_file = None;
     }
+
+    pub fn test(&self) {
+        for i in 0..65536 {
+            println!("{}: {}", i, self.existing_ids[i].len());
+        }
+    }
 }
 
 #[cfg(test)]

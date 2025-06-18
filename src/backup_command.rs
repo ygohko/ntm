@@ -138,6 +138,9 @@ impl Task for BackupCommand {
             self.added_count.load(Ordering::Relaxed)
         );
 
+        let store1 = store.read().unwrap();
+        store1.test();
+        
         Ok(())
     }
 }
