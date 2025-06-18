@@ -137,7 +137,7 @@ impl Task for BackupCommand {
             "{} object(s) added.",
             self.added_count.load(Ordering::Relaxed)
         );
-        
+
         Ok(())
     }
 }
