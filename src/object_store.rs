@@ -309,12 +309,15 @@ impl ObjectStore {
                 serializable.ids.push(id.clone());
             }
         }
-        let serialized = serde_json::to_string(&serializable);
+        let Ok(serialized) = serde_json::to_string(&serializable) else {
+            // TODO: Add a error code?
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
+        };
 
         let path = Utf8PathBuf::from(&self.path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
         path.push("existing_ids.json");
-        if let Err(_) = fs::write_string(&path, serialized) {
+        if let Err(_) = fs::write(&path, &serialized) {
             // TODO: Add a error code?
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
         }

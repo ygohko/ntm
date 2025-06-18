@@ -132,6 +132,11 @@ impl Task for BackupCommand {
         }
         println!("Waiting for background tasks...");
         self.executer.terminate()?;
+        if let Ok(store1) = store.read() {
+            if let Err(error) = store1.save_existing_ids() {
+                println!("Saving existing IDs failed. error: {}", error);
+            }
+        }
 
         println!(
             "{} object(s) added.",
