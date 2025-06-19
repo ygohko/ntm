@@ -25,6 +25,8 @@ use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use crate::attributes::Attributes;
 use crate::commons::OperatePath;
@@ -45,6 +47,15 @@ pub const ERROR_CODE_WRITING_ATTTIBUTE_FAILED: ErrorCode = 5;
 pub const ERROR_CODE_REMOVING_ATTTIBUTE_FAILED: ErrorCode = 6;
 pub const ERROR_CODE_OBJECT_ALREADY_EXISTS: ErrorCode = 7;
 pub const ERROR_CODE_INVALID_OBJECT_ID: ErrorCode = 8;
+pub const ERROR_CODE_READING_CACHED_FAILED: ErrorCode = 9;
+pub const ERROR_CODE_WRITING_CACHED_FAILED: ErrorCode = 10;
+
+const EXISTING_IDS_TABLE_COUNT: usize = 0x100 * 0x100;
+
+#[derive(Serialize, Deserialize, Clone)]
+struct SerializableExistingIds {
+    ids: Vec<String>,
+}
 
 pub struct ObjectStore {
     path: String,
@@ -55,7 +66,7 @@ pub struct ObjectStore {
 impl ObjectStore {
     pub fn new(path: &str) -> Self {
         let mut existing_ids: Vec<Vec<String>> = Vec::new();
-        for _ in 0..65536 {
+        for _ in 0..EXISTING_IDS_TABLE_COUNT {
             existing_ids.push(Vec::new());
         }
 
@@ -79,6 +90,7 @@ impl ObjectStore {
         };
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
+        // TODO: Use iter()?
         if ids.into_iter().position(|id1| {id1 == id}).is_some() {
             return Ok(());
         }
@@ -189,7 +201,7 @@ impl ObjectStore {
         Ok(attributes)
     }
 
-    pub fn exists(&self, id: &str) -> Result<bool> {
+    pub fn exists(&mut self, id: &str) -> Result<bool> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -201,7 +213,8 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &self.existing_ids[index];
+        // TODO: Use iter()?
+        let ids = &mut self.existing_ids[index];
         if ids.into_iter().position(|id1| {id1 == id}).is_some() {
             return Ok(true);
         }
@@ -216,6 +229,9 @@ impl ObjectStore {
             Ok(exists) => exists,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
         };
+        if exists {
+            ids.push(id.to_string());
+        }
 
         Ok(exists)
     }
@@ -285,6 +301,59 @@ impl ObjectStore {
             return;
         }
         self.adding_file = None;
+    }
+
+    pub fn load_existing_ids(&mut self) -> Result<()> {
+        let path = Utf8PathBuf::from(&self.path).parent_or_empty();
+        let mut path = Utf8PathBuf::from(path);
+        path.push("existing_ids.json");
+        let Ok(serialized) = fs::read_to_string(&path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CACHED_FAILED));
+        };
+
+        let serializable: SerializableExistingIds = match serde_json::from_str(&serialized) {
+            Ok(serializable) => serializable,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CACHED_FAILED)),
+        };
+        for id in serializable.ids {
+            let path1 = &id[0..2];
+            let path2 = &id[2..4];
+            let Ok(index1) = u32::from_str_radix(path1, 16) else {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+            };
+            let Ok(index2) = u32::from_str_radix(path2, 16) else {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+            };
+            let index = (index1 * 0x100 + index2) as usize;
+            self.existing_ids[index].push(id);
+        }
+
+        Ok(())
+    }
+    
+    // TODO: Rename to save_cached()?
+    pub fn save_existing_ids(&self) -> Result<()> {
+        let mut serializable = SerializableExistingIds {
+            ids: Vec::new(),
+        };
+        for i in 0..EXISTING_IDS_TABLE_COUNT {
+            let ids = &self.existing_ids[i];
+            for id in ids {
+                serializable.ids.push(id.clone());
+            }
+        }
+        let Ok(serialized) = serde_json::to_string(&serializable) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_CACHED_FAILED));
+        };
+
+        let path = Utf8PathBuf::from(&self.path).parent_or_empty();
+        let mut path = Utf8PathBuf::from(path);
+        path.push("existing_ids.json");
+        if let Err(_) = fs::write(&path, &serialized) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_CACHED_FAILED));
+        }
+
+        Ok(())
     }
 }
 
@@ -435,5 +504,42 @@ mod tests {
         store.begin_adding(&id, &attribute).unwrap();
         store.write_adding(&bytes).unwrap();
         store.end_adding();
+    }
+
+    #[test]
+    fn existing_id_is_loadable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let mut store = ObjectStore::new(&path.to_string_easy());
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attribute = Attributes::new("", 0);
+        store.add(&id, &bytes, &attribute).unwrap();
+        store.save_existing_ids().unwrap();
+        store.load_existing_ids().unwrap();
+    }
+
+    #[test]
+    fn existing_id_is_savable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let mut store = ObjectStore::new(&path.to_string_easy());
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attribute = Attributes::new("", 0);
+        store.add(&id, &bytes, &attribute).unwrap();
+        store.save_existing_ids().unwrap();
     }
 }

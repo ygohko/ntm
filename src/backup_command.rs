@@ -79,6 +79,13 @@ impl Task for BackupCommand {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
+        {
+            if let Ok(mut store1) = store.write() {
+                if let Err(error) = store1.load_existing_ids() {
+                    println!("Loading existing IDs failed. error: {}", error);
+                }
+            }
+        }
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
@@ -132,6 +139,13 @@ impl Task for BackupCommand {
         }
         println!("Waiting for background tasks...");
         self.executer.terminate()?;
+        {
+            if let Ok(store1) = store.read() {
+                if let Err(error) = store1.save_existing_ids() {
+                    println!("Saving existing IDs failed. error: {}", error);
+                }
+            }
+        }
 
         println!(
             "{} object(s) added.",
