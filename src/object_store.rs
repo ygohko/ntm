@@ -25,6 +25,8 @@ use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use crate::attributes::Attributes;
 use crate::commons::OperatePath;
@@ -49,9 +51,6 @@ pub const ERROR_CODE_READING_CACHED_FAILED: ErrorCode = 9;
 pub const ERROR_CODE_WRITING_CACHED_FAILED: ErrorCode = 10;
 
 const EXISTING_IDS_TABLE_COUNT: usize = 0x100 * 0x100;
-
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct SerializableExistingIds {
