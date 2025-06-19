@@ -341,16 +341,14 @@ impl ObjectStore {
             }
         }
         let Ok(serialized) = serde_json::to_string(&serializable) else {
-            // TODO: Add a error code?
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_CACHED_FAILED));
         };
 
         let path = Utf8PathBuf::from(&self.path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
         path.push("existing_ids.json");
         if let Err(_) = fs::write(&path, &serialized) {
-            // TODO: Add a error code?
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_ATTTIBUTE_FAILED));
+            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_CACHED_FAILED));
         }
 
         Ok(())
