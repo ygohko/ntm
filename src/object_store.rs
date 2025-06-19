@@ -202,7 +202,7 @@ impl ObjectStore {
         Ok(attributes)
     }
 
-    pub fn exists(&self, id: &str) -> Result<bool> {
+    pub fn exists(&mut self, id: &str) -> Result<bool> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
         let path3 = &id[4..6];
@@ -215,7 +215,7 @@ impl ObjectStore {
         };
         let index = (index1 * 0x100 + index2) as usize;
         // TODO: Use iter()?
-        let ids = &self.existing_ids[index];
+        let ids = &mut self.existing_ids[index];
         if ids.into_iter().position(|id1| {id1 == id}).is_some() {
             return Ok(true);
         }
@@ -230,6 +230,9 @@ impl ObjectStore {
             Ok(exists) => exists,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
         };
+        if exists {
+            ids.push(id.to_string());
+        }
 
         Ok(exists)
     }
