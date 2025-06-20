@@ -293,7 +293,7 @@ mod tests {
         let mut gotten_path = temp_path.clone();
         gotten_path.push("gotten");
         fs::create_dir_all(&gotten_path).unwrap();
-        let mut command = GetCommand::new(&command.name);
+        let mut command = GetCommand::new(&command.name());
         command.set_destination_path(&ntm_path.to_string_easy());
         command.set_gotten_path(&gotten_path.to_string_easy());
         command.execute().unwrap();
@@ -333,12 +333,12 @@ mod tests {
         let mut command = BackupCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
-        let backup_name = command.name.clone();
+        let backup_name = command.name();
 
         let mut gotten_path = temp_path.clone();
         gotten_path.push("gotten");
         fs::create_dir_all(&gotten_path).unwrap();
-        let mut command = GetCommand::new(&command.name);
+        let mut command = GetCommand::new(&command.name());
         command.set_destination_path(&ntm_path.to_string_easy());
         command.set_gotten_path(&gotten_path.to_string_easy());
         command.execute().unwrap();

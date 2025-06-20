@@ -62,8 +62,7 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 
 pub struct BackupCommand {
-    // TODO: Add getter method.
-    pub name: String,
+    name: String,
     executer: BackgroundExecuter,
     executing: DateTime<Local>,
     destination_path: String,
@@ -172,6 +171,10 @@ impl BackupCommand {
 
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
     }
 
     fn process_file(
