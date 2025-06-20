@@ -21,12 +21,12 @@
  */
 
 use camino::Utf8PathBuf;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
 
 use crate::attributes::Attributes;
 use crate::commons::OperatePath;
@@ -91,7 +91,7 @@ impl ObjectStore {
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
         // TODO: Use iter()?
-        if ids.into_iter().position(|id1| {id1 == id}).is_some() {
+        if ids.into_iter().position(|id1| id1 == id).is_some() {
             return Ok(());
         }
         ids.push(id.to_string());
@@ -215,7 +215,7 @@ impl ObjectStore {
         let index = (index1 * 0x100 + index2) as usize;
         // TODO: Use iter()?
         let ids = &mut self.existing_ids[index];
-        if ids.into_iter().position(|id1| {id1 == id}).is_some() {
+        if ids.into_iter().position(|id1| id1 == id).is_some() {
             return Ok(true);
         }
 
@@ -330,12 +330,10 @@ impl ObjectStore {
 
         Ok(())
     }
-    
+
     // TODO: Rename to save_cached()?
     pub fn save_existing_ids(&self) -> Result<()> {
-        let mut serializable = SerializableExistingIds {
-            ids: Vec::new(),
-        };
+        let mut serializable = SerializableExistingIds { ids: Vec::new() };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
             let ids = &self.existing_ids[i];
             for id in ids {
