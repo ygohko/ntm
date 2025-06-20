@@ -24,10 +24,10 @@ use camino::Utf8PathBuf;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Read;
-use std::sync::Arc;
-use std::sync::RwLock;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use crate::attributes::Attributes;
 use crate::error::Error;
@@ -175,7 +175,7 @@ mod tests {
             &temp_path.to_string_easy(),
             6,
             12345678,
-            &added_count
+            &added_count,
         );
     }
 
@@ -198,7 +198,7 @@ mod tests {
             &temp_path.to_string_easy(),
             6,
             12345678,
-            &added_count
+            &added_count,
         );
         adder.execute().unwrap();
     }

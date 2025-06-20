@@ -291,7 +291,7 @@ mod tests {
 
         let mut backup_path = ntm_path.clone();
         backup_path.push("Backups");
-        backup_path.push(&command.name);
+        backup_path.push(&command.name());
         fs::remove_dir_all(&backup_path).unwrap();
         let mut command = GcCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
