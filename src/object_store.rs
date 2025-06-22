@@ -90,8 +90,7 @@ impl ObjectStore {
         };
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
-        // TODO: Use iter()?
-        if ids.into_iter().position(|id1| id1 == id).is_some() {
+        if ids.iter().position(|id1| id1 == id).is_some() {
             return Ok(());
         }
         ids.push(id.to_string());
@@ -213,9 +212,8 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        // TODO: Use iter()?
         let ids = &mut self.existing_ids[index];
-        if ids.into_iter().position(|id1| id1 == id).is_some() {
+        if ids.iter().position(|id1| id1 == id).is_some() {
             return Ok(true);
         }
 
