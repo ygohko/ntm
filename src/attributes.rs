@@ -37,6 +37,10 @@ impl Attributes {
     ///
     /// * `path` - The path of the file.
     /// * `added` - The timestamp when the file was added.
+    ///
+    /// # Returns
+    ///
+    /// * `Attributes` - A new `Attributes` instance.
     pub fn new(path: &str, added: i64) -> Self {
         Self {
             path: path.to_string(),

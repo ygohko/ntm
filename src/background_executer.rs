@@ -78,6 +78,10 @@ impl Task for BackgroundExecuter {
 
 impl BackgroundExecuter {
     /// Creates a new `BackgroundExecuter` instance.
+    ///
+    /// # Returns
+    ///
+    /// * `BackgroundExecuter` - A new `BackgroundExecuter` instance.
     pub fn new() -> Self {
         Self {
             sender: None,

@@ -69,6 +69,10 @@ impl Task for InitCommand {
 
 impl InitCommand {
     /// Creates a new `InitCommand` instance.
+    ///
+    /// # Returns
+    ///
+    /// * `InitCommand` - A new `InitCommand` instance.
     pub fn new() -> Self {
         InitCommand {
             destination_path: ".".to_string(),

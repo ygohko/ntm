@@ -70,6 +70,10 @@ impl ObjectStore {
     /// # Arguments
     ///
     /// * `path` - The base path for storing objects.
+    ///
+    /// # Returns
+    ///
+    /// * `ObjectStore` - A new `ObjectStore` instance.
     pub fn new(path: &str) -> Self {
         let mut existing_ids: Vec<Vec<String>> = Vec::new();
         for _ in 0..EXISTING_IDS_TABLE_COUNT {

@@ -171,6 +171,10 @@ impl GetCommand {
     /// # Arguments
     ///
     /// * `backup` - The name of the backup to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// * `GetCommand` - A new `GetCommand` instance.
     pub fn new(backup: &str) -> Self {
         GetCommand {
             backup: backup.to_string(),

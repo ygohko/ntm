@@ -61,6 +61,10 @@ impl Error {
     ///
     /// * `id` - A static string identifier for the error.
     /// * `code` - An integer error code.
+    ///
+    /// # Returns
+    ///
+    /// * `Error` - A new `Error` instance.
     pub fn new(id: &'static str, code: i32) -> Self {
         let backtrace = Backtrace::capture();
         let string = format!("{}", backtrace);

@@ -50,6 +50,10 @@ impl FilePathProducer {
     /// # Arguments
     ///
     /// * `path` - The base path from which to produce file paths.
+    ///
+    /// # Returns
+    ///
+    /// * `FilePathProducer` - A new `FilePathProducer` instance.
     pub fn new(path: &str) -> FilePathProducer {
         let prefix_length = path.len() + 1;
         return FilePathProducer {

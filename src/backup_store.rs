@@ -45,6 +45,10 @@ impl BackupStore {
     /// # Arguments
     ///
     /// * `path` - The base path where backups are stored.
+    ///
+    /// # Returns
+    ///
+    /// * `BackupStore` - A new `BackupStore` instance.
     pub fn new(path: &str) -> Self {
         Self {
             path: path.to_string(),

@@ -76,6 +76,10 @@ impl EntrySaver {
     ///
     /// * `entry` - The entry to be saved.
     /// * `path` - The file path where the entry will be saved.
+    ///
+    /// # Returns
+    ///
+    /// * `EntrySaver` - A new `EntrySaver` instance.
     pub fn new(entry: &Entry, path: &str) -> Self {
         Self {
             entry: entry.clone(),
