@@ -31,6 +31,10 @@ pub struct Config {
 
 impl Config {
     /// Creates a new `Config` instance with default values.
+    ///
+    /// # Returns
+    ///
+    /// * `Config` - A new `Config` instance.
     pub fn new() -> Self {
         Self {
             source_path: "".to_string(),

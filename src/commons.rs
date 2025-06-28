@@ -26,10 +26,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 /// A trait for operating on file paths.
-///
-/// # Returns
-///
-/// * `String` - The operated path.
 pub trait OperatePath {
     /// Returns the file name of the path, or an empty string if not present.
     ///
