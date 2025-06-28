@@ -74,20 +74,6 @@ pub struct BackupCommand {
 }
 
 impl Task for BackupCommand {
-    /// Executes the backup command.
-    ///
-    /// This method performs the main logic of the backup process, including:
-    /// - Initializing the background executer.
-    /// - Loading existing object IDs from the object store.
-    /// - Reading the configuration file.
-    /// - Producing file paths to be backed up.
-    /// - Processing each file (adding to object store and saving entry).
-    /// - Terminating background tasks.
-    /// - Saving updated object IDs.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
