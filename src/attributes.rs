@@ -23,6 +23,7 @@
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
+/// Represents the attributes of a file, including its path and when it was added.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Attributes {
     pub path: String,
@@ -30,6 +31,16 @@ pub struct Attributes {
 }
 
 impl Attributes {
+    /// Creates a new `Attributes` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path of the file.
+    /// * `added` - The timestamp when the file was added.
+    ///
+    /// # Returns
+    ///
+    /// * `Attributes` - A new `Attributes` instance.
     pub fn new(path: &str, added: i64) -> Self {
         Self {
             path: path.to_string(),

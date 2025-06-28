@@ -35,6 +35,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 #[allow(dead_code)]
 pub const ERROR_CODE_NOT_IMPLEMENTED: ErrorCode = 1;
 
+/// Represents an error that can occur within the application.
 #[derive(Debug)]
 pub struct Error {
     pub id: &'static str,
@@ -54,6 +55,16 @@ impl fmt::Display for Error {
 }
 
 impl Error {
+    /// Creates a new `Error` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A static string identifier for the error.
+    /// * `code` - An integer error code.
+    ///
+    /// # Returns
+    ///
+    /// * `Error` - A new `Error` instance.
     pub fn new(id: &'static str, code: i32) -> Self {
         let backtrace = Backtrace::capture();
         let string = format!("{}", backtrace);

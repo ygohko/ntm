@@ -36,6 +36,7 @@ pub const ERROR_ID: ErrorId = "backup_command";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 
+/// Executes tasks in a background thread.
 pub struct BackgroundExecuter {
     // TODO: Add send() method.
     pub sender: Option<SyncSender<Box<dyn Task + Send>>>,
@@ -43,6 +44,11 @@ pub struct BackgroundExecuter {
 }
 
 impl Task for BackgroundExecuter {
+    /// Starts the background execution thread.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         let (sender, receiver) = mpsc::sync_channel(5000);
         self.sender = Some(sender);
@@ -71,6 +77,11 @@ impl Task for BackgroundExecuter {
 }
 
 impl BackgroundExecuter {
+    /// Creates a new `BackgroundExecuter` instance.
+    ///
+    /// # Returns
+    ///
+    /// * `BackgroundExecuter` - A new `BackgroundExecuter` instance.
     pub fn new() -> Self {
         Self {
             sender: None,
@@ -78,6 +89,11 @@ impl BackgroundExecuter {
         }
     }
 
+    /// Terminates the background execution thread.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn terminate(&mut self) -> Result<()> {
         if self.handle.is_none() {
             return Ok(());

@@ -34,17 +34,33 @@ pub const ERROR_ID: ErrorId = "backup_store";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
 
+/// Manages backup directories.
 pub struct BackupStore {
     path: String,
 }
 
 impl BackupStore {
+    /// Creates a new `BackupStore` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The base path where backups are stored.
+    ///
+    /// # Returns
+    ///
+    /// * `BackupStore` - A new `BackupStore` instance.
     pub fn new(path: &str) -> Self {
         Self {
             path: path.to_string(),
         }
     }
 
+    /// Returns a list of backup names (directory names) in the store.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a vector of `String`s representing backup names,
+    /// or an `Error` if the operation fails.
     pub fn names(&self) -> Result<Vec<String>> {
         let Ok(read_dir) = fs::read_dir(&self.path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_FINDING_BACKUP_FAILED));

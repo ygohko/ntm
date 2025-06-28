@@ -51,6 +51,7 @@ pub const ERROR_CODE_READING_ENTRY_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
 
+/// A command to get backuped files and directories.
 pub struct GetCommand {
     backup: String,
     limited_directory: String,
@@ -61,6 +62,14 @@ pub struct GetCommand {
 }
 
 impl Task for GetCommand {
+    /// Executes the get command.
+    ///
+    /// This method retrieves backed-up files and directories from the object store
+    /// and restores them to the specified destination.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
         let mut path = Utf8PathBuf::from(&self.destination_path);
@@ -157,6 +166,15 @@ impl Task for GetCommand {
 }
 
 impl GetCommand {
+    /// Creates a new `GetCommand` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `backup` - The name of the backup to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// * `GetCommand` - A new `GetCommand` instance.
     pub fn new(backup: &str) -> Self {
         GetCommand {
             backup: backup.to_string(),
@@ -168,15 +186,30 @@ impl GetCommand {
         }
     }
 
+    /// Sets the directory to limit the retrieval of backuped directories and files.
+    ///
+    /// # Arguments
+    ///
+    /// * `directory` - The directory path to limit retrieval.
     pub fn set_limited_directory(&mut self, directory: &str) -> () {
         self.limited_directory = directory.to_string();
     }
 
+    /// Sets the destination path for the get operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the destination directory.
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }
 
     #[allow(dead_code)]
+    /// Sets the path where the gotten files will be stored.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to store the gotten files.
     pub fn set_gotten_path(&mut self, path: &str) {
         self.gotten_path = path.to_string();
     }

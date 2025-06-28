@@ -56,6 +56,7 @@ impl State {
     }
 }
 
+/// A command to execute garbage collection for a backup destination.
 pub struct GcCommand {
     destination_path: String,
     limited_count: Option<i64>,
@@ -68,6 +69,13 @@ pub struct GcCommand {
 }
 
 impl Task for GcCommand {
+    /// Executes the garbage collection command.
+    ///
+    /// This method identifies and removes unreferenced objects from the object store.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
@@ -129,6 +137,11 @@ impl Task for GcCommand {
 }
 
 impl GcCommand {
+    /// Creates a new `GcCommand` instance.
+    ///
+    /// # Returns
+    ///
+    /// * `GcCommand` - A new `GcCommand` instance.
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
@@ -142,10 +155,20 @@ impl GcCommand {
         }
     }
 
+    /// Sets the destination path for the garbage collection.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the destination directory.
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }
 
+    /// Sets the limited count for the garbage collection.
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - The maximum number of objects to process.
     pub fn set_limited_count(&mut self, count: i64) {
         self.limited_count = Some(count);
     }

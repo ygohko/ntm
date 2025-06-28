@@ -61,6 +61,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 
+/// A command to backup files and directories.
 pub struct BackupCommand {
     name: String,
     executer: BackgroundExecuter,
@@ -156,6 +157,11 @@ impl Task for BackupCommand {
 }
 
 impl BackupCommand {
+    /// Creates a new `BackupCommand` instance.
+    ///
+    /// # Returns
+    ///
+    /// A new `BackupCommand` instance.
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
@@ -169,11 +175,21 @@ impl BackupCommand {
         }
     }
 
+    /// Sets the destination path for the backup.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the backup destination.
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }
 
     #[allow(dead_code)]
+    /// Returns the name of the backup command.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the name of the backup command.
     pub fn name(&self) -> String {
         self.name.clone()
     }
@@ -257,6 +273,15 @@ impl BackupCommand {
     }
 }
 
+/// Generates an object ID from the given bytes.
+///
+/// # Arguments
+///
+/// * `bytes` - The bytes to generate the ID from.
+///
+/// # Returns
+///
+/// A `String` representing the generated object ID.
 fn object_id(bytes: &Vec<u8>) -> String {
     let mut sha256 = Sha256::new();
     sha256.update(bytes.clone());
@@ -267,6 +292,15 @@ fn object_id(bytes: &Vec<u8>) -> String {
     hex.as_string()
 }
 
+/// Extracts the file permissions from the given metadata.
+///
+/// # Arguments
+///
+/// * `metadata` - The metadata of the file.
+///
+/// # Returns
+///
+/// A `u32` representing the file permissions.
 #[cfg(not(target_os = "windows"))]
 fn permission(metadata: &Metadata) -> u32 {
     let permissions = metadata.permissions();
@@ -285,6 +319,15 @@ fn permission(metadata: &Metadata) -> u32 {
     0o644
 }
 
+/// Extracts the user ID from the given metadata.
+///
+/// # Arguments
+///
+/// * `metadata` - The metadata of the file.
+///
+/// # Returns
+///
+/// A `u32` representing the user ID.
 #[cfg(not(target_os = "windows"))]
 fn uid(metadata: &Metadata) -> u32 {
     let uid = metadata.uid();
@@ -297,6 +340,15 @@ fn uid(_metadata: &Metadata) -> u32 {
     0
 }
 
+/// Extracts the group ID from the given metadata.
+///
+/// # Arguments
+///
+/// * `metadata` - The metadata of the file.
+///
+/// # Returns
+///
+/// A `u32` representing the group ID.
 #[cfg(not(target_os = "windows"))]
 fn gid(metadata: &Metadata) -> u32 {
     let gid = metadata.gid();
