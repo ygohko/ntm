@@ -32,12 +32,28 @@ use std::path::PathBuf;
 /// * `String` - The operated path.
 pub trait OperatePath {
     /// Returns the file name of the path, or an empty string if not present.
+    ///
+    /// # Returns
+    ///
+    /// * `String` - The file name.
     fn file_name_or_empty(&self) -> String;
     /// Returns the extension of the path, or an empty string if not present.
+    ///
+    /// # Returns
+    ///
+    /// * `String` - The extension.
     fn extension_or_empty(&self) -> String;
     /// Returns the parent directory of the path, or an empty string if not present.
+    ///
+    /// # Returns
+    ///
+    /// * `String` - The parent directory.
     fn parent_or_empty(&self) -> String;
     /// Converts the path to a `String`.
+    ///
+    /// # Returns
+    ///
+    /// * `String` - The path as a string.
     fn to_string_easy(&self) -> String;
 }
 
