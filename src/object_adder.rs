@@ -141,6 +141,10 @@ impl ObjectAdder {
     /// * `file_size` - The size of the file in bytes.
     /// * `time_stamp` - The timestamp of when the file was added.
     /// * `added_count` - An atomic counter for the number of added objects.
+    ///
+    /// # Returns
+    ///
+    /// * `ObjectAdder` - A new `ObjectAdder` instance.
     pub fn new(
         store: &Arc<RwLock<ObjectStore>>,
         id: &str,
