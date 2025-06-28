@@ -138,6 +138,10 @@ impl Task for GcCommand {
 
 impl GcCommand {
     /// Creates a new `GcCommand` instance.
+    ///
+    /// # Returns
+    ///
+    /// * `GcCommand` - A new `GcCommand` instance.
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
