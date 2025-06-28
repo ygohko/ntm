@@ -35,11 +35,19 @@ pub const ERROR_ID: ErrorId = "init_command";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
 
+/// A command to initialize a backup destination.
 pub struct InitCommand {
     destination_path: String,
 }
 
 impl Task for InitCommand {
+    /// Executes the initialization command.
+    ///
+    /// This method creates the necessary directory structure for a new backup destination.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Backups");
@@ -60,12 +68,18 @@ impl Task for InitCommand {
 }
 
 impl InitCommand {
+    /// Creates a new `InitCommand` instance.
     pub fn new() -> Self {
         InitCommand {
             destination_path: ".".to_string(),
         }
     }
 
+    /// Sets the destination path for the initialization.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the destination directory.
     pub fn set_destination_path(&mut self, path: &str) {
         self.destination_path = path.to_string();
     }

@@ -23,6 +23,7 @@
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
+/// Represents an entry in the backup, containing metadata about a file.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Entry {
     pub id: String,

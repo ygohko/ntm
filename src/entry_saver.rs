@@ -37,12 +37,20 @@ pub const ERROR_ID: ErrorId = "entry_saver";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_WRITING_ENTRY_FAILED: ErrorCode = 1;
 
+/// A task for saving an entry to a file.
 pub struct EntrySaver {
     entry: Entry,
     path: String,
 }
 
 impl Task for EntrySaver {
+    /// Executes the entry saving task.
+    ///
+    /// This method serializes the entry and writes it to the specified file path.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         let path = Utf8PathBuf::from(&self.path);
         let parent = path.parent_or_empty();
@@ -62,6 +70,12 @@ impl Task for EntrySaver {
 }
 
 impl EntrySaver {
+    /// Creates a new `EntrySaver` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `entry` - The entry to be saved.
+    /// * `path` - The file path where the entry will be saved.
     pub fn new(entry: &Entry, path: &str) -> Self {
         Self {
             entry: entry.clone(),

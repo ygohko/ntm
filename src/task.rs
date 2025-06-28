@@ -22,6 +22,12 @@
 
 use crate::error::Result;
 
+/// Represents a task that can be executed.
 pub trait Task {
+    /// Executes the task.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the execution fails.
     fn execute(&mut self) -> Result<()>;
 }

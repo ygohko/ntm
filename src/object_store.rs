@@ -57,6 +57,7 @@ struct SerializableExistingIds {
     ids: Vec<String>,
 }
 
+/// Manages the storage and retrieval of objects (files) and their attributes.
 pub struct ObjectStore {
     path: String,
     adding_file: Option<File>,
@@ -64,6 +65,11 @@ pub struct ObjectStore {
 }
 
 impl ObjectStore {
+    /// Creates a new `ObjectStore` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The base path for storing objects.
     pub fn new(path: &str) -> Self {
         let mut existing_ids: Vec<Vec<String>> = Vec::new();
         for _ in 0..EXISTING_IDS_TABLE_COUNT {
@@ -77,6 +83,17 @@ impl ObjectStore {
         }
     }
 
+    /// Adds an object to the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object.
+    /// * `bytes` - The content of the object as bytes.
+    /// * `attributes` - The attributes of the object.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn add(&mut self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -134,6 +151,15 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Removes an object from the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object to remove.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn remove(&self, id: &str) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -158,6 +184,15 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Retrieves the bytes of an object from the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the object's bytes or an `Error` if the operation fails.
     pub fn bytes(&self, id: &str) -> Result<Vec<u8>> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -177,6 +212,15 @@ impl ObjectStore {
         Ok(bytes)
     }
 
+    /// Retrieves the attributes of an object from the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object whose attributes to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the object's attributes or an `Error` if the operation fails.
     pub fn attributes(&self, id: &str) -> Result<Attributes> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -200,6 +244,15 @@ impl ObjectStore {
         Ok(attributes)
     }
 
+    /// Checks if an object exists in the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object to check.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `true` if the object exists, `false` otherwise, or an `Error` if the operation fails.
     pub fn exists(&mut self, id: &str) -> Result<bool> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -234,6 +287,18 @@ impl ObjectStore {
         Ok(exists)
     }
 
+    /// Begins the process of adding a new object to the store.
+    ///
+    /// This method prepares the store for writing a new object in chunks.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object to add.
+    /// * `attributes` - The attributes of the object.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn begin_adding(&mut self, id: &str, attributes: &Attributes) -> Result<()> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
@@ -282,6 +347,17 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Writes a chunk of bytes to the object being added.
+    ///
+    /// This method should be called after `begin_adding`.
+    ///
+    /// # Arguments
+    ///
+    /// * `bytes` - The bytes to write.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn write_adding(&self, bytes: &Vec<u8>) -> Result<()> {
         if self.adding_file.is_none() {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
@@ -294,6 +370,9 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Ends the process of adding a new object.
+    ///
+    /// This method finalizes the writing process and closes the file.
     pub fn end_adding(&mut self) {
         if self.adding_file.is_none() {
             return;
@@ -301,6 +380,11 @@ impl ObjectStore {
         self.adding_file = None;
     }
 
+    /// Loads existing object IDs from a cached file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn load_existing_ids(&mut self) -> Result<()> {
         let path = Utf8PathBuf::from(&self.path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
@@ -329,6 +413,11 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Saves existing object IDs to a cached file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     // TODO: Rename to save_cached()?
     pub fn save_existing_ids(&self) -> Result<()> {
         let mut serializable = SerializableExistingIds { ids: Vec::new() };

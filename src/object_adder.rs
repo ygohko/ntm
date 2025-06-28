@@ -45,6 +45,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 
+/// A task for adding an object (file) to the object store.
 pub struct ObjectAdder {
     store: Arc<RwLock<ObjectStore>>,
     id: String,
@@ -56,6 +57,13 @@ pub struct ObjectAdder {
 }
 
 impl Task for ObjectAdder {
+    /// Executes the object adding task.
+    ///
+    /// This method adds the specified file to the object store, handling large files by dividing them into chunks.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
         const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
@@ -122,6 +130,17 @@ impl Task for ObjectAdder {
 }
 
 impl ObjectAdder {
+    /// Creates a new `ObjectAdder` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `store` - A shared reference to the `ObjectStore`.
+    /// * `id` - The ID of the object to add.
+    /// * `path` - The path of the file relative to the source path.
+    /// * `source_path` - The base source path.
+    /// * `file_size` - The size of the file in bytes.
+    /// * `time_stamp` - The timestamp of when the file was added.
+    /// * `added_count` - An atomic counter for the number of added objects.
     pub fn new(
         store: &Arc<RwLock<ObjectStore>>,
         id: &str,

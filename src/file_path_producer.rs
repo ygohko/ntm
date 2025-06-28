@@ -36,6 +36,7 @@ pub const ERROR_ID: ErrorId = "file_path_producer";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_PRODUCING_FINISHED: ErrorCode = 1;
 
+/// Produces file paths within a given directory, optionally excluding specified subdirectories.
 pub struct FilePathProducer {
     file_paths: Vec<String>,
     directory_paths: Vec<String>,
@@ -44,6 +45,11 @@ pub struct FilePathProducer {
 }
 
 impl FilePathProducer {
+    /// Creates a new `FilePathProducer` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The base path from which to produce file paths.
     pub fn new(path: &str) -> FilePathProducer {
         let prefix_length = path.len() + 1;
         return FilePathProducer {
@@ -54,6 +60,11 @@ impl FilePathProducer {
         };
     }
 
+    /// Returns the next file path.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the next file path as a `String` or an `Error` if no more paths are available.
     pub fn next(&mut self) -> Result<String> {
         let done = false;
         while !done {
@@ -127,6 +138,11 @@ impl FilePathProducer {
         Err(Error::new(ERROR_ID, ERROR_CODE_PRODUCING_FINISHED))
     }
 
+    /// Sets the directories to be excluded from path production.
+    ///
+    /// # Arguments
+    ///
+    /// * `directories` - A vector of directory paths to exclude.
     pub fn set_excluded_directories(&mut self, directories: &Vec<String>) {
         self.excluded_directories = directories.clone();
     }
