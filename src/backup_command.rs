@@ -158,6 +158,10 @@ impl Task for BackupCommand {
 
 impl BackupCommand {
     /// Creates a new `BackupCommand` instance.
+    ///
+    /// # Returns
+    ///
+    /// A new `BackupCommand` instance.
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
@@ -182,6 +186,10 @@ impl BackupCommand {
 
     #[allow(dead_code)]
     /// Returns the name of the backup command.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the name of the backup command.
     pub fn name(&self) -> String {
         self.name.clone()
     }
