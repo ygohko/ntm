@@ -80,6 +80,11 @@ impl Task for GcCommand {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         self.object_store = Some(ObjectStore::new(&path.to_string_easy()));
+        if let Some(object_store) = self.object_store.as_mut() {
+            if let Err(error) = object_store.load_existing_ids() {
+                println!("Loading existing IDs failed. error: {}", error);
+            }
+        }
 
         let mut backups_path = Utf8PathBuf::from(&self.destination_path);
         backups_path.push("Backups");
