@@ -94,9 +94,12 @@ impl Task for GcCommand {
             Err(error) => return Err(error),
         };
         for name in names {
-            let backup_path = backups_path.join(&name);
-            self.backup_paths.push(backup_path.to_string_easy());
+            if !name.ends_with(".removed") {
+                let backup_path = backups_path.join(&name);
+                self.backup_paths.push(backup_path.to_string_easy());
+            }
         }
+        self.backup_paths.sort_by(|a, b| b.cmp(a));
 
         let mut offset = 0;
         let mut state_path = Utf8PathBuf::from(&self.destination_path);
