@@ -235,6 +235,9 @@ impl GcCommand {
 
         let path1 = Utf8PathBuf::from(&path);
         let object_id = path1.file_name_or_empty();
+        if object_store.cached(&object_id)? {
+            return Ok(());
+        }
         let attributes = match object_store.attributes(&object_id) {
             Ok(attributes) => attributes,
             Err(error) => return Err(error),
