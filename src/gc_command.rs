@@ -80,6 +80,11 @@ impl Task for GcCommand {
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         self.object_store = Some(ObjectStore::new(&path.to_string_easy()));
+        if let Some(object_store) = self.object_store.as_mut() {
+            if let Err(error) = object_store.load_existing_ids() {
+                println!("Loading existing IDs failed. error: {}", error);
+            }
+        }
 
         let mut backups_path = Utf8PathBuf::from(&self.destination_path);
         backups_path.push("Backups");
@@ -89,9 +94,12 @@ impl Task for GcCommand {
             Err(error) => return Err(error),
         };
         for name in names {
-            let backup_path = backups_path.join(&name);
-            self.backup_paths.push(backup_path.to_string_easy());
+            if !name.ends_with(".removed") {
+                let backup_path = backups_path.join(&name);
+                self.backup_paths.push(backup_path.to_string_easy());
+            }
         }
+        self.backup_paths.sort_by(|a, b| b.cmp(a));
 
         let mut offset = 0;
         let mut state_path = Utf8PathBuf::from(&self.destination_path);
@@ -235,6 +243,9 @@ impl GcCommand {
 
         let path1 = Utf8PathBuf::from(&path);
         let object_id = path1.file_name_or_empty();
+        if object_store.cached(&object_id)? {
+            return Ok(());
+        }
         let attributes = match object_store.attributes(&object_id) {
             Ok(attributes) => attributes,
             Err(error) => return Err(error),

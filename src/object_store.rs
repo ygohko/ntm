@@ -291,6 +291,34 @@ impl ObjectStore {
         Ok(exists)
     }
 
+    /// Checks if an object with the given `id` is currently cached or known to exist within this instance's
+    /// internal registry.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object to check.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `true` if the object cached, `false` otherwise, or an `Error` if the operation fails.
+    pub fn cached(&self, id: &str) -> Result<bool> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let Ok(index1) = u32::from_str_radix(path1, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let Ok(index2) = u32::from_str_radix(path2, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let index = (index1 * 0x100 + index2) as usize;
+        let ids = &self.existing_ids[index];
+        if ids.iter().position(|id1| id1 == id).is_some() {
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
     /// Begins the process of adding a new object to the store.
     ///
     /// This method prepares the store for writing a new object in chunks.
@@ -630,5 +658,24 @@ mod tests {
         let attribute = Attributes::new("", 0);
         store.add(&id, &bytes, &attribute).unwrap();
         store.save_existing_ids().unwrap();
+    }
+
+    #[test]
+    fn cached_existing_id_is_checkable() {
+        let Ok(temp_dir) = TempDir::new("test") else {
+            panic!();
+        };
+        let path = temp_dir.path().join("Objects");
+        if let Err(_) = fs::create_dir_all(&path) {
+            panic!();
+        }
+        let mut store = ObjectStore::new(&path.to_string_easy());
+
+        let id = "0102030405060708".to_string();
+        let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let attribute = Attributes::new("", 0);
+        store.add(&id, &bytes, &attribute).unwrap();
+        let cached = store.cached(&id).unwrap();
+        assert_eq!(cached, true);
     }
 }
