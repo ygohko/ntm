@@ -417,7 +417,7 @@ impl ObjectStore {
     /// # Returns
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
-    pub fn load_existing_ids(&mut self) -> Result<()> {
+    pub fn load_cache(&mut self) -> Result<()> {
         let path = Utf8PathBuf::from(&self.path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
         path.push("existing_ids.json");
@@ -624,7 +624,7 @@ mod tests {
     }
 
     #[test]
-    fn existing_id_is_loadable() {
+    fn cache_is_loadable() {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
         };
@@ -639,7 +639,7 @@ mod tests {
         let attribute = Attributes::new("", 0);
         store.add(&id, &bytes, &attribute).unwrap();
         store.save_existing_ids().unwrap();
-        store.load_existing_ids().unwrap();
+        store.load_cache().unwrap();
     }
 
     #[test]
