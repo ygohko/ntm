@@ -141,7 +141,7 @@ impl Task for BackupCommand {
         self.executer.terminate()?;
         {
             if let Ok(store1) = store.read() {
-                if let Err(error) = store1.save_existing_ids() {
+                if let Err(error) = store1.save_cache() {
                     println!("Saving existing IDs failed. error: {}", error);
                 }
             }

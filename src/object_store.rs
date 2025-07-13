@@ -412,7 +412,7 @@ impl ObjectStore {
         self.adding_file = None;
     }
 
-    /// Loads existing object IDs from a cached file.
+    /// Loads cache from a file.
     ///
     /// # Returns
     ///
@@ -445,13 +445,12 @@ impl ObjectStore {
         Ok(())
     }
 
-    /// Saves existing object IDs to a cached file.
+    /// Saves cache to a file.
     ///
     /// # Returns
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
-    // TODO: Rename to save_cached()?
-    pub fn save_existing_ids(&self) -> Result<()> {
+    pub fn save_cache(&self) -> Result<()> {
         let mut serializable = SerializableExistingIds { ids: Vec::new() };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
             let ids = &self.existing_ids[i];
@@ -638,12 +637,12 @@ mod tests {
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         let attribute = Attributes::new("", 0);
         store.add(&id, &bytes, &attribute).unwrap();
-        store.save_existing_ids().unwrap();
+        store.save_cache().unwrap();
         store.load_cache().unwrap();
     }
 
     #[test]
-    fn existing_id_is_savable() {
+    fn cache_is_savable() {
         let Ok(temp_dir) = TempDir::new("test") else {
             panic!();
         };
@@ -657,7 +656,7 @@ mod tests {
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         let attribute = Attributes::new("", 0);
         store.add(&id, &bytes, &attribute).unwrap();
-        store.save_existing_ids().unwrap();
+        store.save_cache().unwrap();
     }
 
     #[test]
