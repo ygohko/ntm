@@ -441,6 +441,11 @@ impl ObjectStore {
                 return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
             };
             let index = (index1 * 0x100 + index2) as usize;
+            let count = self.existing_ids[index].len();
+            if count >= 16 {
+                let removing = count - 15;
+                self.existing_ids[index] = self.existing_ids[index].drain(removing..).collect();
+            }
             self.existing_ids[index].push(id);
         }
 
