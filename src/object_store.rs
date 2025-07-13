@@ -52,6 +52,8 @@ pub const ERROR_CODE_WRITING_CACHED_FAILED: ErrorCode = 10;
 
 const EXISTING_IDS_TABLE_COUNT: usize = 0x100 * 0x100;
 
+const CACHE_FILE_NAME: &str = "object_store_cache.json";
+
 #[derive(Serialize, Deserialize, Clone)]
 struct SerializableExistingIds {
     ids: Vec<String>,
@@ -420,7 +422,7 @@ impl ObjectStore {
     pub fn load_cache(&mut self) -> Result<()> {
         let path = Utf8PathBuf::from(&self.path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
-        path.push("existing_ids.json");
+        path.push(CACHE_FILE_NAME);
         let Ok(serialized) = fs::read_to_string(&path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CACHED_FAILED));
         };
@@ -464,7 +466,7 @@ impl ObjectStore {
 
         let path = Utf8PathBuf::from(&self.path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
-        path.push("existing_ids.json");
+        path.push(CACHE_FILE_NAME);
         if let Err(_) = fs::write(&path, &serialized) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_CACHED_FAILED));
         }
