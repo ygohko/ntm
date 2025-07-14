@@ -81,7 +81,7 @@ impl Task for BackupCommand {
         let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
         {
             if let Ok(mut store1) = store.write() {
-                if let Err(error) = store1.load_existing_ids() {
+                if let Err(error) = store1.load_cache() {
                     println!("Loading existing IDs failed. error: {}", error);
                 }
             }
@@ -141,7 +141,7 @@ impl Task for BackupCommand {
         self.executer.terminate()?;
         {
             if let Ok(store1) = store.read() {
-                if let Err(error) = store1.save_existing_ids() {
+                if let Err(error) = store1.save_cache() {
                     println!("Saving existing IDs failed. error: {}", error);
                 }
             }
