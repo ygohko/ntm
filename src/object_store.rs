@@ -56,7 +56,7 @@ const CACHE_FILE_NAME: &str = "object_store_cache.json";
 
 #[derive(Serialize, Deserialize, Clone)]
 struct Cache {
-    ids: Vec<String>,
+    existing_ids: Vec<String>,
 }
 
 /// Manages the storage and retrieval of objects (files) and their attributes.
@@ -431,7 +431,7 @@ impl ObjectStore {
             Ok(cache) => cache,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CACHED_FAILED)),
         };
-        for id in cache.ids {
+        for id in cache.existing_ids {
             let path1 = &id[0..2];
             let path2 = &id[2..4];
             let Ok(index1) = u32::from_str_radix(path1, 16) else {
@@ -458,11 +458,11 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn save_cache(&self) -> Result<()> {
-        let mut cache = Cache { ids: Vec::new() };
+        let mut cache = Cache { existing_ids: Vec::new() };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
             let ids = &self.existing_ids[i];
             for id in ids {
-                cache.ids.push(id.clone());
+                cache.existing_ids.push(id.clone());
             }
         }
         let Ok(serialized) = serde_json::to_string(&cache) else {
