@@ -21,6 +21,10 @@
  */
 
 use camino::Utf8PathBuf;
+use chrono::DateTime;
+use chrono::Local;
+use chrono::NaiveDateTime;
+use chrono::Utc;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::fs;
@@ -250,6 +254,8 @@ impl GcCommand {
             Ok(attributes) => attributes,
             Err(error) => return Err(error),
         };
+        let added = NaiveDateTime::from_timestamp(attributes.added, 0);
+        let added = DateTime::<Utc>::from_utc(added, Utc);
 
         for backup_path in &self.backup_paths {
             let mut option: Option<String> = None;

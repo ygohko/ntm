@@ -166,6 +166,7 @@ impl BackupCommand {
         Self {
             name: "".to_string(),
             executer: BackgroundExecuter::new(),
+            // TODO: This should be DateTime<Utc>?
             executing: Local::now(),
             destination_path: ".".to_string(),
             excluded_directories: vec![],
