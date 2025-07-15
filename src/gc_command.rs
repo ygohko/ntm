@@ -21,12 +21,7 @@
  */
 
 use camino::Utf8PathBuf;
-use chrono::DateTime;
-use chrono::Local;
-use chrono::NaiveDate;
 use chrono::NaiveDateTime;
-use chrono::NaiveTime;
-use chrono::Utc;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::fs;
@@ -260,10 +255,9 @@ impl GcCommand {
 
         for backup_path in &self.backup_paths {
             let backup_created = match NaiveDateTime::parse_from_str(&backup_path, "%Y%m%d-%H%M") {
-                Ok(created) => created,
-                Err(_) => NaiveDateTime::new(NaiveDate::from_ymd(3000, 1, 1), NaiveTime::from_hms(0, 0, 0)),
+                Ok(created) => created.and_utc().timestamp() + 60,
+                Err(_) => added,
             };
-            let backup_created = backup_created.timestamp() + 60;
             if (backup_created - added) < 0 {
                 return Ok(());
             }
