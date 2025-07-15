@@ -258,6 +258,20 @@ impl GcCommand {
         let added = DateTime::<Utc>::from_utc(added, Utc);
 
         for backup_path in &self.backup_paths {
+            // TODO: Make backup date time.
+            let mut backup_created = match NaiveDateTime::parse_str(&backup_path, "%Y%m%d-%H%M") {
+                Ok(created) => created,
+                Err(_) => NaiveDateTime::new(NaiveDate::new(3000, 1, 1), NaiveTime::new(0, 0, 0)),
+            };
+            backup_created = backup_created.add(FixedOffset::east(60));
+            let backup_created = DateTime<Utc>::from_utc(backup_created, utc);
+            let duration = backup_created.signed_duration_since(&added);
+            if duration.num_seconds() < 0 {
+                // TODO: Exit this loop
+
+                return Ok(());
+            }
+
             let mut option: Option<String> = None;
             let mut entry_path = Utf8PathBuf::from(&backup_path);
             entry_path.push(&attributes.path);
