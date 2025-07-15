@@ -23,7 +23,9 @@
 use camino::Utf8PathBuf;
 use chrono::DateTime;
 use chrono::Local;
+use chrono::NaiveDate;
 use chrono::NaiveDateTime;
+use chrono::NaiveTime;
 use chrono::Utc;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -254,21 +256,15 @@ impl GcCommand {
             Ok(attributes) => attributes,
             Err(error) => return Err(error),
         };
-        let added = NaiveDateTime::from_timestamp(attributes.added, 0);
-        let added = DateTime::<Utc>::from_utc(added, Utc);
+        let added = attributes.added;
 
         for backup_path in &self.backup_paths {
-            // TODO: Make backup date time.
-            let mut backup_created = match NaiveDateTime::parse_str(&backup_path, "%Y%m%d-%H%M") {
+            let backup_created = match NaiveDateTime::parse_from_str(&backup_path, "%Y%m%d-%H%M") {
                 Ok(created) => created,
-                Err(_) => NaiveDateTime::new(NaiveDate::new(3000, 1, 1), NaiveTime::new(0, 0, 0)),
+                Err(_) => NaiveDateTime::new(NaiveDate::from_ymd(3000, 1, 1), NaiveTime::from_hms(0, 0, 0)),
             };
-            backup_created = backup_created.add(FixedOffset::east(60));
-            let backup_created = DateTime<Utc>::from_utc(backup_created, utc);
-            let duration = backup_created.signed_duration_since(&added);
-            if duration.num_seconds() < 0 {
-                // TODO: Exit this loop
-
+            let backup_created = backup_created.timestamp() + 60;
+            if (backup_created - added) < 0 {
                 return Ok(());
             }
 
