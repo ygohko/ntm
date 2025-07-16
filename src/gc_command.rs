@@ -255,11 +255,13 @@ impl GcCommand {
 
         for backup_path in &self.backup_paths {
             let backup_created = match NaiveDateTime::parse_from_str(&backup_path, "%Y%m%d-%H%M") {
+                // Add 60 seconds because backup_created does not have seconds precision.
                 Ok(created) => created.and_utc().timestamp() + 60,
                 Err(_) => added,
             };
             if (backup_created - added) < 0 {
-                return Ok(());
+                // All backups after this object is added are checked.
+                break;
             }
 
             let mut option: Option<String> = None;
