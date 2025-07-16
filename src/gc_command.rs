@@ -21,6 +21,7 @@
  */
 
 use camino::Utf8PathBuf;
+use chrono::NaiveDateTime;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::fs;
@@ -250,8 +251,19 @@ impl GcCommand {
             Ok(attributes) => attributes,
             Err(error) => return Err(error),
         };
+        let added = attributes.added;
 
         for backup_path in &self.backup_paths {
+            let backup_created = match NaiveDateTime::parse_from_str(&backup_path, "%Y%m%d-%H%M") {
+                // Add 60 seconds because backup_created does not have seconds precision.
+                Ok(created) => created.and_utc().timestamp() + 60,
+                Err(_) => added,
+            };
+            if (backup_created - added) < 0 {
+                // All backups after this object is added are checked.
+                break;
+            }
+
             let mut option: Option<String> = None;
             let mut entry_path = Utf8PathBuf::from(&backup_path);
             entry_path.push(&attributes.path);
