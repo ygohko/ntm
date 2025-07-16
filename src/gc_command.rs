@@ -21,6 +21,7 @@
  */
 
 use camino::Utf8PathBuf;
+use chrono::FixedOffset;
 use chrono::NaiveDateTime;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -257,9 +258,10 @@ impl GcCommand {
             let path2 = Utf8PathBuf::from(&backup_path);
             let backup_name = path2.file_name_or_empty();
             println!("backup_name: {}", backup_name);
+            let timezone = FixedOffset::east_opt(9 * 60 * 60).unwrap();
             let backup_created = match NaiveDateTime::parse_from_str(&backup_name, "%Y%m%d-%H%M") {
                 // Add 60 seconds because backup_created does not have seconds precision.
-                Ok(created) => created.and_utc().timestamp() + 60,
+                Ok(created) => created.and_local_timezone(timezone).unwrap().timestamp() + 60,
                 Err(_) => added,
             };
             println!("backup_created: {}, added: {}", backup_created, added);
