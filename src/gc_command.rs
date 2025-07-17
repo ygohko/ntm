@@ -256,16 +256,14 @@ impl GcCommand {
         for backup_path in &self.backup_paths {
             let path2 = Utf8PathBuf::from(&backup_path);
             let backup_name = path2.file_name_or_empty();
-            println!("backup_name: {}", backup_name);
             let backup_created = match NaiveDateTime::parse_from_str(&backup_name, "%Y%m%d-%H%M") {
                 // Add 25 hours because backup_created does not have timezone.
                 Ok(created) => created.and_utc().timestamp() + 25 * 60 * 60,
                 Err(_) => added,
             };
-            println!("backup_created: {}, added: {}", backup_created, added);
             if (backup_created - added) < 0 {
                 // All backups after this object is added are checked.
-                println!("Checking skipped. object_id: {}", object_id);
+                // println!("Checking skipped. object_id: {}", object_id);
 
                 break;
             }
