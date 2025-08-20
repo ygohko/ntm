@@ -63,6 +63,15 @@ struct BackupArguments {
 }
 
 #[derive(Parser, PartialEq)]
+struct RemoveBackupArguments {
+    /// Pattern to specify removing backups
+    pattern: String,    
+    /// Backup destination that dirctries and files are gotten from
+    #[arg(short, long)]
+    destination: Option<String>,
+}
+
+#[derive(Parser, PartialEq)]
 struct GetArguments {
     /// Backup to get from this backup destination
     backup: String,
@@ -88,6 +97,8 @@ enum CommandKind {
     Init(InitArguments),
     /// Backup directories and files into this directory's backup destination
     Backup(BackupArguments),
+    /// Remove backups specified by given pattern
+    RemoveBackup(RemoveBackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
     /// Execute garbage collection for this backup destination
@@ -136,6 +147,8 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+    } else if let CommandKind::RemoveBackup(arguments) = command {
+        // TODO: Implement this.
     } else if let CommandKind::Get(arguments) = command {
         let backup = arguments.backup;
         let mut command = GetCommand::new(&backup);
