@@ -35,6 +35,7 @@ mod get_command;
 mod init_command;
 mod object_adder;
 mod object_store;
+mod remove_backup_command;
 mod task;
 
 use clap::Parser;
