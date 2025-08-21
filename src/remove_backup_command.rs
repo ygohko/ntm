@@ -20,10 +20,25 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use crate::error::Result;
+use crate::task::Task;
+
 /// A command to remove backups specified by pattern.
 pub struct RemoveBackupCommand {
     pattern: String,
     destination_path: String,
+}
+
+impl Task for RemoveBackupCommand {
+    fn execute(&mut self) -> Result<()> {
+        // TODO: Iterate for backups.
+
+        // TODO: Check wheather this backup matches pattern.
+
+        // TODO: Mark removed this backup.
+
+        Ok(())
+    }
 }
 
 impl RemoveBackupCommand {
