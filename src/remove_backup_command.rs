@@ -20,6 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
+
+use crate::backup_store::BackupStore;
 use crate::error::Result;
 use crate::task::Task;
 
@@ -31,9 +34,14 @@ pub struct RemoveBackupCommand {
 
 impl Task for RemoveBackupCommand {
     fn execute(&mut self) -> Result<()> {
-        // TODO: Iterate for backups.
+        let mut backup_path = Utf8PathBuf::from(&self.destination_path);
+        backup_path.push("Backups");
+        let store = BackupStore::new(backup_path.as_str());
+        let names = store.names()?;
 
-        // TODO: Check wheather this backup matches pattern.
+        for name in names {
+            // TODO: Check wheather this backup matches pattern.
+        }
 
         // TODO: Mark removed this backup.
 
