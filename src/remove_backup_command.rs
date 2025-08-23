@@ -21,6 +21,7 @@
  */
 
 use camino::Utf8PathBuf;
+use regex::Regex;
 
 use crate::backup_store::BackupStore;
 use crate::error::Result;
@@ -39,11 +40,17 @@ impl Task for RemoveBackupCommand {
         let store = BackupStore::new(backup_path.as_str());
         let names = store.names()?;
 
+        // ADHOC
+        let pattern = self.pattern.replace("*", ".*");
+        let re = Regex::new(&pattern).unwrap();
         for name in names {
-            // TODO: Check wheather this backup matches pattern.
-        }
+            if re.is_match(&name) {
+                println!("Pattern matched. name: {}", name);
 
-        // TODO: Mark removed this backup.
+                // TODO: Mark removed this backup.
+                
+            }
+        }
 
         Ok(())
     }

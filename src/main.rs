@@ -47,6 +47,7 @@ use crate::backup_command::BackupCommand;
 use crate::gc_command::GcCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
+use crate::remove_backup_command::RemoveBackupCommand;
 use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
@@ -149,7 +150,16 @@ fn main() -> ExitCode {
             }
         };
     } else if let CommandKind::RemoveBackup(arguments) = command {
-        // TODO: Implement this.
+        let pattern = arguments.pattern;
+        let mut command = RemoveBackupCommand::new(&pattern);
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
+        }
+        if let Err(error) = command.execute() {
+            println!("Error caused.\n\n{}", error);
+
+            return ExitCode::FAILURE;
+        }
     } else if let CommandKind::Get(arguments) = command {
         let backup = arguments.backup;
         let mut command = GetCommand::new(&backup);
