@@ -125,3 +125,52 @@ impl RemoveBackupCommand {
         self.destination_path = destination_path.to_string();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::backup_command::BackupCommand;
+    use crate::commons::OperatePath;
+    use crate::init_command::InitCommand;
+    use crate::remove_backup_command::RemoveBackupCommand;
+    use crate::task::Task;
+
+    #[test]
+    fn is_creatable() {
+        let _command = RemoveBackupCommand::new("*");
+    }
+
+    #[test]
+    fn is_executable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = &temp_dir.path().to_path_buf();
+        let mut source_path = temp_path.clone();
+        source_path.push("source");
+        fs::create_dir_all(&source_path).unwrap();
+        let mut file_path = source_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "ABCDE").unwrap();
+
+        let mut ntm_path = temp_path.clone();
+        ntm_path.push("ntm");
+        fs::create_dir_all(&ntm_path).unwrap();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&ntm_path.to_string_easy());
+        command.execute().unwrap();
+
+        let mut config_path = ntm_path.clone();
+        config_path.push("ntm.toml");
+        let config = format!("source_path = \"{}\"", source_path.display());
+        fs::write(config_path, config).unwrap();
+
+        let mut command = BackupCommand::new();
+        command.set_destination_path(&ntm_path.to_string_easy());
+        command.execute().unwrap();
+
+        let mut command = RemoveBackupCommand::new("*");
+        command.set_destination_path(&ntm_path.to_string_easy());
+        command.execute().unwrap();
+    }
+}
