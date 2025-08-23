@@ -25,8 +25,18 @@ use regex::Regex;
 use std::fs;
 
 use crate::backup_store::BackupStore;
+use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
 use crate::error::Result;
 use crate::task::Task;
+
+#[allow(dead_code)]
+pub const ERROR_ID: ErrorId = "remove_backup_command";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_INVALID_REGULAR_EXPRESSION: ErrorCode = 1;
 
 /// A command to remove backups specified by pattern.
 pub struct RemoveBackupCommand {
@@ -35,20 +45,34 @@ pub struct RemoveBackupCommand {
 }
 
 impl Task for RemoveBackupCommand {
+    /// Marks backup files for removal by renaming them to append a ".removed" suffix,
+    /// based on a user-defined pattern.
+    ///
+    /// This method first constructs the path to the backup store by appending "Backups"
+    /// to the `destination_path`. It then retrieves all existing backup names from this store.
+    ///
+    /// The `self.pattern` string is interpreted as a wildcard pattern where:
+    /// - `*` matches any sequence of characters (including an empty sequence).
+    /// - `?` matches any single character.
+    /// This wildcard pattern is converted into a regular expression for matching against backup names.
+    ///
+    /// # Returns
+    ///
+    /// A result may contain an error.
     fn execute(&mut self) -> Result<()> {
         let mut backup_path = Utf8PathBuf::from(&self.destination_path);
         backup_path.push("Backups");
         let store = BackupStore::new(backup_path.as_str());
         let names = store.names()?;
 
-        // ADHOC
-        let pattern = self.pattern.replace("*", ".*");
-        let re = Regex::new(&pattern).unwrap();
+        let mut pattern = self.pattern.replace("*", ".*");
+        pattern = pattern.replace("?", ".");
+        let Ok(re) = Regex::new(&pattern) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_REGULAR_EXPRESSION));
+        };
         for name in names {
             if re.is_match(&name) {
                 println!("Pattern matched. name: {}", name);
-
-                // TODO: Mark removed this backup.
                 let mut from_path = Utf8PathBuf::from(&self.destination_path);
                 from_path.push("Backups");
                 from_path.push(&name);
