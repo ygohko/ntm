@@ -95,10 +95,8 @@ impl Task for GcCommand {
             Err(error) => return Err(error),
         };
         for name in names {
-            if !name.ends_with(".removed") {
-                let backup_path = backups_path.join(&name);
-                self.backup_paths.push(backup_path.to_string_easy());
-            }
+            let backup_path = backups_path.join(&name);
+            self.backup_paths.push(backup_path.to_string_easy());
         }
         self.backup_paths.sort_by(|a, b| b.cmp(a));
 

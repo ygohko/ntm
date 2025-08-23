@@ -70,7 +70,10 @@ impl BackupStore {
             if let Ok(entry) = result {
                 if let Ok(metadata) = entry.metadata() {
                     if metadata.is_dir() {
-                        names.push(entry.path().file_name_or_empty());
+                        let name = entry.path().file_name_or_empty();
+                        if !name.ends_with(".removed") {
+                            names.push(name);
+                        }
                     }
                 }
             }
