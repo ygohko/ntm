@@ -22,6 +22,7 @@
 
 use camino::Utf8PathBuf;
 use regex::Regex;
+use std::fs;
 
 use crate::backup_store::BackupStore;
 use crate::error::Result;
@@ -48,7 +49,18 @@ impl Task for RemoveBackupCommand {
                 println!("Pattern matched. name: {}", name);
 
                 // TODO: Mark removed this backup.
-                
+                let mut from_path = Utf8PathBuf::from(&self.destination_path);
+                from_path.push("Backups");
+                from_path.push(&name);
+
+                let mut to_path = Utf8PathBuf::from(&self.destination_path);
+                to_path.push("Backups");
+                let mut removed_name = name.clone();
+                removed_name.push_str(".removed");
+                to_path.push(&removed_name);
+                if let Err(error) = fs::rename(&from_path, &to_path) {
+                    println!("Error: Could not mark to removed {}. error: {}", from_path, error);
+                };
             }
         }
 
