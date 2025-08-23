@@ -68,7 +68,7 @@ struct BackupArguments {
 struct RemoveBackupArguments {
     /// Pattern to specify removing backups
     pattern: String,    
-    /// Backup destination that dirctries and files are gotten from
+    /// Backup destination that is used for backup
     #[arg(short, long)]
     destination: Option<String>,
 }
@@ -79,7 +79,7 @@ struct GetArguments {
     backup: String,
     /// Directory to limit getting backuped directories and files
     limited_directory: Option<String>,
-    /// Backup destination that dirctries and files are gotten from
+    /// Backup destination that directries and files are gotten from
     #[arg(short, long)]
     destination: Option<String>,
 }

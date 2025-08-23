@@ -65,7 +65,8 @@ impl Task for RemoveBackupCommand {
         let store = BackupStore::new(backup_path.as_str());
         let names = store.names()?;
 
-        let mut pattern = self.pattern.replace("*", ".*");
+        let mut pattern = regex::escape(&self.pattern);
+        pattern = pattern.replace("*", ".*");
         pattern = pattern.replace("?", ".");
         let Ok(re) = Regex::new(&pattern) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_REGULAR_EXPRESSION));
@@ -109,7 +110,7 @@ impl RemoveBackupCommand {
     pub fn new(pattern: &str) -> Self {
         Self {
             pattern: pattern.to_string(),
-            destination_path: "".to_string(),
+            destination_path: ".".to_string(),
         }
     }
 
