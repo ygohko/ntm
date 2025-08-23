@@ -35,6 +35,7 @@ mod get_command;
 mod init_command;
 mod object_adder;
 mod object_store;
+mod remove_backup_command;
 mod task;
 
 use clap::Parser;
@@ -46,6 +47,7 @@ use crate::backup_command::BackupCommand;
 use crate::gc_command::GcCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
+use crate::remove_backup_command::RemoveBackupCommand;
 use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
@@ -63,12 +65,21 @@ struct BackupArguments {
 }
 
 #[derive(Parser, PartialEq)]
+struct RemoveBackupArguments {
+    /// Pattern to specify removing backups
+    pattern: String,    
+    /// Backup destination that is used for backup
+    #[arg(short, long)]
+    destination: Option<String>,
+}
+
+#[derive(Parser, PartialEq)]
 struct GetArguments {
     /// Backup to get from this backup destination
     backup: String,
     /// Directory to limit getting backuped directories and files
     limited_directory: Option<String>,
-    /// Backup destination that dirctries and files are gotten from
+    /// Backup destination that directries and files are gotten from
     #[arg(short, long)]
     destination: Option<String>,
 }
@@ -88,6 +99,8 @@ enum CommandKind {
     Init(InitArguments),
     /// Backup directories and files into this directory's backup destination
     Backup(BackupArguments),
+    /// Remove backups specified by given pattern
+    RemoveBackup(RemoveBackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
     /// Execute garbage collection for this backup destination
@@ -136,6 +149,17 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+    } else if let CommandKind::RemoveBackup(arguments) = command {
+        let pattern = arguments.pattern;
+        let mut command = RemoveBackupCommand::new(&pattern);
+        if let Some(destination) = arguments.destination {
+            command.set_destination_path(&destination);
+        }
+        if let Err(error) = command.execute() {
+            println!("Error caused.\n\n{}", error);
+
+            return ExitCode::FAILURE;
+        }
     } else if let CommandKind::Get(arguments) = command {
         let backup = arguments.backup;
         let mut command = GetCommand::new(&backup);
