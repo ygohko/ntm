@@ -95,6 +95,22 @@ pub struct GarbageCollector {
 }
 
 impl Task for GarbageCollector {
+    /// Executes the configured operation in a new background thread.
+    ///
+    /// This method creates a new thread to run the core logic, represented by the `main` function.
+    /// It safely shares the internal `Private` state (which holds configuration like
+    /// `destination_path` and `limited_count`) with the new thread by cloning the `Arc<RwLock>`.
+    ///
+    /// The method blocks the current thread until the spawned background thread completes its execution.
+    /// Errors potentially returned by the `main` function within the background thread are currently ignored.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` upon successful completion of the background thread.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the background thread itself panics during its execution.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         let handle = thread::spawn(move || {
@@ -107,22 +123,51 @@ impl Task for GarbageCollector {
 }
 
 impl GarbageCollector {
+    /// Creates a new instance of `GarbageCollector`.
+    ///
+    /// This initializes the internal state, specifically a `private` field, as a new
+    /// `Private` instance wrapped in an `Arc<RwLock>`. This setup allows for
+    /// shared, thread-safe, and mutable access to the private data.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `GarbageCollector`.
     pub fn new() -> Self {
         Self {
             private: Arc::new(RwLock::new(Private::new())),
         }
     }
 
+    /// Sets the destination path where processed files or data will be stored.
+    ///
+    /// This operation acquires a write lock on the internal state to update the path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The new path as a string slice. The path is cloned and stored internally.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal `RwLock` is poisoned, indicating a previous operation
+    /// on the protected data failed catastrophically.
     pub fn set_destination_path(&mut self, path: &str) {
-        if let Ok(mut private) = self.private.write() {
-            private.destination_path = path.to_string();
-        }
+        let mut private = self.private.write().unwrap();
+        private.destination_path = path.to_string();
     }
 
+    /// Sets an optional limited count for the internal private data.
+    ///
+    /// This method attempts to acquire a write lock on the private data.
+    /// If the lock is successfully acquired, the `limited_count` is updated to `Some(count)`.
+    /// If acquiring the lock fails (e.g., due to the lock being poisoned),
+    /// the operation silently fails, and the count is not updated.
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - An `i64` value representing the new limited count.
     pub fn set_limited_count(&mut self, count: i64) {
-        if let Ok(mut private) = self.private.write() {
-            private.limited_count = Some(count);
-        }
+        let mut private = self.private.write().unwrap();
+        private.limited_count = Some(count);
     }
 }
 
