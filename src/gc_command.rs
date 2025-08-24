@@ -83,6 +83,10 @@ impl Task for GcCommand {
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
         let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&self.destination_path);
+        if let Some(limited_count) = self.limited_count {
+            collector.set_limited_count(limited_count);
+        }
         collector.execute()?;
 
         Ok(())

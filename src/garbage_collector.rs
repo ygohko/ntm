@@ -142,6 +142,14 @@ impl GarbageCollector {
         }
     }
 
+    pub fn set_destination_path(&mut self, path: &str) {
+        self.destination_path = path.to_string();
+    }
+
+    pub fn set_limited_count(&mut self, count: i64) {
+        self.limited_count = Some(count);
+    }
+
     fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
         let directory1 = format!("{:02x}", index1);
         let directory2 = format!("{:02x}", index2);
