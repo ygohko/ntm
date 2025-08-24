@@ -97,9 +97,9 @@ impl Task for GarbageCollector {
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         let handle = thread::spawn(move || {
-            main(&private);
+            let _ = main(&private);
         });
-        handle.join();
+        let _ = handle.join();
 
         Ok(())
     }

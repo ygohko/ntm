@@ -20,23 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use camino::Utf8PathBuf;
-use chrono::NaiveDateTime;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
-use std::fs;
-use std::path::Path;
-
-use crate::backup_store::BackupStore;
-use crate::commons::OperatePath;
-use crate::entry::Entry;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
-use crate::file_path_producer;
-use crate::file_path_producer::FilePathProducer;
 use crate::garbage_collector::GarbageCollector;
-use crate::object_store::ObjectStore;
 use crate::task::Task;
 
 #[allow(dead_code)]
@@ -45,32 +32,10 @@ pub const ERROR_ID: ErrorId = "gc_command";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct State {
-    pub last_processed_id: String,
-}
-
-impl State {
-    pub fn new() -> Self {
-        Self {
-            last_processed_id: "".to_string(),
-        }
-    }
-}
-
 /// A command to execute garbage collection for a backup destination.
 pub struct GcCommand {
     destination_path: String,
     limited_count: Option<i64>,
-
-    /*
-    object_store: Option<ObjectStore>,
-    backup_paths: Vec<String>,
-    state: State,
-    processed_count: i64,
-    removed_count: i64,
-    count: i32,
-    */
 }
 
 impl Task for GcCommand {
