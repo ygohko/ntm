@@ -34,7 +34,6 @@ use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
-use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
@@ -51,7 +50,6 @@ pub const ERROR_ID: ErrorId = "garbage_collector";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_UNLOCKING_FAILED: ErrorCode = 1;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct State {
@@ -129,13 +127,15 @@ impl GarbageCollector {
 }
 
 fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
-    let destination_path = match private.read() {
-        Ok(private) => private.destination_path.clone(),
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
-    };
+    let destination_path: String;
+    {
+        let private = private.read().unwrap();
+        destination_path = private.destination_path.clone();
+    }
     let mut path = Utf8PathBuf::from(&destination_path);
     path.push("Objects");
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
         if let Some(object_store) = private.object_store.as_mut() {
             if let Err(error) = object_store.load_cache() {
@@ -152,7 +152,8 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         Err(error) => return Err(error),
     };
     
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         for name in names {
             let backup_path = backups_path.join(&name);
             private.backup_paths.push(backup_path.to_string_easy());
@@ -182,17 +183,17 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         }
 
         if (i & 0xFF) == 0 {
-            if let Ok(private) = private.read() {
-                if let Ok(serialized) = serde_json::to_string(&private.state) {
-                    let mut path = Utf8PathBuf::from(&destination_path);
-                    path.push("state.json");
-                    if let Err(_) = fs::write(&path, &serialized) {
-                        println!("Warning: Writing state failed.");
-                    }
+            let private = private.read().unwrap();
+            if let Ok(serialized) = serde_json::to_string(&private.state) {
+                let mut path = Utf8PathBuf::from(&destination_path);
+                path.push("state.json");
+                if let Err(_) = fs::write(&path, &serialized) {
+                    println!("Warning: Writing state failed.");
                 }
             }
         }
-        if let Ok(private) = private.read() {
+        {
+            let private = private.read().unwrap();
             if let Some(count) = private.limited_count {
                 if private.processed_count >= count {
                     break;
@@ -201,7 +202,8 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         }
     }
 
-    if let Ok(private) = private.read() {
+    {
+        let private = private.read().unwrap();
         println!("{} object(s) removed.", private.removed_count);
     }
 
@@ -209,10 +211,11 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
 }
 
 fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Result<()> {
-    let destination_path = match private.read() {
-        Ok(private) => private.destination_path.clone(),
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
-    };
+    let destination_path: String;
+    {
+        let private = private.read().unwrap();
+        destination_path = private.destination_path.clone();
+    }
     let directory1 = format!("{:02x}", index1);
     let directory2 = format!("{:02x}", index2);
     let mut object_path = Utf8PathBuf::from(&destination_path);
@@ -252,7 +255,8 @@ fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Res
                         error
                     );
                 }
-                if let Ok(mut private) = private.write() {
+                {
+                    let mut private = private.write().unwrap();
                     private.processed_count += 1;
                     private.state.last_processed_id = file_name;
                 }
@@ -266,9 +270,7 @@ fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Res
 fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
     let backup_paths: Vec<String>;
     {
-        let Ok(private) = private.read() else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_UNLOCKING_FAILED));
-        };
+        let private = private.read().unwrap();
         if private.count == 0 {
             println!(
                 "Processing ({}, {}): {}",
@@ -277,7 +279,8 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
         }
         backup_paths = private.backup_paths.clone();
     }
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         private.count += 1;
         private.count %= 100;
     }
@@ -286,9 +289,7 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
     let object_id = path1.file_name_or_empty();
     let attributes: Attributes;
     {
-        let Ok(private) = private.read() else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_UNLOCKING_FAILED));
-        };
+        let private = private.read().unwrap();
         let object_store = private.object_store.as_ref().unwrap();
         if object_store.cached(&object_id)? {
             return Ok(());
@@ -330,14 +331,16 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
         }
     }
 
-    if let Ok(private) = private.read() {
+    {
+        let private = private.read().unwrap();
         if let Some(object_store) = &private.object_store {
             if let Err(_) = object_store.remove(&object_id) {
                 println!("Warning: Removing object {} failed.", object_id);
             }
         }
     }
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         private.removed_count += 1;
     }
 
