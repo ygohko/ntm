@@ -43,6 +43,9 @@ use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
 
+// TODO: Add doc comments.
+// TODO: Add tests.
+
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "garbage_collector";
 
