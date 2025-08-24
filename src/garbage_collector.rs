@@ -49,7 +49,7 @@ impl State {
     }
 }
 
-struct GarbageCollector {
+pub struct GarbageCollector {
     destination_path: String,
     // TODO: Remove this?
     limited_count: Option<i64>,
@@ -129,6 +129,19 @@ impl Task for GarbageCollector {
 }
 
 impl GarbageCollector {
+    pub fn new() -> Self {
+        Self {
+            destination_path: ".".to_string(),
+            limited_count: None,
+            object_store: None,
+            backup_paths: Vec::new(),
+            state: State::new(),
+            processed_count: 0,
+            removed_count: 0,
+            count: 0,
+        }
+    }
+
     fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
         let directory1 = format!("{:02x}", index1);
         let directory2 = format!("{:02x}", index2);

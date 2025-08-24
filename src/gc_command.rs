@@ -35,6 +35,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::garbage_collector::GarbageCollector;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
 
@@ -61,12 +62,15 @@ impl State {
 pub struct GcCommand {
     destination_path: String,
     limited_count: Option<i64>,
+
+    /*
     object_store: Option<ObjectStore>,
     backup_paths: Vec<String>,
     state: State,
     processed_count: i64,
     removed_count: i64,
     count: i32,
+    */
 }
 
 impl Task for GcCommand {
@@ -78,6 +82,12 @@ impl Task for GcCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
+        let mut collector = GarbageCollector::new();
+        collector.execute()?;
+
+        Ok(())
+
+        /*
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         self.object_store = Some(ObjectStore::new(&path.to_string_easy()));
@@ -140,6 +150,7 @@ impl Task for GcCommand {
         println!("{} object(s) removed.", self.removed_count);
 
         Ok(())
+        */
     }
 }
 
@@ -153,12 +164,14 @@ impl GcCommand {
         Self {
             destination_path: ".".to_string(),
             limited_count: None,
+            /*
             object_store: None,
             backup_paths: Vec::new(),
             state: State::new(),
             processed_count: 0,
             removed_count: 0,
             count: 0,
+            */
         }
     }
 
@@ -180,6 +193,7 @@ impl GcCommand {
         self.limited_count = Some(count);
     }
 
+    /*
     fn process_unit(&mut self, index1: i32, index2: i32) -> Result<()> {
         let directory1 = format!("{:02x}", index1);
         let directory2 = format!("{:02x}", index2);
@@ -228,7 +242,9 @@ impl GcCommand {
 
         Ok(())
     }
+    */
 
+    /*
     fn process_object(&mut self, path: &str) -> Result<()> {
         let object_store = self.object_store.as_ref().unwrap();
         if self.count == 0 {
@@ -292,6 +308,7 @@ impl GcCommand {
 
         Ok(())
     }
+    */
 }
 
 #[cfg(test)]
