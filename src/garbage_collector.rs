@@ -30,6 +30,7 @@ use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
@@ -47,6 +48,7 @@ pub const ERROR_ID: ErrorId = "garbage_collector";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_UNLOCKING_FAILED: ErrorCode = 1;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct State {
@@ -93,8 +95,8 @@ pub struct GarbageCollector {
 
 impl Task for GarbageCollector {
     fn execute(&mut self) -> Result<()> {
-        let mut private = self.private.clone();
-        let handle = thread::spawn(move |private| {
+        let private = self.private.clone();
+        let handle = thread::spawn(move || {
             main(&private);
         });
         handle.join();
@@ -111,22 +113,26 @@ impl GarbageCollector {
     }
 
     pub fn set_destination_path(&mut self, path: &str) {
-        self.destination_path = path.to_string();
+        if let Ok(mut private) = self.private.write() {
+            private.destination_path = path.to_string();
+        }
     }
 
     pub fn set_limited_count(&mut self, count: i64) {
-        self.limited_count = Some(count);
+        if let Ok(mut private) = self.private.write() {
+            private.limited_count = Some(count);
+        }
     }
 }
 
 fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
     let destination_path = match private.read() {
-        Ok(private) => private.destination_path,
-        Err(_) => return Error::new(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
+        Ok(private) => private.destination_path.clone(),
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
     };
     let mut path = Utf8PathBuf::from(&destination_path);
     path.push("Objects");
-    if let Some(private) = private.write() {
+    if let Ok(mut private) = private.write() {
         private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
         if let Some(object_store) = private.object_store.as_mut() {
             if let Err(error) = object_store.load_cache() {
@@ -143,7 +149,7 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         Err(error) => return Err(error),
     };
     
-    if let Some(private) = private.write() {
+    if let Ok(mut private) = private.write() {
         for name in names {
             let backup_path = backups_path.join(&name);
             private.backup_paths.push(backup_path.to_string_easy());
@@ -200,9 +206,13 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
 }
 
 fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Result<()> {
+    let destination_path = match private.read() {
+        Ok(private) => private.destination_path.clone(),
+        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
+    };
     let directory1 = format!("{:02x}", index1);
     let directory2 = format!("{:02x}", index2);
-    let mut object_path = Utf8PathBuf::from(&self.destination_path);
+    let mut object_path = Utf8PathBuf::from(&destination_path);
     object_path.push("Objects");
     object_path.push(&directory1);
     object_path.push(&directory2);
@@ -233,14 +243,16 @@ fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Res
                 let mut path = Utf8PathBuf::from(&directory1);
                 path.push(&directory2);
                 path.push(&produced_path);
-                if let Err(error) = self.process_object(&path.to_string_easy()) {
+                if let Err(error) = process_object(private, &path.to_string_easy()) {
                     println!(
                         "Warning: error caused when processing objects. error: {}",
                         error
                     );
                 }
-                self.processed_count += 1;
-                self.state.last_processed_id = file_name;
+                if let Ok(mut private) = private.write() {
+                    private.processed_count += 1;
+                    private.state.last_processed_id = file_name;
+                }
             }
         }
     }
@@ -249,36 +261,47 @@ fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Res
 }
 
 fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
-    let object_store = self.object_store.as_ref().unwrap();
-    if self.count == 0 {
-        println!(
-            "Processing ({}, {}): {}",
-            self.processed_count, self.removed_count, path
-        );
+    let backup_paths: Vec<String>;
+    {
+        let Ok(private) = private.read() else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_UNLOCKING_FAILED));
+        };
+        if private.count == 0 {
+            println!(
+                "Processing ({}, {}): {}",
+                private.processed_count, private.removed_count, path
+            );
+        }
+        backup_paths = private.backup_paths.clone();
     }
-    self.count += 1;
-    self.count %= 100;
+    if let Ok(mut private) = private.write() {
+        private.count += 1;
+        private.count %= 100;
+    }
 
     let path1 = Utf8PathBuf::from(&path);
     let object_id = path1.file_name_or_empty();
-    if object_store.cached(&object_id)? {
-        return Ok(());
+    let attributes: Attributes;
+    {
+        let Ok(private) = private.read() else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_UNLOCKING_FAILED));
+        };
+        let object_store = private.object_store.as_ref().unwrap();
+        if object_store.cached(&object_id)? {
+            return Ok(());
+        }
+        attributes = object_store.attributes(&object_id)?;
     }
-    let attributes = match object_store.attributes(&object_id) {
-        Ok(attributes) => attributes,
-        Err(error) => return Err(error),
-    };
-    let added = attributes.added;
 
-    for backup_path in &self.backup_paths {
+    for backup_path in &backup_paths {
         let path2 = Utf8PathBuf::from(&backup_path);
         let backup_name = path2.file_name_or_empty();
         let backup_created = match NaiveDateTime::parse_from_str(&backup_name, "%Y%m%d-%H%M") {
             // Add 25 hours because backup_created does not have timezone.
             Ok(created) => created.and_utc().timestamp() + 25 * 60 * 60,
-            Err(_) => added,
+            Err(_) => attributes.added,
         };
-        if (backup_created - added) < 0 {
+        if (backup_created - attributes.added) < 0 {
             // All backups after this object is added are checked.
             // println!("Checking skipped. object_id: {}", object_id);
 
@@ -304,10 +327,16 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
         }
     }
 
-    if let Err(_) = object_store.remove(&object_id) {
-        println!("Warning: Removing object {} failed.", object_id);
+    if let Ok(private) = private.read() {
+        if let Some(object_store) = &private.object_store {
+            if let Err(_) = object_store.remove(&object_id) {
+                println!("Warning: Removing object {} failed.", object_id);
+            }
+        }
     }
-    self.removed_count += 1;
+    if let Ok(mut private) = private.write() {
+        private.removed_count += 1;
+    }
 
     Ok(())
 }
