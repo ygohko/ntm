@@ -391,3 +391,13 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::garbage_collector::GarbageCollector;
+
+    #[test]
+    fn is_creatable() {
+        let _collector = GarbageCollector::new();
+    }
+}
