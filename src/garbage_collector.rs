@@ -394,10 +394,53 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::backup_command::BackupCommand;
+    use crate::commons::OperatePath;
     use crate::garbage_collector::GarbageCollector;
+    use crate::init_command::InitCommand;
+    use crate::task::Task;
 
     #[test]
     fn is_creatable() {
         let _collector = GarbageCollector::new();
+    }
+
+    #[test]
+    fn is_executable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = &temp_dir.path().to_path_buf();
+        let mut source_path = temp_path.clone();
+        source_path.push("source");
+        fs::create_dir_all(&source_path).unwrap();
+        let mut file_path = source_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "ABCDE").unwrap();
+
+        let mut ntm_path = temp_path.clone();
+        ntm_path.push("ntm");
+        fs::create_dir_all(&ntm_path).unwrap();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&ntm_path.to_string_easy());
+        command.execute().unwrap();
+
+        let mut config_path = ntm_path.clone();
+        config_path.push("ntm.toml");
+        let config = format!("source_path = \"{}\"", source_path.display());
+        fs::write(config_path, config).unwrap();
+
+        let mut command = BackupCommand::new();
+        command.set_destination_path(&ntm_path.to_string_easy());
+        command.execute().unwrap();
+
+        let mut backup_path = ntm_path.clone();
+        backup_path.push("Backups");
+        backup_path.push(&command.name());
+        fs::remove_dir_all(&backup_path).unwrap();
+        let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&ntm_path.to_string_easy());
+        collector.execute().unwrap();
     }
 }
