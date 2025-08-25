@@ -34,7 +34,6 @@ use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
-use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
@@ -51,7 +50,6 @@ pub const ERROR_ID: ErrorId = "garbage_collector";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_UNLOCKING_FAILED: ErrorCode = 1;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct State {
@@ -97,6 +95,22 @@ pub struct GarbageCollector {
 }
 
 impl Task for GarbageCollector {
+    /// Executes the configured operation in a new background thread.
+    ///
+    /// This method creates a new thread to run the core logic, represented by the `main` function.
+    /// It safely shares the internal `Private` state (which holds configuration like
+    /// `destination_path` and `limited_count`) with the new thread by cloning the `Arc<RwLock>`.
+    ///
+    /// The method blocks the current thread until the spawned background thread completes its execution.
+    /// Errors potentially returned by the `main` function within the background thread are currently ignored.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` upon successful completion of the background thread.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the background thread itself panics during its execution.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         let handle = thread::spawn(move || {
@@ -109,33 +123,64 @@ impl Task for GarbageCollector {
 }
 
 impl GarbageCollector {
+    /// Creates a new instance of `GarbageCollector`.
+    ///
+    /// This initializes the internal state, specifically a `private` field, as a new
+    /// `Private` instance wrapped in an `Arc<RwLock>`. This setup allows for
+    /// shared, thread-safe, and mutable access to the private data.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `GarbageCollector`.
     pub fn new() -> Self {
         Self {
             private: Arc::new(RwLock::new(Private::new())),
         }
     }
 
+    /// Sets the destination path where processed files or data will be stored.
+    ///
+    /// This operation acquires a write lock on the internal state to update the path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The new path as a string slice. The path is cloned and stored internally.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal `RwLock` is poisoned, indicating a previous operation
+    /// on the protected data failed catastrophically.
     pub fn set_destination_path(&mut self, path: &str) {
-        if let Ok(mut private) = self.private.write() {
-            private.destination_path = path.to_string();
-        }
+        let mut private = self.private.write().unwrap();
+        private.destination_path = path.to_string();
     }
 
+    /// Sets an optional limited count for the internal private data.
+    ///
+    /// This method attempts to acquire a write lock on the private data.
+    /// If the lock is successfully acquired, the `limited_count` is updated to `Some(count)`.
+    /// If acquiring the lock fails (e.g., due to the lock being poisoned),
+    /// the operation silently fails, and the count is not updated.
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - An `i64` value representing the new limited count.
     pub fn set_limited_count(&mut self, count: i64) {
-        if let Ok(mut private) = self.private.write() {
-            private.limited_count = Some(count);
-        }
+        let mut private = self.private.write().unwrap();
+        private.limited_count = Some(count);
     }
 }
 
 fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
-    let destination_path = match private.read() {
-        Ok(private) => private.destination_path.clone(),
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
-    };
+    let destination_path: String;
+    {
+        let private = private.read().unwrap();
+        destination_path = private.destination_path.clone();
+    }
     let mut path = Utf8PathBuf::from(&destination_path);
     path.push("Objects");
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
         if let Some(object_store) = private.object_store.as_mut() {
             if let Err(error) = object_store.load_cache() {
@@ -152,7 +197,8 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         Err(error) => return Err(error),
     };
     
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         for name in names {
             let backup_path = backups_path.join(&name);
             private.backup_paths.push(backup_path.to_string_easy());
@@ -182,17 +228,17 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         }
 
         if (i & 0xFF) == 0 {
-            if let Ok(private) = private.read() {
-                if let Ok(serialized) = serde_json::to_string(&private.state) {
-                    let mut path = Utf8PathBuf::from(&destination_path);
-                    path.push("state.json");
-                    if let Err(_) = fs::write(&path, &serialized) {
-                        println!("Warning: Writing state failed.");
-                    }
+            let private = private.read().unwrap();
+            if let Ok(serialized) = serde_json::to_string(&private.state) {
+                let mut path = Utf8PathBuf::from(&destination_path);
+                path.push("state.json");
+                if let Err(_) = fs::write(&path, &serialized) {
+                    println!("Warning: Writing state failed.");
                 }
             }
         }
-        if let Ok(private) = private.read() {
+        {
+            let private = private.read().unwrap();
             if let Some(count) = private.limited_count {
                 if private.processed_count >= count {
                     break;
@@ -201,7 +247,8 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         }
     }
 
-    if let Ok(private) = private.read() {
+    {
+        let private = private.read().unwrap();
         println!("{} object(s) removed.", private.removed_count);
     }
 
@@ -209,10 +256,11 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
 }
 
 fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Result<()> {
-    let destination_path = match private.read() {
-        Ok(private) => private.destination_path.clone(),
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
-    };
+    let destination_path: String;
+    {
+        let private = private.read().unwrap();
+        destination_path = private.destination_path.clone();
+    }
     let directory1 = format!("{:02x}", index1);
     let directory2 = format!("{:02x}", index2);
     let mut object_path = Utf8PathBuf::from(&destination_path);
@@ -252,7 +300,8 @@ fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Res
                         error
                     );
                 }
-                if let Ok(mut private) = private.write() {
+                {
+                    let mut private = private.write().unwrap();
                     private.processed_count += 1;
                     private.state.last_processed_id = file_name;
                 }
@@ -266,9 +315,7 @@ fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Res
 fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
     let backup_paths: Vec<String>;
     {
-        let Ok(private) = private.read() else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_UNLOCKING_FAILED));
-        };
+        let private = private.read().unwrap();
         if private.count == 0 {
             println!(
                 "Processing ({}, {}): {}",
@@ -277,7 +324,8 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
         }
         backup_paths = private.backup_paths.clone();
     }
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         private.count += 1;
         private.count %= 100;
     }
@@ -286,9 +334,7 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
     let object_id = path1.file_name_or_empty();
     let attributes: Attributes;
     {
-        let Ok(private) = private.read() else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_UNLOCKING_FAILED));
-        };
+        let private = private.read().unwrap();
         let object_store = private.object_store.as_ref().unwrap();
         if object_store.cached(&object_id)? {
             return Ok(());
@@ -330,14 +376,16 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
         }
     }
 
-    if let Ok(private) = private.read() {
+    {
+        let private = private.read().unwrap();
         if let Some(object_store) = &private.object_store {
             if let Err(_) = object_store.remove(&object_id) {
                 println!("Warning: Removing object {} failed.", object_id);
             }
         }
     }
-    if let Ok(mut private) = private.write() {
+    {
+        let mut private = private.write().unwrap();
         private.removed_count += 1;
     }
 
