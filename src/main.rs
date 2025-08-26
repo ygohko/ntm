@@ -86,10 +86,10 @@ struct GetArguments {
 }
 
 #[derive(Parser, PartialEq)]
-struct GcArguments {
+struct CleanArguments {
     /// Directory to limit getting backuped directories and files
     limited_count: Option<i32>,
-    /// Backup destination that GC is executed on
+    /// Backup destination that cleaning is executed on
     #[arg(short, long)]
     destination: Option<String>,
 }
@@ -104,8 +104,8 @@ enum CommandKind {
     RemoveBackup(RemoveBackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
-    /// Execute garbage collection for this backup destination
-    Gc(GcArguments),
+    /// Execute cleaning for this backup destination
+    Clean(CleanArguments),
 }
 
 #[derive(Parser)]
@@ -178,7 +178,7 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
-    } else if let CommandKind::Gc(arguments) = command {
+    } else if let CommandKind::Clean(arguments) = command {
         let mut command = CleanCommand::new();
         if let Some(limited_count) = arguments.limited_count {
             command.set_limited_count(limited_count as i64);
