@@ -97,13 +97,13 @@ mod tests {
 
     use crate::backup_command::BackupCommand;
     use crate::commons::OperatePath;
-    use crate::gc_command::GcCommand;
+    use crate::clean_command::CleanCommand;
     use crate::init_command::InitCommand;
     use crate::task::Task;
 
     #[test]
     fn is_creatable() {
-        let _command = GcCommand::new();
+        let _command = CleanCommand::new();
     }
 
     #[test]
@@ -137,7 +137,7 @@ mod tests {
         backup_path.push("Backups");
         backup_path.push(&command.name());
         fs::remove_dir_all(&backup_path).unwrap();
-        let mut command = GcCommand::new();
+        let mut command = CleanCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
     }
