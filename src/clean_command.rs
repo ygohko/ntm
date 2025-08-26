@@ -27,7 +27,7 @@ use crate::garbage_collector::GarbageCollector;
 use crate::task::Task;
 
 #[allow(dead_code)]
-pub const ERROR_ID: ErrorId = "gc_command";
+pub const ERROR_ID: ErrorId = "clean_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
@@ -71,7 +71,7 @@ impl CleanCommand {
         }
     }
 
-    /// Sets the destination path for the garbage collection.
+    /// Sets the destination path for the cleaning.
     ///
     /// # Arguments
     ///
