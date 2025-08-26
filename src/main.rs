@@ -45,7 +45,7 @@ use std::process::ExitCode;
 use std::time::SystemTime;
 
 use crate::backup_command::BackupCommand;
-use crate::clean_command::GcCommand;
+use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 use crate::remove_backup_command::RemoveBackupCommand;
@@ -179,7 +179,7 @@ fn main() -> ExitCode {
             }
         }
     } else if let CommandKind::Gc(arguments) = command {
-        let mut command = GcCommand::new();
+        let mut command = CleanCommand::new();
         if let Some(limited_count) = arguments.limited_count {
             command.set_limited_count(limited_count as i64);
         }
