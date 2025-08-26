@@ -27,19 +27,19 @@ use crate::garbage_collector::GarbageCollector;
 use crate::task::Task;
 
 #[allow(dead_code)]
-pub const ERROR_ID: ErrorId = "gc_command";
+pub const ERROR_ID: ErrorId = "clean_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 
-/// A command to execute garbage collection for a backup destination.
-pub struct GcCommand {
+/// A command to execute cleaning for a backup destination.
+pub struct CleanCommand {
     destination_path: String,
     limited_count: Option<i64>,
 }
 
-impl Task for GcCommand {
-    /// Executes the garbage collection command.
+impl Task for CleanCommand {
+    /// Executes the clean command.
     ///
     /// This method identifies and removes unreferenced objects from the object store.
     ///
@@ -58,12 +58,12 @@ impl Task for GcCommand {
     }
 }
 
-impl GcCommand {
-    /// Creates a new `GcCommand` instance.
+impl CleanCommand {
+    /// Creates a new `CleanCommand` instance.
     ///
     /// # Returns
     ///
-    /// * `GcCommand` - A new `GcCommand` instance.
+    /// * `CleanCommand` - A new `CleanCommand` instance.
     pub fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
@@ -71,7 +71,7 @@ impl GcCommand {
         }
     }
 
-    /// Sets the destination path for the garbage collection.
+    /// Sets the destination path for the cleaning.
     ///
     /// # Arguments
     ///
@@ -97,13 +97,13 @@ mod tests {
 
     use crate::backup_command::BackupCommand;
     use crate::commons::OperatePath;
-    use crate::gc_command::GcCommand;
+    use crate::clean_command::CleanCommand;
     use crate::init_command::InitCommand;
     use crate::task::Task;
 
     #[test]
     fn is_creatable() {
-        let _command = GcCommand::new();
+        let _command = CleanCommand::new();
     }
 
     #[test]
@@ -137,7 +137,7 @@ mod tests {
         backup_path.push("Backups");
         backup_path.push(&command.name());
         fs::remove_dir_all(&backup_path).unwrap();
-        let mut command = GcCommand::new();
+        let mut command = CleanCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
     }

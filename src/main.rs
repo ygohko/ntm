@@ -24,6 +24,7 @@ mod attributes;
 mod background_executer;
 mod backup_command;
 mod backup_store;
+mod clean_command;
 mod commons;
 mod config;
 mod entry;
@@ -31,7 +32,6 @@ mod entry_saver;
 mod error;
 mod file_path_producer;
 mod garbage_collector;
-mod gc_command;
 mod get_command;
 mod init_command;
 mod object_adder;
@@ -45,7 +45,7 @@ use std::process::ExitCode;
 use std::time::SystemTime;
 
 use crate::backup_command::BackupCommand;
-use crate::gc_command::GcCommand;
+use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
 use crate::remove_backup_command::RemoveBackupCommand;
@@ -86,10 +86,10 @@ struct GetArguments {
 }
 
 #[derive(Parser, PartialEq)]
-struct GcArguments {
+struct CleanArguments {
     /// Directory to limit getting backuped directories and files
     limited_count: Option<i32>,
-    /// Backup destination that GC is executed on
+    /// Backup destination that cleaning is executed on
     #[arg(short, long)]
     destination: Option<String>,
 }
@@ -104,8 +104,8 @@ enum CommandKind {
     RemoveBackup(RemoveBackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
-    /// Execute garbage collection for this backup destination
-    Gc(GcArguments),
+    /// Execute cleaning for this backup destination
+    Clean(CleanArguments),
 }
 
 #[derive(Parser)]
@@ -178,8 +178,8 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
-    } else if let CommandKind::Gc(arguments) = command {
-        let mut command = GcCommand::new();
+    } else if let CommandKind::Clean(arguments) = command {
+        let mut command = CleanCommand::new();
         if let Some(limited_count) = arguments.limited_count {
             command.set_limited_count(limited_count as i64);
         }
