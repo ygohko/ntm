@@ -23,7 +23,7 @@
 use crate::error::Result;
 use crate::task::Task;
 
-struct BackupRemover {
+pub struct BackupRemover {
     destination_path: String,
 }
 
@@ -35,4 +35,16 @@ impl Task for BackupRemover {
 
         Ok(())
     }
+}
+
+impl BackupRemover {
+    pub fn new() -> Self {
+        Self {
+            destination_path: ".".to_string(),
+        }
+    }
+
+    pub fn set_destination_path(&mut self, destination_path: String) {
+        self.destination_path = destination_path;
+    }    
 }
