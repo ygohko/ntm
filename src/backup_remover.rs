@@ -20,18 +20,36 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::thread;
+use std::sync::Arc;
+use std::sync::RwLock;
+
 use crate::error::Result;
 use crate::task::Task;
 
-pub struct BackupRemover {
+struct Private {
     destination_path: String,
+}
+
+impl Private {
+    fn new() -> Self {
+        Self {
+            destination_path: ".".to_string(),
+        }
+    }
+}
+
+pub struct BackupRemover {
+    private: Arc<RwLock<Private>>,
 }
 
 impl Task for BackupRemover {
     fn execute(&mut self) -> Result<()> {
-        // TODO: Iterate backups.
-
-        // TODO: If backup is marked, do recursive remove.
+        let private = self.private.clone();
+        let handle = thread::spawn(move || {
+            main(&private);
+        });
+        handle.join();
 
         Ok(())
     }
@@ -40,11 +58,20 @@ impl Task for BackupRemover {
 impl BackupRemover {
     pub fn new() -> Self {
         Self {
-            destination_path: ".".to_string(),
+            private: Arc::new(RwLock::new(Private::new())),
         }
     }
 
     pub fn set_destination_path(&mut self, destination_path: String) {
-        self.destination_path = destination_path;
+        let mut private = self.private.write().unwrap();
+        private.destination_path = destination_path;
     }    
+}
+
+fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
+    // TODO: Iterate backups.
+
+    // TODO: If backup is marked, do recursive remove.
+
+    Ok(())
 }
