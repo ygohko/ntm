@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::fs;
 use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -69,9 +70,30 @@ impl BackupRemover {
 }
 
 fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
+    let destination_path: String;
+    {
+        let private = private.read().unwrap();
+        destination_path = private.destination_path;
+    }
+    let path = Utf8PathBuf::from(&destination_path);
+    path.push("Backups");
+    
     // TODO: Iterate backups.
-
+    let Ok(read_dir) = fs::read_dir(&path) else {
+        return Err(Error(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
+    };
+    for result in read_dir {
+        if let Ok(dir_entry) = result {
+            process_dir_entry(private, &dir_entry)?;
+        }
+    }
+    
     // TODO: If backup is marked, do recursive remove.
 
+    Ok(())
+}
+
+fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Result<()> {
+    // TODO: Imprement this.
     Ok(())
 }
