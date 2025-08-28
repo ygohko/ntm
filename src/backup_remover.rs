@@ -27,6 +27,7 @@ use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -89,8 +90,7 @@ fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
     }
     let mut path = Utf8PathBuf::from(&destination_path);
     path.push("Backups");
-    
-    // TODO: Iterate backups.
+
     let Ok(read_dir) = fs::read_dir(&path) else {
         return Err(Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
     };
@@ -99,13 +99,24 @@ fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
             process_dir_entry(private, &dir_entry)?;
         }
     }
-    
-    // TODO: If backup is marked, do recursive remove.
 
     Ok(())
 }
 
 fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Result<()> {
-    // TODO: Imprement this.
+    let Ok(metadata) = dir_entry.metadata() else {
+        return Ok(());
+    };
+    if !metadata.is_dir() {
+        return Ok(());
+    }
+    let path = dir_entry.path();
+    let string = path.to_string_easy();
+    if !string.ends_with(".removed") {
+        return Ok(());
+    }
+
+    // TODO: Do recursive remove.
+    
     Ok(())
 }
