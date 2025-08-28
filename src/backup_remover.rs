@@ -20,13 +20,25 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::fs;
+use std::fs::DirEntry;
 use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
 use crate::error::Result;
 use crate::task::Task;
+
+#[allow(dead_code)]
+pub const ERROR_ID: ErrorId = "backup_remover";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_READING_DIRECTORY_FAILED: ErrorCode = 1;
 
 struct Private {
     destination_path: String,
@@ -73,14 +85,14 @@ fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
     let destination_path: String;
     {
         let private = private.read().unwrap();
-        destination_path = private.destination_path;
+        destination_path = private.destination_path.clone();
     }
-    let path = Utf8PathBuf::from(&destination_path);
+    let mut path = Utf8PathBuf::from(&destination_path);
     path.push("Backups");
     
     // TODO: Iterate backups.
     let Ok(read_dir) = fs::read_dir(&path) else {
-        return Err(Error(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
+        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
     };
     for result in read_dir {
         if let Ok(dir_entry) = result {
