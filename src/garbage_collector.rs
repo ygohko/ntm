@@ -137,6 +137,21 @@ impl GarbageCollector {
         }
     }
 
+    /// Waits for the associated thread to finish.
+    ///
+    /// If `self.join_handle` contains a `JoinHandle`, this method will take it
+    /// and call `join()` on it, blocking the current thread until the associated
+    /// thread completes.
+    ///
+    /// After the call, `self.join_handle` will be `None`, ensuring that the
+    /// `JoinHandle` is joined at most once through this method. Subsequent calls
+    /// to this method will do nothing unless a new `JoinHandle` has been set.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the underlying thread associated with the
+    /// `JoinHandle` itself panicked. The panic will be propagated to the
+    /// calling thread.
     pub fn join(&mut self) {
         if self.join_handle.is_some() {
             let handle = self.join_handle.take();

@@ -66,6 +66,20 @@ pub struct BackupRemover {
 }
 
 impl Task for BackupRemover {
+    /// Spawns a new thread to execute the main logic with a copy of the private data.
+    ///
+    /// This method first clones the `self.private` field to ensure that the data
+    /// can be safely moved into the new thread's closure. A new thread is then
+    /// spawned, and the cloned `private` data is moved into it. The new thread
+    /// will then invoke the `main` function, passing a reference to this `private`
+    /// data.
+    ///
+    /// The `JoinHandle` for the newly created thread is stored in `self.join_handle`,
+    /// allowing the program to potentially wait for the thread's completion later
+    /// if necessary.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the thread was successfully spawned.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
@@ -77,6 +91,12 @@ impl Task for BackupRemover {
 }
 
 impl BackupRemover {
+    /// Creates a new instance of `BackupRemover`.
+    ///
+    /// This method initializes a new instance with a `None` `join_handle`,
+    /// indicating that no worker thread has been spawned or joined yet.
+    /// It also sets up a new `Arc<RwLock<Private>>` for its internal
+    /// private state, ensuring thread-safe shared access to its data.
     pub fn new() -> Self {
         Self {
             join_handle: None,
@@ -84,6 +104,14 @@ impl BackupRemover {
         }
     }
 
+    /// Joins the underlying thread if a join handle is present.
+    ///
+    /// This method consumes `self` and blocks the current thread until the
+    /// associated thread (if any) has finished execution. If no join handle
+    /// is present (e.g., the task was already joined or never started a thread),
+    /// this method does nothing.
+    ///
+    /// After calling `join`, the `Task` object cannot be used further.
     pub fn join(mut self) {
         if self.join_handle.is_some() {
             let handle = self.join_handle.take();
@@ -91,6 +119,20 @@ impl BackupRemover {
         }
     }
 
+    /// Sets the destination path for the operation managed by this instance.
+    ///
+    /// This method acquires a write lock on the internal private data,
+    /// updates the `destination_path` field, and then releases the lock.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - A string slice representing the new destination path.
+    ///            This path will be cloned and stored internally.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the `RwLock` is poisoned (i.e., a writer
+    /// previously panicked while holding the lock).
     pub fn set_destination_path(&mut self, path: &str) {
         let mut private = self.private.write().unwrap();
         private.destination_path = path.to_string();
