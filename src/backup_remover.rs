@@ -78,9 +78,9 @@ impl BackupRemover {
         }
     }
 
-    pub fn set_destination_path(&mut self, destination_path: String) {
+    pub fn set_destination_path(&mut self, path: &str) {
         let mut private = self.private.write().unwrap();
-        private.destination_path = destination_path;
+        private.destination_path = path.to_string();
     }    
 }
 
@@ -122,8 +122,8 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
     let mut producer = FilePathProducer::new(&path);
     let mut done = false;
     while !done {
-        let path = match producer.next() {
-            Ok(path) => path,
+        let file_path = match producer.next() {
+            Ok(file_path) => file_path,
             Err(error) => {
                 if error.id == file_path_producer::ERROR_ID
                     && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
@@ -138,8 +138,10 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
         };
 
         if !done {
-            if let Err(error) = fs::remove_file(&path) {
-                println!("Removing file {} failed. error: {}", path, error);
+            let mut removing_path = Utf8PathBuf::from(&path);
+            removing_path.push(&file_path);
+            if let Err(error) = fs::remove_file(&removing_path) {
+                println!("Removing file {} failed. error: {}", removing_path, error);
             }
         }
     }

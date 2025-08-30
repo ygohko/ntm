@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use crate::backup_remover::BackupRemover;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
@@ -47,6 +48,10 @@ impl Task for CleanCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
+        let mut remover = BackupRemover::new();
+        remover.set_destination_path(&self.destination_path);
+        remover.execute()?;
+
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&self.destination_path);
         if let Some(limited_count) = self.limited_count {
