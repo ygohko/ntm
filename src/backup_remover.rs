@@ -136,7 +136,7 @@ impl BackupRemover {
     pub fn set_destination_path(&mut self, path: &str) {
         let mut private = self.private.write().unwrap();
         private.destination_path = path.to_string();
-    }    
+    }
 }
 
 fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
@@ -215,6 +215,6 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
     if let Err(error) = fs::remove_dir_all(&path) {
         println!("Removing directory {} failed. error: {}", path, error);
     }
-    
+
     Ok(())
 }

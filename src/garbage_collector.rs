@@ -158,7 +158,7 @@ impl GarbageCollector {
             handle.unwrap().join();
         }
     }
-    
+
     /// Sets the destination path where processed files or data will be stored.
     ///
     /// This operation acquires a write lock on the internal state to update the path.

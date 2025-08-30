@@ -61,7 +61,7 @@ impl Task for CleanCommand {
 
         remover.join();
         collector.join();
-        
+
         Ok(())
     }
 }
