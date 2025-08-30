@@ -83,7 +83,7 @@ impl Task for BackupRemover {
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
-            main(&private);
+            let _ = main(&private);
         }));
 
         Ok(())
@@ -115,7 +115,8 @@ impl BackupRemover {
     pub fn join(mut self) {
         if self.join_handle.is_some() {
             let handle = self.join_handle.take();
-            handle.unwrap().join();
+            // TODO: Receive result value of this thread.
+            let _ = handle.unwrap().join();
         }
     }
 
