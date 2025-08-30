@@ -51,6 +51,7 @@ impl Task for CleanCommand {
         let mut remover = BackupRemover::new();
         remover.set_destination_path(&self.destination_path);
         remover.execute()?;
+        remover.join();
 
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&self.destination_path);

@@ -24,6 +24,7 @@ use camino::Utf8PathBuf;
 use std::fs;
 use std::fs::DirEntry;
 use std::thread;
+use std::thread::JoinHandle;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -60,16 +61,16 @@ impl Private {
 }
 
 pub struct BackupRemover {
+    join_handle: Option<JoinHandle<()>>,
     private: Arc<RwLock<Private>>,
 }
 
 impl Task for BackupRemover {
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
-        let handle = thread::spawn(move || {
+        self.join_handle = Some(thread::spawn(move || {
             main(&private);
-        });
-        handle.join();
+        }));
 
         Ok(())
     }
@@ -78,7 +79,15 @@ impl Task for BackupRemover {
 impl BackupRemover {
     pub fn new() -> Self {
         Self {
+            join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
+        }
+    }
+
+    pub fn join(mut self) {
+        if self.join_handle.is_some() {
+            let handle = self.join_handle.take();
+            handle.unwrap().join();
         }
     }
 
