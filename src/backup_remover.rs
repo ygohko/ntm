@@ -44,6 +44,8 @@ pub const ERROR_ID: ErrorId = "backup_remover";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_DIRECTORY_FAILED: ErrorCode = 1;
 
+// TODO: Add tests.
+
 struct Private {
     destination_path: String,
     removed_count: i64,
