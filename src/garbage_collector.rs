@@ -27,6 +27,7 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 use std::thread;
+use std::thread::JoinHandle;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -41,9 +42,6 @@ use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
-
-// TODO: Add doc comments.
-// TODO: Add tests.
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "garbage_collector";
@@ -91,6 +89,7 @@ impl Private {
 }
 
 pub struct GarbageCollector {
+    join_handle: Option<JoinHandle<()>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -113,10 +112,9 @@ impl Task for GarbageCollector {
     /// This method will panic if the background thread itself panics during its execution.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
-        let handle = thread::spawn(move || {
+        self.join_handle = Some(thread::spawn(move || {
             let _ = main(&private);
-        });
-        let _ = handle.join();
+        }));
 
         Ok(())
     }
@@ -134,7 +132,31 @@ impl GarbageCollector {
     /// A new instance of `GarbageCollector`.
     pub fn new() -> Self {
         Self {
+            join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
+        }
+    }
+
+    /// Waits for the associated thread to finish.
+    ///
+    /// If `self.join_handle` contains a `JoinHandle`, this method will take it
+    /// and call `join()` on it, blocking the current thread until the associated
+    /// thread completes.
+    ///
+    /// After the call, `self.join_handle` will be `None`, ensuring that the
+    /// `JoinHandle` is joined at most once through this method. Subsequent calls
+    /// to this method will do nothing unless a new `JoinHandle` has been set.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the underlying thread associated with the
+    /// `JoinHandle` itself panicked. The panic will be propagated to the
+    /// calling thread.
+    pub fn join(&mut self) {
+        if self.join_handle.is_some() {
+            let handle = self.join_handle.take();
+            // TODO: Receive result value of this thread.
+            let _ = handle.unwrap().join();
         }
     }
 

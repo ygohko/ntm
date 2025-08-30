@@ -23,6 +23,7 @@
 mod attributes;
 mod background_executer;
 mod backup_command;
+mod backup_remover;
 mod backup_store;
 mod clean_command;
 mod commons;
