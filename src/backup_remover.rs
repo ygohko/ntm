@@ -45,12 +45,16 @@ pub const ERROR_CODE_READING_DIRECTORY_FAILED: ErrorCode = 1;
 
 struct Private {
     destination_path: String,
+    removed_count: i64,
+    count: i32,
 }
 
 impl Private {
     fn new() -> Self {
         Self {
             destination_path: ".".to_string(),
+            removed_count: 0,
+            count: 0,
         }
     }
 }
@@ -118,7 +122,6 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
         return Ok(());
     }
 
-    // TODO: Do recursive remove.
     let mut producer = FilePathProducer::new(&path);
     let mut done = false;
     while !done {
@@ -140,8 +143,20 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
         if !done {
             let mut removing_path = Utf8PathBuf::from(&path);
             removing_path.push(&file_path);
+            {
+                let private = private.read().unwrap();
+                if private.count == 0 {
+                    println!("Removing ({}): {}", private.removed_count, removing_path);
+                }
+            }
             if let Err(error) = fs::remove_file(&removing_path) {
                 println!("Removing file {} failed. error: {}", removing_path, error);
+            }
+            {
+                let mut private = private.write().unwrap();
+                private.removed_count += 1;
+                private.count += 1;
+                private.count %= 1000;
             }
         }
     }
