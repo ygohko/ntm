@@ -32,6 +32,8 @@ use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::file_path_producer;
+use crate::file_path_producer::FilePathProducer;
 use crate::task::Task;
 
 #[allow(dead_code)]
@@ -111,12 +113,40 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
         return Ok(());
     }
     let path = dir_entry.path();
-    let string = path.to_string_easy();
-    if !string.ends_with(".removed") {
+    let path = path.to_string_easy();
+    if !path.ends_with(".removed") {
         return Ok(());
     }
 
     // TODO: Do recursive remove.
+    let mut producer = FilePathProducer::new(&path);
+    let mut done = false;
+    while !done {
+        let path = match producer.next() {
+            Ok(path) => path,
+            Err(error) => {
+                if error.id == file_path_producer::ERROR_ID
+                    && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                {
+                    done = true;
+                } else {
+                    return Err(error);
+                }
+
+                "".to_string()
+            },
+        };
+
+        if !done {
+            if let Err(error) = fs::remove_file(&path) {
+                println!("Removing file {} failed. error: {}", path, error);
+            }
+        }
+    }
+
+    if let Err(error) = fs::remove_dir_all(&path) {
+        println!("Removing directory {} failed. error: {}", path, error);
+    }
     
     Ok(())
 }
