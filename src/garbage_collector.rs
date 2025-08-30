@@ -27,6 +27,7 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 use std::thread;
+use std::thread::JoinHandle;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -88,6 +89,7 @@ impl Private {
 }
 
 pub struct GarbageCollector {
+    join_handle: Option<JoinHandle<()>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -110,10 +112,9 @@ impl Task for GarbageCollector {
     /// This method will panic if the background thread itself panics during its execution.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
-        let handle = thread::spawn(move || {
+        self.join_handle = Some(thread::spawn(move || {
             let _ = main(&private);
-        });
-        let _ = handle.join();
+        }));
 
         Ok(())
     }
@@ -131,10 +132,18 @@ impl GarbageCollector {
     /// A new instance of `GarbageCollector`.
     pub fn new() -> Self {
         Self {
+            join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
         }
     }
 
+    pub fn join(&mut self) {
+        if self.join_handle.is_some() {
+            let handle = self.join_handle.take();
+            handle.unwrap().join();
+        }
+    }
+    
     /// Sets the destination path where processed files or data will be stored.
     ///
     /// This operation acquires a write lock on the internal state to update the path.
