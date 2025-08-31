@@ -221,3 +221,13 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::backup_remover::BackupRemover;
+
+    #[test]
+    fn is_creatable() {
+        let _remover = BackupRemover::new();
+    }
+}
