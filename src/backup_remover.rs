@@ -224,10 +224,59 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::backup_command::BackupCommand;
     use crate::backup_remover::BackupRemover;
+    use crate::commons::OperatePath;
+    use crate::init_command::InitCommand;
+    use crate::task::Task;
 
     #[test]
     fn is_creatable() {
         let _remover = BackupRemover::new();
+    }
+
+    #[test]
+    fn is_executable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = &temp_dir.path().to_path_buf();
+        let mut source_path = temp_path.clone();
+        source_path.push("source");
+        fs::create_dir_all(&source_path).unwrap();
+        let mut file_path = source_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "ABCDE").unwrap();
+
+        let mut ntm_path = temp_path.clone();
+        ntm_path.push("ntm");
+        fs::create_dir_all(&ntm_path).unwrap();
+        let mut command = InitCommand::new();
+        command.set_destination_path(&ntm_path.to_string_easy());
+        command.execute().unwrap();
+
+        let mut config_path = ntm_path.clone();
+        config_path.push("ntm.toml");
+        let config = format!("source_path = \"{}\"", source_path.display());
+        fs::write(config_path, config).unwrap();
+
+        let mut command = BackupCommand::new();
+        command.set_destination_path(&ntm_path.to_string_easy());
+        command.execute().unwrap();
+        
+        let mut from_path = ntm_path.clone();
+        from_path.push("Backups");
+        from_path.push(&command.name());
+        let mut to_path = ntm_path.clone();
+        to_path.push("Backups");
+        let mut file_name = command.name().clone();
+        file_name.push_str(".removed");
+        to_path.push(&file_name);
+        fs::rename(&from_path, &to_path).unwrap();
+        let mut remover = BackupRemover::new();
+        remover.set_destination_path(&ntm_path.to_string_easy());
+        remover.execute().unwrap();
+        remover.join();
     }
 }
