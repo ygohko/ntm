@@ -60,7 +60,7 @@ impl Task for CleanCommand {
         collector.execute()?;
 
         remover.join();
-        collector.join();
+        let _ = collector.join();
 
         Ok(())
     }

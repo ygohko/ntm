@@ -91,7 +91,7 @@ impl Private {
 }
 
 pub struct GarbageCollector {
-    join_handle: Option<JoinHandle<()>>,
+    join_handle: Option<JoinHandle<Result<()>>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -114,8 +114,8 @@ impl Task for GarbageCollector {
     /// This method will panic if the background thread itself panics during its execution.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
-        self.join_handle = Some(thread::spawn(move || {
-           main(&private);
+        self.join_handle = Some(thread::spawn(move || -> Result<()> {
+           main(&private)
         }));
 
         Ok(())
@@ -161,7 +161,8 @@ impl GarbageCollector {
         };
         let result = handle.join().unwrap();
 
-        result;
+        result
+            
     }
 
     /// Sets the destination path where processed files or data will be stored.
