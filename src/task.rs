@@ -20,7 +20,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use crate::error::ErrorId;
+use crate::error::ErrorCode;
 use crate::error::Result;
+
+#[allow(dead_code)]
+pub const ERROR_ID: ErrorId = "task";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_READING_NOT_SUPPORTED: ErrorCode = 1;
 
 /// Represents a task that can be executed.
 pub trait Task {

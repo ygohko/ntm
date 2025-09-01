@@ -35,12 +35,14 @@ use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
+use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
+use crate::task;
 use crate::task::Task;
 
 #[allow(dead_code)]
@@ -113,7 +115,7 @@ impl Task for GarbageCollector {
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
-            let _ = main(&private);
+           main(&private);
         }));
 
         Ok(())
@@ -152,12 +154,14 @@ impl GarbageCollector {
     /// This method will panic if the underlying thread associated with the
     /// `JoinHandle` itself panicked. The panic will be propagated to the
     /// calling thread.
-    pub fn join(&mut self) {
-        if self.join_handle.is_some() {
-            let handle = self.join_handle.take();
-            // TODO: Receive result value of this thread.
-            let _ = handle.unwrap().join();
-        }
+    pub fn join(&mut self) -> Result<()> {
+        let handle = self.join_handle.take();
+        let Some(handle) = handle else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_READING_NOT_SUPPORTED));
+        };
+        let result = handle.join().unwrap();
+
+        result;
     }
 
     /// Sets the destination path where processed files or data will be stored.
