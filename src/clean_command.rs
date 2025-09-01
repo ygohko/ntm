@@ -60,7 +60,9 @@ impl Task for CleanCommand {
         collector.execute()?;
 
         remover.join();
-        let _ = collector.join();
+        if let Err(error) = collector.join() {
+            println!("Garbage collection failed. error {}", error);
+        }
 
         Ok(())
     }
