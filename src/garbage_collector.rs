@@ -35,12 +35,14 @@ use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
+use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;
+use crate::task;
 use crate::task::Task;
 
 #[allow(dead_code)]
@@ -89,31 +91,36 @@ impl Private {
 }
 
 pub struct GarbageCollector {
-    join_handle: Option<JoinHandle<()>>,
+    join_handle: Option<JoinHandle<Result<()>>>,
     private: Arc<RwLock<Private>>,
 }
 
 impl Task for GarbageCollector {
-    /// Executes the configured operation in a new background thread.
+    /// Spawns a new thread to execute the main application logic.
     ///
-    /// This method creates a new thread to run the core logic, represented by the `main` function.
-    /// It safely shares the internal `Private` state (which holds configuration like
-    /// `destination_path` and `limited_count`) with the new thread by cloning the `Arc<RwLock>`.
+    /// This method initializes a new background thread to perform the core operations.
+    /// It first clones the `self.private` data, which is then moved into the new thread's
+    /// closure. Inside this new thread, the `main` function is called, receiving a
+    /// reference to this cloned private data.
     ///
-    /// The method blocks the current thread until the spawned background thread completes its execution.
-    /// Errors potentially returned by the `main` function within the background thread are currently ignored.
+    /// The `JoinHandle` for the newly spawned thread is stored in `self.join_handle`.
+    /// This handle can later be used to await the thread's completion, check its status,
+    /// or handle panics.
     ///
     /// # Returns
     ///
-    /// `Ok(())` upon successful completion of the background thread.
+    /// `Ok(())` if the thread was successfully spawned.
     ///
-    /// # Panics
-    ///
-    /// This method will panic if the background thread itself panics during its execution.
+    /// The current implementation always returns `Ok(())` as `thread::spawn` itself
+    /// returns a `JoinHandle` directly and does not typically fail to *spawn* the thread
+    /// in a way that returns a `Result`. The `Result<()>` return type might be present
+    /// for future error handling or to satisfy a trait's signature.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
-            let _ = main(&private);
+            let result = main(&private);
+
+            result
         }));
 
         Ok(())
@@ -137,27 +144,30 @@ impl GarbageCollector {
         }
     }
 
-    /// Waits for the associated thread to finish.
+    /// Waits for the spawned thread to complete and returns its result.
     ///
-    /// If `self.join_handle` contains a `JoinHandle`, this method will take it
-    /// and call `join()` on it, blocking the current thread until the associated
-    /// thread completes.
+    /// This method consumes the `join_handle` associated with the thread.
+    /// It should only be called once after `execute` has been called.
     ///
-    /// After the call, `self.join_handle` will be `None`, ensuring that the
-    /// `JoinHandle` is joined at most once through this method. Subsequent calls
-    /// to this method will do nothing unless a new `JoinHandle` has been set.
+    /// # Errors
     ///
-    /// # Panics
-    ///
-    /// This method will panic if the underlying thread associated with the
-    /// `JoinHandle` itself panicked. The panic will be propagated to the
-    /// calling thread.
-    pub fn join(&mut self) {
-        if self.join_handle.is_some() {
-            let handle = self.join_handle.take();
-            // TODO: Receive result value of this thread.
-            let _ = handle.unwrap().join();
-        }
+    /// *   `Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED))` if `join` is called
+    ///     without a thread having been spawned (i.e., `join_handle` is `None`). This can happen
+    ///     if `execute` was not called or if `join` was called multiple times.
+    /// *   `Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED))` if the spawned thread
+    ///     panicked during execution.
+    /// *   `Err` (propagated from the thread's execution) if the `main` function executed
+    ///     within the thread returned an `Err`.
+    pub fn join(&mut self) -> Result<()> {
+        let handle = self.join_handle.take();
+        let Some(handle) = handle else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
+        };
+        let Ok(result) = handle.join() else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED));
+        };
+
+        result
     }
 
     /// Sets the destination path where processed files or data will be stored.
