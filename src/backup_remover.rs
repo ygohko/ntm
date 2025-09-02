@@ -107,7 +107,7 @@ impl BackupRemover {
         }
     }
 
-    /// Joins the underlying task/thread, waiting for it to complete.
+    /// Joins the underlying thread, waiting for it to complete.
     ///
     /// This method attempts to take and consume the internal `JoinHandle`,
     /// meaning it can only be called once successfully for a given instance.
