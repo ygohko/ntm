@@ -84,7 +84,10 @@ impl Task for RemoveBackupCommand {
                 removed_name.push_str(".removed");
                 to_path.push(&removed_name);
                 if let Err(error) = fs::rename(&from_path, &to_path) {
-                    println!("Error: Could not mark to removed {}. error: {}", from_path, error);
+                    println!(
+                        "Error: Could not mark to removed {}. error: {}",
+                        from_path, error
+                    );
                 };
             }
         }

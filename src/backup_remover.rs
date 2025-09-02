@@ -23,10 +23,10 @@
 use camino::Utf8PathBuf;
 use std::fs;
 use std::fs::DirEntry;
-use std::thread;
-use std::thread::JoinHandle;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::thread;
+use std::thread::JoinHandle;
 
 use crate::commons::OperatePath;
 use crate::error::Error;
@@ -147,7 +147,7 @@ impl BackupRemover {
     }
 }
 
-fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
+fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
     let destination_path: String;
     {
         let private = private.read().unwrap();
@@ -196,7 +196,7 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
                 }
 
                 "".to_string()
-            },
+            }
         };
 
         if !done {
@@ -269,7 +269,7 @@ mod tests {
         let mut command = BackupCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
-        
+
         let mut from_path = ntm_path.clone();
         from_path.push("Backups");
         from_path.push(&command.name());

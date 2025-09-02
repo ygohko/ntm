@@ -108,8 +108,8 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::backup_command::BackupCommand;
-    use crate::commons::OperatePath;
     use crate::clean_command::CleanCommand;
+    use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
     use crate::task::Task;
 

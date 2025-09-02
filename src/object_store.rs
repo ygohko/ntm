@@ -458,7 +458,9 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn save_cache(&self) -> Result<()> {
-        let mut cache = Cache { existing_ids: Vec::new() };
+        let mut cache = Cache {
+            existing_ids: Vec::new(),
+        };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
             let ids = &self.existing_ids[i];
             for id in ids {

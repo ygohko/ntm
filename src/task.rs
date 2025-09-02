@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use crate::error::ErrorId;
 use crate::error::ErrorCode;
+use crate::error::ErrorId;
 use crate::error::Result;
 
 #[allow(dead_code)]
