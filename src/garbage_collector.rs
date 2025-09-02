@@ -164,7 +164,7 @@ impl GarbageCollector {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
         };
         let Ok(result) = handle.join() else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED));
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
         };
 
         result

@@ -30,7 +30,7 @@ pub const ERROR_ID: ErrorId = "task";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_NOT_SUPPORTED: ErrorCode = 1;
-pub const ERROR_CODE_PANICED: ErrorCode = 2;
+pub const ERROR_CODE_PANICKED: ErrorCode = 2;
 
 /// Represents a task that can be executed.
 pub trait Task {
