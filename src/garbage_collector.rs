@@ -474,6 +474,6 @@ mod tests {
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&ntm_path.to_string_easy());
         collector.execute().unwrap();
-        collector.join();
+        collector.join().unwrap();
     }
 }

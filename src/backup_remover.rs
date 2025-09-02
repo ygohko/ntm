@@ -35,6 +35,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
+use crate::task;
 use crate::task::Task;
 
 #[allow(dead_code)]
@@ -43,8 +44,6 @@ pub const ERROR_ID: ErrorId = "backup_remover";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_DIRECTORY_FAILED: ErrorCode = 1;
-
-// TODO: Add tests.
 
 struct Private {
     destination_path: String,
@@ -63,7 +62,7 @@ impl Private {
 }
 
 pub struct BackupRemover {
-    join_handle: Option<JoinHandle<()>>,
+    join_handle: Option<JoinHandle<Result<()>>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -85,7 +84,9 @@ impl Task for BackupRemover {
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
-            let _ = main(&private);
+            let result = main(&private);
+
+            result
         }));
 
         Ok(())
@@ -114,12 +115,16 @@ impl BackupRemover {
     /// this method does nothing.
     ///
     /// After calling `join`, the `Task` object cannot be used further.
-    pub fn join(mut self) {
-        if self.join_handle.is_some() {
-            let handle = self.join_handle.take();
-            // TODO: Receive result value of this thread.
-            let _ = handle.unwrap().join();
-        }
+    pub fn join(mut self) -> Result<()> {
+        let handle = self.join_handle.take();
+        let Some(handle) = handle else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
+        };
+        let Ok(result) = handle.join() else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED));
+        };
+
+        result
     }
 
     /// Sets the destination path for the operation managed by this instance.
@@ -277,6 +282,6 @@ mod tests {
         let mut remover = BackupRemover::new();
         remover.set_destination_path(&ntm_path.to_string_easy());
         remover.execute().unwrap();
-        remover.join();
+        remover.join().unwrap();
     }
 }
