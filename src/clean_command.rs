@@ -59,7 +59,9 @@ impl Task for CleanCommand {
         }
         collector.execute()?;
 
-        remover.join();
+        if let Err(error) = remover.join() {
+            println!("Removing backups failed. error {}", error);
+        }
         if let Err(error) = collector.join() {
             println!("Garbage collection failed. error {}", error);
         }
