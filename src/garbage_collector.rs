@@ -26,10 +26,10 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
-use std::thread;
-use std::thread::JoinHandle;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::thread;
+use std::thread::JoinHandle;
 
 use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
@@ -164,7 +164,7 @@ impl GarbageCollector {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
         };
         let Ok(result) = handle.join() else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED));
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
         };
 
         result
@@ -228,7 +228,7 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
         Ok(names) => names,
         Err(error) => return Err(error),
     };
-    
+
     {
         let mut private = private.write().unwrap();
         for name in names {

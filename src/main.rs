@@ -69,7 +69,7 @@ struct BackupArguments {
 #[derive(Parser, PartialEq)]
 struct RemoveBackupArguments {
     /// Pattern to specify removing backups
-    pattern: String,    
+    pattern: String,
     /// Backup destination that is used for backup
     #[arg(short, long)]
     destination: Option<String>,

@@ -23,10 +23,10 @@
 use camino::Utf8PathBuf;
 use std::fs;
 use std::fs::DirEntry;
-use std::thread;
-use std::thread::JoinHandle;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::thread;
+use std::thread::JoinHandle;
 
 use crate::commons::OperatePath;
 use crate::error::Error;
@@ -107,21 +107,28 @@ impl BackupRemover {
         }
     }
 
-    /// Joins the underlying thread if a join handle is present.
+    /// Joins the underlying thread, waiting for it to complete.
     ///
-    /// This method consumes `self` and blocks the current thread until the
-    /// associated thread (if any) has finished execution. If no join handle
-    /// is present (e.g., the task was already joined or never started a thread),
-    /// this method does nothing.
+    /// This method attempts to take and consume the internal `JoinHandle`,
+    /// meaning it can only be called once successfully for a given instance.
+    /// It blocks the current thread until the associated task/thread has finished execution.
     ///
-    /// After calling `join`, the `Task` object cannot be used further.
-    pub fn join(mut self) -> Result<()> {
+    /// # Returns
+    ///
+    /// - `Ok(())` if the task completed successfully without panicking.
+    /// - `Err(Error)` if:
+    ///   - No `JoinHandle` is available within the `self` instance (e.g., the task has already been joined,
+    ///     not started, or the method was called without a valid handle).
+    ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_NOT_SUPPORTED` is returned.
+    ///   - The joined task/thread panicked during its execution.
+    ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_PANICED` is returned.
+    pub fn join(&mut self) -> Result<()> {
         let handle = self.join_handle.take();
         let Some(handle) = handle else {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
         };
         let Ok(result) = handle.join() else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED));
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
         };
 
         result
@@ -147,7 +154,7 @@ impl BackupRemover {
     }
 }
 
-fn main(private :&Arc<RwLock<Private>>) -> Result<()> {
+fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
     let destination_path: String;
     {
         let private = private.read().unwrap();
@@ -196,7 +203,7 @@ fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Re
                 }
 
                 "".to_string()
-            },
+            }
         };
 
         if !done {
@@ -269,7 +276,7 @@ mod tests {
         let mut command = BackupCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
-        
+
         let mut from_path = ntm_path.clone();
         from_path.push("Backups");
         from_path.push(&command.name());
