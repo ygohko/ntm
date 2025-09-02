@@ -107,14 +107,21 @@ impl BackupRemover {
         }
     }
 
-    /// Joins the underlying thread if a join handle is present.
+    /// Joins the underlying task/thread, waiting for it to complete.
     ///
-    /// This method consumes `self` and blocks the current thread until the
-    /// associated thread (if any) has finished execution. If no join handle
-    /// is present (e.g., the task was already joined or never started a thread),
-    /// this method does nothing.
+    /// This method attempts to take and consume the internal `JoinHandle`,
+    /// meaning it can only be called once successfully for a given instance.
+    /// It blocks the current thread until the associated task/thread has finished execution.
     ///
-    /// After calling `join`, the `Task` object cannot be used further.
+    /// # Returns
+    ///
+    /// - `Ok(())` if the task completed successfully without panicking.
+    /// - `Err(Error)` if:
+    ///   - No `JoinHandle` is available within the `self` instance (e.g., the task has already been joined,
+    ///     not started, or the method was called without a valid handle).
+    ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_NOT_SUPPORTED` is returned.
+    ///   - The joined task/thread panicked during its execution.
+    ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_PANICED` is returned.
     pub fn join(&mut self) -> Result<()> {
         let handle = self.join_handle.take();
         let Some(handle) = handle else {
