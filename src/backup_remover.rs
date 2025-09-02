@@ -115,7 +115,7 @@ impl BackupRemover {
     /// this method does nothing.
     ///
     /// After calling `join`, the `Task` object cannot be used further.
-    pub fn join(mut self) -> Result<()> {
+    pub fn join(&mut self) -> Result<()> {
         let handle = self.join_handle.take();
         let Some(handle) = handle else {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
