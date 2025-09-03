@@ -29,6 +29,7 @@ use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::task;
 use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "backup_command";
@@ -73,6 +74,39 @@ impl Task for BackgroundExecuter {
         self.handle = Some(handle);
 
         Ok(())
+    }
+
+    /// Attempts to execute a task or operation in the background.
+    ///
+    /// **Note:** This method currently returns an error, explicitly indicating that
+    /// background execution is not supported by the current implementation.
+    /// It serves as a placeholder or an unimplemented feature.
+    ///
+    /// # Errors
+    ///
+    /// This method will always return an `Err(Error)` with `task::ERROR_ID` and
+    /// `task::ERROR_CODE_NOT_SUPPORTED`, as background execution is not
+    /// currently implemented or supported.
+    ///
+    /// # Returns
+    ///
+    /// A `Result<()>` which will always be `Err` in the current implementation,
+    /// signalling the lack of background execution support.
+    fn execute_in_background(&mut self) -> Result<()> {
+        Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED))
+    }
+
+    /// Joins the current execution context with this task, waiting for the task to complete.
+    ///
+    /// **Note:** This method is currently not supported and will always return an error indicating
+    /// `NOT_SUPPORTED`.
+    ///
+    /// # Returns
+    ///
+    /// An `Err` containing an `Error` with `ERROR_ID` and `ERROR_CODE_NOT_SUPPORTED`, as this
+    /// operation is not implemented.
+    fn join(&mut self) -> Result<()> {
+        Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED))
     }
 }
 
