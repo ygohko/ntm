@@ -52,14 +52,14 @@ impl Task for CleanCommand {
     fn execute(&mut self) -> Result<()> {
         let mut remover = BackupRemover::new();
         remover.set_destination_path(&self.destination_path);
-        remover.execute()?;
+        remover.execute_in_background()?;
 
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&self.destination_path);
         if let Some(limited_count) = self.limited_count {
             collector.set_limited_count(limited_count);
         }
-        collector.execute()?;
+        collector.execute_in_background()?;
 
         if let Err(error) = remover.join() {
             println!("Removing backups failed. error {}", error);

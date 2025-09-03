@@ -310,6 +310,5 @@ mod tests {
         let mut remover = BackupRemover::new();
         remover.set_destination_path(&ntm_path.to_string_easy());
         remover.execute().unwrap();
-        remover.join().unwrap();
     }
 }
