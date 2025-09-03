@@ -40,4 +40,8 @@ pub trait Task {
     ///
     /// A `Result` indicating success or an `Error` if the execution fails.
     fn execute(&mut self) -> Result<()>;
+
+    fn execute_in_background(&mut self) -> Result<()>;
+
+    fn join(&mut self) -> Result<()>;
 }

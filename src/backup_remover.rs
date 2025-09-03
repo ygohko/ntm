@@ -83,13 +83,32 @@ impl Task for BackupRemover {
     /// - `Ok(())` if the thread was successfully spawned.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
+        let result = main(&private);
+
+        result
+    }
+
+    fn execute_in_background(&mut self) -> Result<()> {
+        let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
             let result = main(&private);
 
             result
         }));
 
-        Ok(())
+        Ok(())        
+    }
+
+    fn join(&mut self) -> Result<()> {
+        let handle = self.join_handle.take();
+        let Some(handle) = handle else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
+        };
+        let Ok(result) = handle.join() else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
+        };
+
+        result
     }
 }
 
@@ -122,6 +141,7 @@ impl BackupRemover {
     ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_NOT_SUPPORTED` is returned.
     ///   - The joined task/thread panicked during its execution.
     ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_PANICED` is returned.
+    /*
     pub fn join(&mut self) -> Result<()> {
         let handle = self.join_handle.take();
         let Some(handle) = handle else {
@@ -133,6 +153,7 @@ impl BackupRemover {
 
         result
     }
+    */
 
     /// Sets the destination path for the operation managed by this instance.
     ///
