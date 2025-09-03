@@ -96,6 +96,14 @@ pub struct GarbageCollector {
 }
 
 impl Task for GarbageCollector {
+    fn execute(&mut self) -> Result<()> {
+        let private = self.private.clone();
+        let result = main(&private);
+
+        result
+    }
+
+
     /// Spawns a new thread to execute the main application logic.
     ///
     /// This method initializes a new background thread to perform the core operations.
@@ -115,7 +123,7 @@ impl Task for GarbageCollector {
     /// returns a `JoinHandle` directly and does not typically fail to *spawn* the thread
     /// in a way that returns a `Result`. The `Result<()>` return type might be present
     /// for future error handling or to satisfy a trait's signature.
-    fn execute(&mut self) -> Result<()> {
+    fn execute_in_background(&mut self) -> Result<()> {
         let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
             let result = main(&private);
@@ -124,6 +132,18 @@ impl Task for GarbageCollector {
         }));
 
         Ok(())
+    }
+
+    fn join(&mut self) -> Result<()> {
+        let handle = self.join_handle.take();
+        let Some(handle) = handle else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
+        };
+        let Ok(result) = handle.join() else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
+        };
+
+        result
     }
 }
 
@@ -158,6 +178,7 @@ impl GarbageCollector {
     ///     panicked during execution.
     /// *   `Err` (propagated from the thread's execution) if the `main` function executed
     ///     within the thread returned an `Err`.
+    /*
     pub fn join(&mut self) -> Result<()> {
         let handle = self.join_handle.take();
         let Some(handle) = handle else {
@@ -169,6 +190,7 @@ impl GarbageCollector {
 
         result
     }
+    */
 
     /// Sets the destination path where processed files or data will be stored.
     ///
