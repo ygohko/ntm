@@ -40,4 +40,40 @@ pub trait Task {
     ///
     /// A `Result` indicating success or an `Error` if the execution fails.
     fn execute(&mut self) -> Result<()>;
+
+    /// Initiates an operation or task to be executed asynchronously in the background.
+    ///
+    /// This method dispatches the primary work to a separate thread, an asynchronous runtime,
+    /// or a similar background execution mechanism, allowing the current thread to continue
+    /// without blocking. The `&mut self` indicates that initiating the background task
+    /// may modify the internal state of the object, for example, to store a handle to
+    /// the spawned task, update status, or manage resources.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())` if the background operation was successfully initiated. This indicates
+    ///   that the task was successfully handed off to the background execution system,
+    ///   but it does *not* guarantee the successful completion of the background task itself.
+    /// - `Err` if an error occurred while attempting to initiate or dispatch the
+    ///   background operation. This could be due to issues like failing to spawn a thread,
+    ///   the task executor being full, or other resource contention preventing the
+    ///   initiation.
+    fn execute_in_background(&mut self) -> Result<()>;
+
+    /// Waits for the previously initiated background operation to complete.
+    ///
+    /// This method blocks the current thread until the background task, started by
+    /// `execute_in_background`, has finished its execution. After this method
+    /// returns successfully, the background task is considered completed, and
+    /// resources associated with it may be deallocated.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - There is no background operation currently running to join.
+    /// - The background operation itself encountered an unrecoverable error
+    ///   and this error is propagated to the join caller.
+    /// - An error occurred while waiting for the background operation to complete
+    ///   (e.g., an interruption or an internal communication error).
+    fn join(&mut self) -> Result<()>;
 }

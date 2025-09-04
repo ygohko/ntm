@@ -96,6 +96,23 @@ pub struct GarbageCollector {
 }
 
 impl Task for GarbageCollector {
+    /// Executes the main operational logic by leveraging the instance's private data.
+    ///
+    /// This method first accesses and clones the `private` field from the instance (`self.private`).
+    /// It then invokes the `main` function, passing a reference to this cloned private data.
+    /// The `Result` returned by the `main` function is directly propagated and returned by this method.
+    ///
+    /// # Returns
+    /// A `Result<()>` which represents the outcome of the `main` function's execution.
+    /// Returns `Ok(())` on successful completion of the `main` function, or an `Err`
+    /// containing details if the operation within `main` fails.
+    fn execute(&mut self) -> Result<()> {
+        let private = self.private.clone();
+        let result = main(&private);
+
+        result
+    }
+
     /// Spawns a new thread to execute the main application logic.
     ///
     /// This method initializes a new background thread to perform the core operations.
@@ -115,7 +132,7 @@ impl Task for GarbageCollector {
     /// returns a `JoinHandle` directly and does not typically fail to *spawn* the thread
     /// in a way that returns a `Result`. The `Result<()>` return type might be present
     /// for future error handling or to satisfy a trait's signature.
-    fn execute(&mut self) -> Result<()> {
+    fn execute_in_background(&mut self) -> Result<()> {
         let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
             let result = main(&private);
@@ -124,6 +141,37 @@ impl Task for GarbageCollector {
         }));
 
         Ok(())
+    }
+
+    /// Waits for the previously spawned task or thread to complete and returns its result.
+    ///
+    /// This method takes ownership of the `join_handle` from the instance. If no
+    /// handle is present (meaning no task was spawned or it was already joined),
+    /// an error indicating an unsupported operation is returned. If the joined task
+    /// panics, an error indicating a panic is returned.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED)`: If there is no
+    ///   `join_handle` available to join (e.g., the task was not spawned, or it was
+    ///   already joined and the handle consumed).
+    /// * `Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED)`: If the underlying
+    ///   task or thread being joined panics during its execution.
+    ///
+    /// # Returns
+    ///
+    /// A `Result<()>` representing the outcome of the joined task. `Ok(())` on successful
+    /// completion, or an `Err` if the task itself returned an error.
+    fn join(&mut self) -> Result<()> {
+        let handle = self.join_handle.take();
+        let Some(handle) = handle else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
+        };
+        let Ok(result) = handle.join() else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
+        };
+
+        result
     }
 }
 
@@ -142,32 +190,6 @@ impl GarbageCollector {
             join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
         }
-    }
-
-    /// Waits for the spawned thread to complete and returns its result.
-    ///
-    /// This method consumes the `join_handle` associated with the thread.
-    /// It should only be called once after `execute` has been called.
-    ///
-    /// # Errors
-    ///
-    /// *   `Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED))` if `join` is called
-    ///     without a thread having been spawned (i.e., `join_handle` is `None`). This can happen
-    ///     if `execute` was not called or if `join` was called multiple times.
-    /// *   `Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED))` if the spawned thread
-    ///     panicked during execution.
-    /// *   `Err` (propagated from the thread's execution) if the `main` function executed
-    ///     within the thread returned an `Err`.
-    pub fn join(&mut self) -> Result<()> {
-        let handle = self.join_handle.take();
-        let Some(handle) = handle else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
-        };
-        let Ok(result) = handle.join() else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
-        };
-
-        result
     }
 
     /// Sets the destination path where processed files or data will be stored.
@@ -474,6 +496,5 @@ mod tests {
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&ntm_path.to_string_easy());
         collector.execute().unwrap();
-        collector.join().unwrap();
     }
 }

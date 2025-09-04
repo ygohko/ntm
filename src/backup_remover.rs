@@ -83,6 +83,31 @@ impl Task for BackupRemover {
     /// - `Ok(())` if the thread was successfully spawned.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
+        let result = main(&private);
+
+        result
+    }
+
+    /// Spawns a new thread to execute a background task.
+    ///
+    /// This method clones the internal `private` state and moves it into a new
+    /// thread. The `main` function is then called within this new thread using
+    /// the cloned `private` state.
+    ///
+    /// A `JoinHandle` for the newly created thread is stored in `self.join_handle`,
+    /// allowing the caller to later wait for the completion of the background
+    /// task using the `join` method.
+    ///
+    /// This method returns `Ok(())` immediately after successfully spawning the
+    /// thread, without waiting for the background task to complete. Any errors
+    /// occurring within the background task itself will be captured by the
+    /// `JoinHandle` and can be retrieved when `join` is called.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the thread was successfully spawned.
+    fn execute_in_background(&mut self) -> Result<()> {
+        let private = self.private.clone();
         self.join_handle = Some(thread::spawn(move || {
             let result = main(&private);
 
@@ -90,6 +115,27 @@ impl Task for BackupRemover {
         }));
 
         Ok(())
+    }
+
+    /// Spawns a new thread to execute the background task.
+    ///
+    /// This method clones the `private` state of the current object and moves it into a new thread.
+    /// The `main` function is then called within this new thread, using the cloned `private` state.
+    /// The `JoinHandle` for this thread is stored internally, allowing the task's completion
+    /// and result to be awaited using the `join` method.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the background thread is successfully spawned.
+    fn join(&mut self) -> Result<()> {
+        let handle = self.join_handle.take();
+        let Some(handle) = handle else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
+        };
+        let Ok(result) = handle.join() else {
+            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
+        };
+
+        result
     }
 }
 
@@ -105,33 +151,6 @@ impl BackupRemover {
             join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
         }
-    }
-
-    /// Joins the underlying thread, waiting for it to complete.
-    ///
-    /// This method attempts to take and consume the internal `JoinHandle`,
-    /// meaning it can only be called once successfully for a given instance.
-    /// It blocks the current thread until the associated task/thread has finished execution.
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(())` if the task completed successfully without panicking.
-    /// - `Err(Error)` if:
-    ///   - No `JoinHandle` is available within the `self` instance (e.g., the task has already been joined,
-    ///     not started, or the method was called without a valid handle).
-    ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_NOT_SUPPORTED` is returned.
-    ///   - The joined task/thread panicked during its execution.
-    ///     In this case, an error with `task::ERROR_ID` and `task::ERROR_CODE_PANICED` is returned.
-    pub fn join(&mut self) -> Result<()> {
-        let handle = self.join_handle.take();
-        let Some(handle) = handle else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
-        };
-        let Ok(result) = handle.join() else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
-        };
-
-        result
     }
 
     /// Sets the destination path for the operation managed by this instance.
@@ -289,6 +308,5 @@ mod tests {
         let mut remover = BackupRemover::new();
         remover.set_destination_path(&ntm_path.to_string_easy());
         remover.execute().unwrap();
-        remover.join().unwrap();
     }
 }
