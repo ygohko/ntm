@@ -192,34 +192,6 @@ impl GarbageCollector {
         }
     }
 
-    /// Waits for the spawned thread to complete and returns its result.
-    ///
-    /// This method consumes the `join_handle` associated with the thread.
-    /// It should only be called once after `execute` has been called.
-    ///
-    /// # Errors
-    ///
-    /// *   `Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED))` if `join` is called
-    ///     without a thread having been spawned (i.e., `join_handle` is `None`). This can happen
-    ///     if `execute` was not called or if `join` was called multiple times.
-    /// *   `Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICED))` if the spawned thread
-    ///     panicked during execution.
-    /// *   `Err` (propagated from the thread's execution) if the `main` function executed
-    ///     within the thread returned an `Err`.
-    /*
-    pub fn join(&mut self) -> Result<()> {
-        let handle = self.join_handle.take();
-        let Some(handle) = handle else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
-        };
-        let Ok(result) = handle.join() else {
-            return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED));
-        };
-
-        result
-    }
-    */
-
     /// Sets the destination path where processed files or data will be stored.
     ///
     /// This operation acquires a write lock on the internal state to update the path.

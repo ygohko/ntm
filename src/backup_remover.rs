@@ -114,7 +114,7 @@ impl Task for BackupRemover {
             result
         }));
 
-        Ok(())        
+        Ok(())
     }
 
     /// Spawns a new thread to execute the background task.
