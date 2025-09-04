@@ -96,13 +96,22 @@ pub struct GarbageCollector {
 }
 
 impl Task for GarbageCollector {
+    /// Executes the main operational logic by leveraging the instance's private data.
+    ///
+    /// This method first accesses and clones the `private` field from the instance (`self.private`).
+    /// It then invokes the `main` function, passing a reference to this cloned private data.
+    /// The `Result` returned by the `main` function is directly propagated and returned by this method.
+    ///
+    /// # Returns
+    /// A `Result<()>` which represents the outcome of the `main` function's execution.
+    /// Returns `Ok(())` on successful completion of the `main` function, or an `Err`
+    /// containing details if the operation within `main` fails.
     fn execute(&mut self) -> Result<()> {
         let private = self.private.clone();
         let result = main(&private);
 
         result
     }
-
 
     /// Spawns a new thread to execute the main application logic.
     ///
@@ -134,6 +143,25 @@ impl Task for GarbageCollector {
         Ok(())
     }
 
+    /// Waits for the previously spawned task or thread to complete and returns its result.
+    ///
+    /// This method takes ownership of the `join_handle` from the instance. If no
+    /// handle is present (meaning no task was spawned or it was already joined),
+    /// an error indicating an unsupported operation is returned. If the joined task
+    /// panics, an error indicating a panic is returned.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED)`: If there is no
+    ///   `join_handle` available to join (e.g., the task was not spawned, or it was
+    ///   already joined and the handle consumed).
+    /// * `Error::new(task::ERROR_ID, task::ERROR_CODE_PANICKED)`: If the underlying
+    ///   task or thread being joined panics during its execution.
+    ///
+    /// # Returns
+    ///
+    /// A `Result<()>` representing the outcome of the joined task. `Ok(())` on successful
+    /// completion, or an `Err` if the task itself returned an error.
     fn join(&mut self) -> Result<()> {
         let handle = self.join_handle.take();
         let Some(handle) = handle else {
