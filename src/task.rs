@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
@@ -58,7 +59,9 @@ pub trait Task {
     ///   background operation. This could be due to issues like failing to spawn a thread,
     ///   the task executor being full, or other resource contention preventing the
     ///   initiation.
-    fn execute_in_background(&mut self) -> Result<()>;
+    fn execute_in_background(&mut self) -> Result<()> {
+        Err(Error::new(ERROR_ID, ERROR_CODE_NOT_SUPPORTED))
+    }
 
     /// Waits for the previously initiated background operation to complete.
     ///
@@ -75,5 +78,7 @@ pub trait Task {
     ///   and this error is propagated to the join caller.
     /// - An error occurred while waiting for the background operation to complete
     ///   (e.g., an interruption or an internal communication error).
-    fn join(&mut self) -> Result<()>;
+    fn join(&mut self) -> Result<()> {
+        Err(Error::new(ERROR_ID, ERROR_CODE_NOT_SUPPORTED))
+    }
 }
