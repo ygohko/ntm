@@ -110,6 +110,7 @@ enum CommandKind {
 }
 
 #[derive(Parser)]
+#[command(version)]
 struct Arguments {
     /// Command you want to do
     #[command(subcommand)]
