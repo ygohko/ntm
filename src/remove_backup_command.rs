@@ -71,6 +71,8 @@ impl Task for RemoveBackupCommand {
         let Ok(re) = Regex::new(&pattern) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_REGULAR_EXPRESSION));
         };
+        let mut processed_count = 0;
+        let mut marked_count = 0;
         for name in names {
             if re.is_match(&name) {
                 let mut from_path = Utf8PathBuf::from(&self.destination_path);
@@ -81,9 +83,10 @@ impl Task for RemoveBackupCommand {
                 let mut removed_name = name.clone();
                 removed_name.push_str(".removed");
                 to_path.push(&removed_name);
+                println!("Marking ({}): {}", processed_count, name);
                 match fs::rename(&from_path, &to_path) {
                     Ok(()) => {
-                        println!("Marked as removed: {}", name);
+                        marked_count += 1;
                     },
                     Err(error) => {
                         println!(
@@ -92,7 +95,11 @@ impl Task for RemoveBackupCommand {
                         );
                     },
                 };
+
+                processed_count += 1;
             }
+
+            println!("{} backup(s) marked as removed.", marked_count);
         }
 
         Ok(())
