@@ -73,21 +73,24 @@ impl Task for RemoveBackupCommand {
         };
         for name in names {
             if re.is_match(&name) {
-                println!("Pattern matched. name: {}", name);
                 let mut from_path = Utf8PathBuf::from(&self.destination_path);
                 from_path.push("Backups");
                 from_path.push(&name);
-
                 let mut to_path = Utf8PathBuf::from(&self.destination_path);
                 to_path.push("Backups");
                 let mut removed_name = name.clone();
                 removed_name.push_str(".removed");
                 to_path.push(&removed_name);
-                if let Err(error) = fs::rename(&from_path, &to_path) {
-                    println!(
-                        "Error: Could not mark to removed {}. error: {}",
-                        from_path, error
-                    );
+                match fs::rename(&from_path, &to_path) {
+                    Ok(()) => {
+                        println!("Marked as removed: {}", name);
+                    },
+                    Err(error) => {
+                        println!(
+                            "Error: Could not mark to removed {}. error: {}",
+                            from_path, error
+                        );
+                    },
                 };
             }
         }
