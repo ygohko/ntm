@@ -98,9 +98,8 @@ impl Task for RemoveBackupCommand {
 
                 processed_count += 1;
             }
-
-            println!("{} backup(s) marked as removed.", marked_count);
         }
+        println!("{} backup(s) marked as removed.", marked_count);
 
         Ok(())
     }
