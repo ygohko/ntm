@@ -59,10 +59,19 @@ struct InitArguments {
     destination: Option<String>,
 }
 
+#[derive(Parser, PartialEq)]
+struct BackupExecuteArguments {
+    /// Backup destination that is used for backup
+    #[arg(short, long)]
+    destination: Option<String>,
+}
+
 #[derive(Subcommand, PartialEq)]
 enum BackupCommandKind {
     /// Execute backup
-    Execute,
+    Execute(BackupExecuteArguments),
+    /// Remove specified backups
+    Remove,
 }
 
 #[derive(Parser, PartialEq)]
@@ -70,9 +79,6 @@ struct BackupArguments {
     /// Sub command for backup command
     #[command(subcommand)]
     command: Option<BackupCommandKind>,
-    /// Backup destination that is used for backup
-    #[arg(short, long)]
-    destination: Option<String>,
 }
 
 #[derive(Parser, PartialEq)]
@@ -149,19 +155,18 @@ fn main() -> ExitCode {
             }
         };
     } else if let CommandKind::Backup(arguments) = command {
-        if arguments.command.unwrap() == BackupCommandKind::Execute {
-            let mut command = BackupCommand::new();
-            if let Some(destination) = arguments.destination {
-                command.set_destination_path(&destination);
-            }
-            match command.execute() {
-                Ok(_) => (),
-                Err(error) => {
+        if let Some(command) = arguments.command {
+            if let BackupCommandKind::Execute(arguments) = command {
+                let mut command = BackupCommand::new();
+                if let Some(destination) = arguments.destination {
+                    command.set_destination_path(&destination);
+                }
+                if let Err(error) = command.execute() {
                     println!("Error caused.\n\n{}", error);
 
                     return ExitCode::FAILURE;
                 }
-            };
+            }
         }
     } else if let CommandKind::RemoveBackup(arguments) = command {
         let pattern = arguments.pattern;
