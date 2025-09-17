@@ -149,18 +149,20 @@ fn main() -> ExitCode {
             }
         };
     } else if let CommandKind::Backup(arguments) = command {
-        let mut command = BackupCommand::new();
-        if let Some(destination) = arguments.destination {
-            command.set_destination_path(&destination);
-        }
-        match command.execute() {
-            Ok(_) => (),
-            Err(error) => {
-                println!("Error caused.\n\n{}", error);
-
-                return ExitCode::FAILURE;
+        if arguments.command.unwrap() == BackupCommandKind::Execute {
+            let mut command = BackupCommand::new();
+            if let Some(destination) = arguments.destination {
+                command.set_destination_path(&destination);
             }
-        };
+            match command.execute() {
+                Ok(_) => (),
+                Err(error) => {
+                    println!("Error caused.\n\n{}", error);
+
+                    return ExitCode::FAILURE;
+                }
+            };
+        }
     } else if let CommandKind::RemoveBackup(arguments) = command {
         let pattern = arguments.pattern;
         let mut command = RemoveBackupCommand::new(&pattern);
