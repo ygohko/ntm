@@ -59,8 +59,16 @@ struct InitArguments {
     destination: Option<String>,
 }
 
+#[derive(Subcommand, PartialEq)]
+enum BackupCommandKind {
+    /// Execute backup
+    Execute,
+}
+
 #[derive(Parser, PartialEq)]
 struct BackupArguments {
+    /// Sub command for backup command
+    command: Option<BackupCommandKind>,
     /// Backup destination that is used for backup
     #[arg(short, long)]
     destination: Option<String>,
