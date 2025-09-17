@@ -68,6 +68,7 @@ enum BackupCommandKind {
 #[derive(Parser, PartialEq)]
 struct BackupArguments {
     /// Sub command for backup command
+    #[command(subcommand)]
     command: Option<BackupCommandKind>,
     /// Backup destination that is used for backup
     #[arg(short, long)]
