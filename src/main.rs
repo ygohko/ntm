@@ -23,6 +23,7 @@
 mod attributes;
 mod background_executer;
 mod backup_execute_command;
+mod backup_remove_command;
 mod backup_remover;
 mod backup_store;
 mod clean_command;
@@ -37,7 +38,6 @@ mod get_command;
 mod init_command;
 mod object_adder;
 mod object_store;
-mod remove_backup_command;
 mod task;
 
 use clap::Parser;
@@ -46,10 +46,10 @@ use std::process::ExitCode;
 use std::time::SystemTime;
 
 use crate::backup_execute_command::BackupExecuteCommand;
+use crate::backup_remove_command::BackupRemoveCommand;
 use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
-use crate::remove_backup_command::BackupRemoveCommand;
 use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
@@ -177,17 +177,6 @@ fn main() -> ExitCode {
                 }
             }
         }
-    /* } else if let CommandKind::RemoveBackup(arguments) = command {
-        let pattern = arguments.pattern;
-        let mut command = RemoveBackupCommand::new(&pattern);
-        if let Some(destination) = arguments.destination {
-            command.set_destination_path(&destination);
-        }
-        if let Err(error) = command.execute() {
-            println!("Error caused.\n\n{}", error);
-
-            return ExitCode::FAILURE;
-        } */
     } else if let CommandKind::Get(arguments) = command {
         let backup = arguments.backup;
         let mut command = GetCommand::new(&backup);
