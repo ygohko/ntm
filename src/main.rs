@@ -22,7 +22,7 @@
 
 mod attributes;
 mod background_executer;
-mod backup_command;
+mod backup_execute_command;
 mod backup_remover;
 mod backup_store;
 mod clean_command;
@@ -45,7 +45,7 @@ use clap::Subcommand;
 use std::process::ExitCode;
 use std::time::SystemTime;
 
-use crate::backup_command::BackupExecuteCommand;
+use crate::backup_execute_command::BackupExecuteCommand;
 use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
