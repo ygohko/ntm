@@ -32,19 +32,19 @@ use crate::error::Result;
 use crate::task::Task;
 
 #[allow(dead_code)]
-pub const ERROR_ID: ErrorId = "remove_backup_command";
+pub const ERROR_ID: ErrorId = "backup_remove_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_INVALID_REGULAR_EXPRESSION: ErrorCode = 1;
 
 /// A command to remove backups specified by pattern.
-pub struct RemoveBackupCommand {
+pub struct BackupRemoveCommand {
     pattern: String,
     destination_path: String,
 }
 
-impl Task for RemoveBackupCommand {
+impl Task for BackupRemoveCommand {
     /// Marks backup files for removal by renaming them to append a ".removed" suffix,
     /// based on a user-defined pattern.
     ///
@@ -105,7 +105,7 @@ impl Task for RemoveBackupCommand {
     }
 }
 
-impl RemoveBackupCommand {
+impl BackupRemoveCommand {
     /// Creates a new instance of the struct with the given pattern.
     ///
     /// Initializes the `pattern` field by converting the input string slice into an owned `String`.

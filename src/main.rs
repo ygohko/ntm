@@ -49,7 +49,7 @@ use crate::backup_execute_command::BackupExecuteCommand;
 use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
-use crate::remove_backup_command::RemoveBackupCommand;
+use crate::remove_backup_command::BackupRemoveCommand;
 use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
@@ -166,7 +166,7 @@ fn main() -> ExitCode {
                 }
             } else if let BackupCommandKind::Remove(arguments) = command {
                 let pattern = arguments.pattern;
-                let mut command = RemoveBackupCommand::new(&pattern);
+                let mut command = BackupRemoveCommand::new(&pattern);
                 if let Some(destination) = arguments.destination {
                     command.set_destination_path(&destination);
                 }

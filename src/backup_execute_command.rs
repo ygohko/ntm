@@ -54,7 +54,7 @@ use crate::object_adder::ObjectAdder;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
 
-pub const ERROR_ID: ErrorId = "backup_command";
+pub const ERROR_ID: ErrorId = "backup_execute_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
