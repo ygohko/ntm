@@ -451,7 +451,7 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::backup_command::BackupCommand;
+    use crate::backup_execute_command::BackupExecuteCommand;
     use crate::commons::OperatePath;
     use crate::garbage_collector::GarbageCollector;
     use crate::init_command::InitCommand;
@@ -485,7 +485,7 @@ mod tests {
         let config = format!("source_path = \"{}\"", source_path.display());
         fs::write(config_path, config).unwrap();
 
-        let mut command = BackupCommand::new();
+        let mut command = BackupExecuteCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
 

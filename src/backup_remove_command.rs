@@ -144,15 +144,15 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::backup_command::BackupCommand;
+    use crate::backup_execute_command::BackupExecuteCommand;
+    use crate::backup_remove_command::BackupRemoveCommand;
     use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
-    use crate::remove_backup_command::RemoveBackupCommand;
     use crate::task::Task;
 
     #[test]
     fn is_creatable() {
-        let _command = RemoveBackupCommand::new("*");
+        let _command = BackupRemoveCommand::new("*");
     }
 
     #[test]
@@ -178,11 +178,11 @@ mod tests {
         let config = format!("source_path = \"{}\"", source_path.display());
         fs::write(config_path, config).unwrap();
 
-        let mut command = BackupCommand::new();
+        let mut command = BackupExecuteCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
 
-        let mut command = RemoveBackupCommand::new("*");
+        let mut command = BackupRemoveCommand::new("*");
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
     }
