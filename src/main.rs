@@ -66,12 +66,21 @@ struct BackupExecuteArguments {
     destination: Option<String>,
 }
 
+#[derive(Parser, PartialEq)]
+struct BackupRemoveArguments {
+    /// Pattern to specify removing backups
+    pattern: String,
+    /// Backup destination that is used for backup
+    #[arg(short, long)]
+    destination: Option<String>,
+}
+
 #[derive(Subcommand, PartialEq)]
 enum BackupCommandKind {
     /// Execute backup
     Execute(BackupExecuteArguments),
-    /// Remove specified backups
-    Remove,
+    /// Remove backups specified by given pattern
+    Remove(BackupRemoveArguments),
 }
 
 #[derive(Parser, PartialEq)]
@@ -79,15 +88,6 @@ struct BackupArguments {
     /// Sub command for backup command
     #[command(subcommand)]
     command: Option<BackupCommandKind>,
-}
-
-#[derive(Parser, PartialEq)]
-struct RemoveBackupArguments {
-    /// Pattern to specify removing backups
-    pattern: String,
-    /// Backup destination that is used for backup
-    #[arg(short, long)]
-    destination: Option<String>,
 }
 
 #[derive(Parser, PartialEq)]
@@ -116,8 +116,6 @@ enum CommandKind {
     Init(InitArguments),
     /// Backup directories and files into this directory's backup destination
     Backup(BackupArguments),
-    /// Remove backups specified by given pattern
-    RemoveBackup(RemoveBackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
     /// Execute cleaning for this backup destination
@@ -166,9 +164,20 @@ fn main() -> ExitCode {
 
                     return ExitCode::FAILURE;
                 }
+            } else if let BackupCommandKind::Remove(arguments) = command {
+                let pattern = arguments.pattern;
+                let mut command = RemoveBackupCommand::new(&pattern);
+                if let Some(destination) = arguments.destination {
+                    command.set_destination_path(&destination);
+                }
+                if let Err(error) = command.execute() {
+                    println!("Error caused.\n\n{}", error);
+
+                    return ExitCode::FAILURE;
+                }
             }
         }
-    } else if let CommandKind::RemoveBackup(arguments) = command {
+    /* } else if let CommandKind::RemoveBackup(arguments) = command {
         let pattern = arguments.pattern;
         let mut command = RemoveBackupCommand::new(&pattern);
         if let Some(destination) = arguments.destination {
@@ -178,7 +187,7 @@ fn main() -> ExitCode {
             println!("Error caused.\n\n{}", error);
 
             return ExitCode::FAILURE;
-        }
+        } */
     } else if let CommandKind::Get(arguments) = command {
         let backup = arguments.backup;
         let mut command = GetCommand::new(&backup);
