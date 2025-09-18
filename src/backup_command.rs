@@ -62,7 +62,7 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 
 /// A command to backup files and directories.
-pub struct BackupCommand {
+pub struct BackupExecuteCommand {
     name: String,
     executer: BackgroundExecuter,
     executing: DateTime<Local>,
@@ -73,7 +73,7 @@ pub struct BackupCommand {
     count: i32,
 }
 
-impl Task for BackupCommand {
+impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
@@ -156,12 +156,12 @@ impl Task for BackupCommand {
     }
 }
 
-impl BackupCommand {
-    /// Creates a new `BackupCommand` instance.
+impl BackupExecuteCommand {
+    /// Creates a new `BackupExecuteCommand` instance.
     ///
     /// # Returns
     ///
-    /// A new `BackupCommand` instance.
+    /// A new `BackupExecuteCommand` instance.
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
@@ -185,11 +185,11 @@ impl BackupCommand {
     }
 
     #[allow(dead_code)]
-    /// Returns the name of the backup command.
+    /// Returns the name of the backup.
     ///
     /// # Returns
     ///
-    /// A `String` representing the name of the backup command.
+    /// A `String` representing the name of the backup.
     pub fn name(&self) -> String {
         self.name.clone()
     }

@@ -45,7 +45,7 @@ use clap::Subcommand;
 use std::process::ExitCode;
 use std::time::SystemTime;
 
-use crate::backup_command::BackupCommand;
+use crate::backup_command::BackupExecuteCommand;
 use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
@@ -155,7 +155,7 @@ fn main() -> ExitCode {
     } else if let CommandKind::Backup(arguments) = command {
         if let Some(command) = arguments.command {
             if let BackupCommandKind::Execute(arguments) = command {
-                let mut command = BackupCommand::new();
+                let mut command = BackupExecuteCommand::new();
                 if let Some(destination) = arguments.destination {
                     command.set_destination_path(&destination);
                 }
