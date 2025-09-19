@@ -54,7 +54,7 @@ use crate::object_adder::ObjectAdder;
 use crate::object_store::ObjectStore;
 use crate::task::Task;
 
-pub const ERROR_ID: ErrorId = "backup_command";
+pub const ERROR_ID: ErrorId = "backup_execute_command";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
@@ -62,7 +62,7 @@ pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 
 /// A command to backup files and directories.
-pub struct BackupCommand {
+pub struct BackupExecuteCommand {
     name: String,
     executer: BackgroundExecuter,
     executing: DateTime<Local>,
@@ -73,7 +73,7 @@ pub struct BackupCommand {
     count: i32,
 }
 
-impl Task for BackupCommand {
+impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
@@ -156,12 +156,12 @@ impl Task for BackupCommand {
     }
 }
 
-impl BackupCommand {
-    /// Creates a new `BackupCommand` instance.
+impl BackupExecuteCommand {
+    /// Creates a new `BackupExecuteCommand` instance.
     ///
     /// # Returns
     ///
-    /// A new `BackupCommand` instance.
+    /// A new `BackupExecuteCommand` instance.
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
@@ -185,11 +185,11 @@ impl BackupCommand {
     }
 
     #[allow(dead_code)]
-    /// Returns the name of the backup command.
+    /// Returns the name of the backup.
     ///
     /// # Returns
     ///
-    /// A `String` representing the name of the backup command.
+    /// A `String` representing the name of the backup.
     pub fn name(&self) -> String {
         self.name.clone()
     }
@@ -366,14 +366,14 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::backup_command::BackupCommand;
+    use crate::backup_execute_command::BackupExecuteCommand;
     use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
     use crate::task::Task;
 
     #[test]
     fn is_creatable() {
-        let _command = BackupCommand::new();
+        let _command = BackupExecuteCommand::new();
     }
 
     #[test]
@@ -399,7 +399,7 @@ mod tests {
         let config = format!("source_path = \"{}\"", source_path.display());
         fs::write(config_path, config).unwrap();
 
-        let mut command = BackupCommand::new();
+        let mut command = BackupExecuteCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
         command.execute().unwrap();
     }

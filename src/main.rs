@@ -22,7 +22,8 @@
 
 mod attributes;
 mod background_executer;
-mod backup_command;
+mod backup_execute_command;
+mod backup_remove_command;
 mod backup_remover;
 mod backup_store;
 mod clean_command;
@@ -37,7 +38,6 @@ mod get_command;
 mod init_command;
 mod object_adder;
 mod object_store;
-mod remove_backup_command;
 mod task;
 
 use clap::Parser;
@@ -45,11 +45,11 @@ use clap::Subcommand;
 use std::process::ExitCode;
 use std::time::SystemTime;
 
-use crate::backup_command::BackupCommand;
+use crate::backup_execute_command::BackupExecuteCommand;
+use crate::backup_remove_command::BackupRemoveCommand;
 use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
-use crate::remove_backup_command::RemoveBackupCommand;
 use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
@@ -60,19 +60,34 @@ struct InitArguments {
 }
 
 #[derive(Parser, PartialEq)]
-struct BackupArguments {
+struct BackupExecuteArguments {
     /// Backup destination that is used for backup
     #[arg(short, long)]
     destination: Option<String>,
 }
 
 #[derive(Parser, PartialEq)]
-struct RemoveBackupArguments {
+struct BackupRemoveArguments {
     /// Pattern to specify removing backups
     pattern: String,
     /// Backup destination that is used for backup
     #[arg(short, long)]
     destination: Option<String>,
+}
+
+#[derive(Subcommand, PartialEq)]
+enum BackupCommandKind {
+    /// Execute backup
+    Execute(BackupExecuteArguments),
+    /// Remove backups specified by given pattern
+    Remove(BackupRemoveArguments),
+}
+
+#[derive(Parser, PartialEq)]
+struct BackupArguments {
+    /// Sub command for backup command
+    #[command(subcommand)]
+    command: Option<BackupCommandKind>,
 }
 
 #[derive(Parser, PartialEq)]
@@ -101,8 +116,6 @@ enum CommandKind {
     Init(InitArguments),
     /// Backup directories and files into this directory's backup destination
     Backup(BackupArguments),
-    /// Remove backups specified by given pattern
-    RemoveBackup(RemoveBackupArguments),
     /// Get backuped directories and files that is specified
     Get(GetArguments),
     /// Execute cleaning for this backup destination
@@ -140,28 +153,29 @@ fn main() -> ExitCode {
             }
         };
     } else if let CommandKind::Backup(arguments) = command {
-        let mut command = BackupCommand::new();
-        if let Some(destination) = arguments.destination {
-            command.set_destination_path(&destination);
-        }
-        match command.execute() {
-            Ok(_) => (),
-            Err(error) => {
-                println!("Error caused.\n\n{}", error);
+        if let Some(command) = arguments.command {
+            if let BackupCommandKind::Execute(arguments) = command {
+                let mut command = BackupExecuteCommand::new();
+                if let Some(destination) = arguments.destination {
+                    command.set_destination_path(&destination);
+                }
+                if let Err(error) = command.execute() {
+                    println!("Error caused.\n\n{}", error);
 
-                return ExitCode::FAILURE;
+                    return ExitCode::FAILURE;
+                }
+            } else if let BackupCommandKind::Remove(arguments) = command {
+                let pattern = arguments.pattern;
+                let mut command = BackupRemoveCommand::new(&pattern);
+                if let Some(destination) = arguments.destination {
+                    command.set_destination_path(&destination);
+                }
+                if let Err(error) = command.execute() {
+                    println!("Error caused.\n\n{}", error);
+
+                    return ExitCode::FAILURE;
+                }
             }
-        };
-    } else if let CommandKind::RemoveBackup(arguments) = command {
-        let pattern = arguments.pattern;
-        let mut command = RemoveBackupCommand::new(&pattern);
-        if let Some(destination) = arguments.destination {
-            command.set_destination_path(&destination);
-        }
-        if let Err(error) = command.execute() {
-            println!("Error caused.\n\n{}", error);
-
-            return ExitCode::FAILURE;
         }
     } else if let CommandKind::Get(arguments) = command {
         let backup = arguments.backup;
