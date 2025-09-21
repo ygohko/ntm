@@ -22,13 +22,15 @@
 
 use camino::Utf8PathBuf;
 use std::fs;
+#[cfg(not(target_os = "windows"))]
 use std::fs::File;
-use std::ops::Add;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs as unix_fs;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(not(target_os = "windows"))]
 use std::time::Duration;
+#[cfg(not(target_os = "windows"))]
 use std::time::SystemTime;
 
 use crate::commons::OperatePath;
@@ -250,16 +252,6 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
 
 #[cfg(target_os = "windows")]
 fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
-    };
-    let mut modified = SystemTime::UNIX_EPOCH;
-    modified = modified.add(Duration::from_secs(entry.last_modified));
-    if let Err(_) = file.set_modified(modified) {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
-    }
-
     if entry.permission != 0 {
         let metadata = match fs::metadata(path) {
             Ok(metadata) => metadata,
