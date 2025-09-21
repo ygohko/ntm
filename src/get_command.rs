@@ -25,6 +25,8 @@ use std::fs;
 #[cfg(not(target_os = "windows"))]
 use std::fs::File;
 #[cfg(not(target_os = "windows"))]
+use std::ops::Add;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::fs as unix_fs;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
