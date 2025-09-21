@@ -78,8 +78,10 @@ struct BackupRemoveArguments {
 #[derive(Subcommand, PartialEq)]
 enum BackupCommandKind {
     /// Execute backup
+    #[clap(alias = "e")]
     Execute(BackupExecuteArguments),
     /// Remove backups specified by given pattern
+    #[clap(alias = "r")]
     Remove(BackupRemoveArguments),
 }
 
