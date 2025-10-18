@@ -445,11 +445,6 @@ impl ObjectStore {
                 return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
             };
             let index = (index1 * 0x100 + index2) as usize;
-            let count = self.existing_ids[index].len();
-            if count >= 16 {
-                let removing = count - 15;
-                self.existing_ids[index] = self.existing_ids[index].drain(removing..).collect();
-            }
             self.existing_ids[index].push(id);
         }
 
@@ -467,8 +462,13 @@ impl ObjectStore {
         };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
             let ids = &self.existing_ids[i];
-            for id in ids {
-                cache.existing_ids.push(id.clone());
+            let mut begin = 0;
+            let count = ids.len();
+            if count > 16 {
+                begin = count - 16;
+            }
+            for i in begin..count {
+                cache.existing_ids.push(ids[i].clone());
             }
         }
         let Ok(serialized) = serde_json::to_string(&cache) else {
