@@ -64,6 +64,7 @@ pub struct ObjectStore {
     path: String,
     adding_file: Option<File>,
     existing_ids: Vec<Vec<String>>,
+    cached_count: i64,
 }
 
 impl ObjectStore {
@@ -86,6 +87,7 @@ impl ObjectStore {
             path: path.to_string(),
             adding_file: None,
             existing_ids: existing_ids,
+            cached_count: 0,
         }
     }
 
@@ -273,6 +275,8 @@ impl ObjectStore {
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
         if ids.iter().position(|id1| id1 == id).is_some() {
+            self.cached_count += 1;
+
             return Ok(true);
         }
 
@@ -479,6 +483,15 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    /// Retrieves cached cound.
+    ///
+    /// # Returns
+    ///
+    /// Cound that indicates how many object cache hit.
+    pub fn cached_count(&self) -> i64 {
+        self.cached_count
     }
 }
 

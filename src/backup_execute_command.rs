@@ -151,6 +151,9 @@ impl Task for BackupExecuteCommand {
             "{} object(s) added.",
             self.added_count.load(Ordering::Relaxed)
         );
+        if let Ok(store1) = store.read() {
+            println!("{} cached objects hit.", store1.cached_count());
+        }
 
         Ok(())
     }
