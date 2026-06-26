@@ -389,11 +389,14 @@ fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
     let attributes: Attributes;
     {
         let private = private.read().unwrap();
-        let object_store = private.object_store.as_ref().unwrap();
-        if object_store.cached(&object_id)? {
-            return Ok(());
+        if let Some(ref object_store) = &private.object_store {
+            if object_store.cached(&object_id)? {
+                return Ok(());
+            }
+            attributes = object_store.attributes(&object_id)?;
+        } else {
+            panic!();
         }
-        attributes = object_store.attributes(&object_id)?;
     }
 
     for backup_path in &backup_paths {

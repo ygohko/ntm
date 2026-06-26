@@ -107,6 +107,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
+        /*
         let Ok(index1) = u32::from_str_radix(path1, 16) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
@@ -118,6 +119,19 @@ impl ObjectStore {
         if ids.iter().position(|id1| id1 == id).is_some() {
             return Ok(());
         }
+        */
+
+        if self.get_cached(id)? {
+            return Ok(());
+        }
+        let Ok(index1) = u32::from_str_radix(path1, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let Ok(index2) = u32::from_str_radix(path2, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let index = (index1 * 0x100 + index2) as usize;
+        let ids = &mut self.existing_ids[index];
         ids.push(id.to_string());
 
         let mut path = Utf8PathBuf::from(&self.path);
@@ -318,11 +332,45 @@ impl ObjectStore {
         };
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &self.existing_ids[index];
-        if ids.iter().position(|id1| id1 == id).is_some() {
-            return Ok(true);
-        }
+        if ids.iter().position(|id1| id1 == id).is_none() {
+            return Ok(false);
+        };
 
-        Ok(false)
+        Ok(true)
+    }
+
+    /// Checks if an object with the given `id` is currently cached or known to exist within this instance's
+    /// internal registry.
+    ///
+    /// This method updates cache to extend lifetime of the found ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object to check.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `true` if the object cached, `false` otherwise, or an `Error` if the operation fails.
+    pub fn get_cached(&mut self, id: &str) -> Result<bool> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let Ok(index1) = u32::from_str_radix(path1, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let Ok(index2) = u32::from_str_radix(path2, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let index = (index1 * 0x100 + index2) as usize;
+        let ids = &mut self.existing_ids[index];
+        let Some(index) = ids.iter().position(|id1| id1 == id) else {
+            return Ok(false);
+        };
+
+        // ADHOC: Update cache if object exists.
+        ids.remove(index);
+        ids.push(id.to_string());
+
+        Ok(true)
     }
 
     /// Begins the process of adding a new object to the store.
