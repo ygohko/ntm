@@ -505,6 +505,8 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn save_cache(&self) -> Result<()> {
+        const CACHE_SIZE: usize = 16;
+
         let mut cache = Cache {
             existing_ids: Vec::new(),
         };
@@ -512,8 +514,8 @@ impl ObjectStore {
             let ids = &self.existing_ids[i];
             let mut begin = 0;
             let count = ids.len();
-            if count > 16 {
-                begin = count - 16;
+            if count > CACHE_SIZE {
+                begin = count - CACHE_SIZE;
             }
             for i in begin..count {
                 cache.existing_ids.push(ids[i].clone());
