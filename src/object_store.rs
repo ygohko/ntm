@@ -505,7 +505,7 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn save_cache(&self) -> Result<()> {
-        const CACHE_SIZE: usize = 16;
+        const CACHE_SIZE: usize = 8;
 
         let mut cache = Cache {
             existing_ids: Vec::new(),
