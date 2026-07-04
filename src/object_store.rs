@@ -107,19 +107,6 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        /*
-        let Ok(index1) = u32::from_str_radix(path1, 16) else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
-        };
-        let Ok(index2) = u32::from_str_radix(path2, 16) else {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
-        };
-        let index = (index1 * 0x100 + index2) as usize;
-        let ids = &mut self.existing_ids[index];
-        if ids.iter().position(|id1| id1 == id).is_some() {
-            return Ok(());
-        }
-        */
 
         if self.get_cached(id)? {
             return Ok(());
