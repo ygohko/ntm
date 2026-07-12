@@ -94,7 +94,7 @@ impl Task for ObjectAdder {
             };
             let attribute = Attributes::new(&self.path, self.time_stamp);
             let mut needs_writing = true;
-            if let Err(error) = store.begin_adding(&self.id, &attribute) {
+            if let Err(error) = store.begin_adding(&self.id, &attribute, self.file_size) {
                 if error.id == object_store::ERROR_ID
                     && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
                 {
