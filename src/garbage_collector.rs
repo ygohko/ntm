@@ -274,10 +274,18 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
     }
 
     for i in 0..65536 {
+        let index1 = (i / 0x100) & 0xFF;
+        let index2 = i & 0xFF;
+        if let Err(error) = process_unit(private, index1, index2, true) {
+            println!("Warning: Processing unit failed. error: {}", error);
+        }
+    }
+    
+    for i in 0..65536 {
         let index = (i as i32) + offset;
         let index1 = (index / 0x100) & 0xFF;
         let index2 = index & 0xFF;
-        if let Err(error) = process_unit(private, index1, index2) {
+        if let Err(error) = process_unit(private, index1, index2, false) {
             println!("Warning: Processing unit failed. error: {}", error);
         }
 
@@ -309,13 +317,16 @@ fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
     Ok(())
 }
 
-fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32) -> Result<()> {
+fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32, large: bool) -> Result<()> {
     let destination_path: String;
     {
         let private = private.read().unwrap();
         destination_path = private.destination_path.clone();
     }
-    let directory1 = format!("{:02x}", index1);
+    let mut directory1 = format!("{:02x}", index1);
+    if large {
+        directory1 = "l".to_string() + &directory1;
+    }
     let directory2 = format!("{:02x}", index2);
     let mut object_path = Utf8PathBuf::from(&destination_path);
     object_path.push("Objects");
