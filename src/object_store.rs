@@ -353,7 +353,6 @@ impl ObjectStore {
             return Ok(false);
         };
 
-        // ADHOC: Update cache if object exists.
         ids.remove(index);
         ids.push(id.to_string());
 
