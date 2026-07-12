@@ -64,6 +64,7 @@ pub struct ObjectStore {
     path: String,
     adding_file: Option<File>,
     existing_ids: Vec<Vec<String>>,
+    cached_count: i64,
 }
 
 impl ObjectStore {
@@ -86,6 +87,7 @@ impl ObjectStore {
             path: path.to_string(),
             adding_file: None,
             existing_ids: existing_ids,
+            cached_count: 0,
         }
     }
 
@@ -105,6 +107,10 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
+
+        if self.get_cached(id)? {
+            return Ok(());
+        }
         let Ok(index1) = u32::from_str_radix(path1, 16) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
@@ -113,9 +119,6 @@ impl ObjectStore {
         };
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
-        if ids.iter().position(|id1| id1 == id).is_some() {
-            return Ok(());
-        }
         ids.push(id.to_string());
 
         let mut path = Utf8PathBuf::from(&self.path);
@@ -273,6 +276,8 @@ impl ObjectStore {
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
         if ids.iter().position(|id1| id1 == id).is_some() {
+            self.cached_count += 1;
+
             return Ok(true);
         }
 
@@ -314,11 +319,44 @@ impl ObjectStore {
         };
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &self.existing_ids[index];
-        if ids.iter().position(|id1| id1 == id).is_some() {
-            return Ok(true);
-        }
+        if ids.iter().position(|id1| id1 == id).is_none() {
+            return Ok(false);
+        };
 
-        Ok(false)
+        Ok(true)
+    }
+
+    /// Checks if an object with the given `id` is currently cached or known to exist within this instance's
+    /// internal registry.
+    ///
+    /// This method updates cache to extend lifetime of the found ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the object to check.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing `true` if the object cached, `false` otherwise, or an `Error` if the operation fails.
+    pub fn get_cached(&mut self, id: &str) -> Result<bool> {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let Ok(index1) = u32::from_str_radix(path1, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let Ok(index2) = u32::from_str_radix(path2, 16) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
+        };
+        let index = (index1 * 0x100 + index2) as usize;
+        let ids = &mut self.existing_ids[index];
+        let Some(index) = ids.iter().position(|id1| id1 == id) else {
+            return Ok(false);
+        };
+
+        ids.remove(index);
+        ids.push(id.to_string());
+
+        Ok(true)
     }
 
     /// Begins the process of adding a new object to the store.
@@ -441,11 +479,6 @@ impl ObjectStore {
                 return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
             };
             let index = (index1 * 0x100 + index2) as usize;
-            let count = self.existing_ids[index].len();
-            if count >= 16 {
-                let removing = count - 15;
-                self.existing_ids[index] = self.existing_ids[index].drain(removing..).collect();
-            }
             self.existing_ids[index].push(id);
         }
 
@@ -458,13 +491,20 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn save_cache(&self) -> Result<()> {
+        const CACHE_SIZE: usize = 16;
+
         let mut cache = Cache {
             existing_ids: Vec::new(),
         };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
             let ids = &self.existing_ids[i];
-            for id in ids {
-                cache.existing_ids.push(id.clone());
+            let mut begin = 0;
+            let count = ids.len();
+            if count > CACHE_SIZE {
+                begin = count - CACHE_SIZE;
+            }
+            for i in begin..count {
+                cache.existing_ids.push(ids[i].clone());
             }
         }
         let Ok(serialized) = serde_json::to_string(&cache) else {
@@ -479,6 +519,15 @@ impl ObjectStore {
         }
 
         Ok(())
+    }
+
+    /// Retrieves cached count.
+    ///
+    /// # Returns
+    ///
+    /// Count that indicates how many object cache hit.
+    pub fn cached_count(&self) -> i64 {
+        self.cached_count
     }
 }
 
