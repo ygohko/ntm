@@ -521,11 +521,11 @@ impl ObjectStore {
         Ok(())
     }
 
-    /// Retrieves cached cound.
+    /// Retrieves cached count.
     ///
     /// # Returns
     ///
-    /// Cound that indicates how many object cache hit.
+    /// Count that indicates how many object cache hit.
     pub fn cached_count(&self) -> i64 {
         self.cached_count
     }
