@@ -65,6 +65,7 @@ impl State {
 }
 
 struct Private {
+    join_handle: Option<JoinHandle<Result<()>>>,
     destination_path: String,
     limited_count: Option<i64>,
     object_store: Option<ObjectStore>,
@@ -78,6 +79,7 @@ struct Private {
 impl Private {
     fn new() -> Self {
         Self {
+            join_handle: None,
             destination_path: ".".to_string(),
             limited_count: None,
             object_store: None,
@@ -90,8 +92,8 @@ impl Private {
     }
 }
 
+#[derive(clone)]
 pub struct GarbageCollector {
-    join_handle: Option<JoinHandle<Result<()>>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -133,9 +135,10 @@ impl Task for GarbageCollector {
     /// in a way that returns a `Result`. The `Result<()>` return type might be present
     /// for future error handling or to satisfy a trait's signature.
     fn execute_in_background(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        self.join_handle = Some(thread::spawn(move || {
-            let result = main(&private);
+        let collector = self.clone();
+        let mut private = self.private.write.unwrap();
+        private.join_handle = Some(thread::spawn(move || {
+            let result = collector.main();
 
             result
         }));
@@ -223,98 +226,98 @@ impl GarbageCollector {
         let mut private = self.private.write().unwrap();
         private.limited_count = Some(count);
     }
-}
 
-fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
-    let destination_path: String;
-    {
-        let private = private.read().unwrap();
-        destination_path = private.destination_path.clone();
-    }
-    let mut path = Utf8PathBuf::from(&destination_path);
-    path.push("Objects");
-    {
-        let mut private = private.write().unwrap();
-        private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
-        if let Some(object_store) = private.object_store.as_mut() {
-            if let Err(error) = object_store.load_cache() {
-                println!("Loading existing IDs failed. error: {}", error);
-            }
-        }
-    }
-
-    let mut backups_path = Utf8PathBuf::from(&destination_path);
-    backups_path.push("Backups");
-    let backup_store = BackupStore::new(&backups_path.to_string_easy());
-    let names = match backup_store.names() {
-        Ok(names) => names,
-        Err(error) => return Err(error),
-    };
-
-    {
-        let mut private = private.write().unwrap();
-        for name in names {
-            let backup_path = backups_path.join(&name);
-            private.backup_paths.push(backup_path.to_string_easy());
-        }
-        private.backup_paths.sort_by(|a, b| b.cmp(a));
-    }
-
-    let mut offset = 0;
-    let mut state_path = Utf8PathBuf::from(&destination_path);
-    state_path.push("state.json");
-    if let Ok(serialized) = fs::read_to_string(&state_path) {
-        if let Ok(state) = serde_json::from_str::<State>(&serialized) {
-            let string = &state.last_processed_id[0..4];
-            if let Ok(mut value) = u32::from_str_radix(&string, 16) {
-                value += 1;
-                offset = (value & 0xFFFF) as i32;
-            }
-        }
-    }
-
-    for i in 0..65536 {
-        let index1 = (i / 0x100) & 0xFF;
-        let index2 = i & 0xFF;
-        if let Err(error) = process_unit(private, index1, index2, true) {
-            println!("Warning: Processing unit failed. error: {}", error);
-        }
-    }
-    
-    for i in 0..65536 {
-        let index = (i as i32) + offset;
-        let index1 = (index / 0x100) & 0xFF;
-        let index2 = index & 0xFF;
-        if let Err(error) = process_unit(private, index1, index2, false) {
-            println!("Warning: Processing unit failed. error: {}", error);
-        }
-
-        if (i & 0xFF) == 0 {
-            let private = private.read().unwrap();
-            if let Ok(serialized) = serde_json::to_string(&private.state) {
-                let mut path = Utf8PathBuf::from(&destination_path);
-                path.push("state.json");
-                if let Err(_) = fs::write(&path, &serialized) {
-                    println!("Warning: Writing state failed.");
-                }
-            }
-        }
+    fn main(&self) -> Result<()> {
+        let destination_path: String;
         {
             let private = private.read().unwrap();
-            if let Some(count) = private.limited_count {
-                if private.processed_count >= count {
-                    break;
+            destination_path = private.destination_path.clone();
+        }
+        let mut path = Utf8PathBuf::from(&destination_path);
+        path.push("Objects");
+        {
+            let mut private = private.write().unwrap();
+            private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
+            if let Some(object_store) = private.object_store.as_mut() {
+                if let Err(error) = object_store.load_cache() {
+                    println!("Loading existing IDs failed. error: {}", error);
                 }
             }
         }
-    }
 
-    {
-        let private = private.read().unwrap();
-        println!("{} object(s) removed.", private.removed_count);
-    }
+        let mut backups_path = Utf8PathBuf::from(&destination_path);
+        backups_path.push("Backups");
+        let backup_store = BackupStore::new(&backups_path.to_string_easy());
+        let names = match backup_store.names() {
+            Ok(names) => names,
+            Err(error) => return Err(error),
+        };
 
-    Ok(())
+        {
+            let mut private = private.write().unwrap();
+            for name in names {
+                let backup_path = backups_path.join(&name);
+                private.backup_paths.push(backup_path.to_string_easy());
+            }
+            private.backup_paths.sort_by(|a, b| b.cmp(a));
+        }
+
+        let mut offset = 0;
+        let mut state_path = Utf8PathBuf::from(&destination_path);
+        state_path.push("state.json");
+        if let Ok(serialized) = fs::read_to_string(&state_path) {
+            if let Ok(state) = serde_json::from_str::<State>(&serialized) {
+                let string = &state.last_processed_id[0..4];
+                if let Ok(mut value) = u32::from_str_radix(&string, 16) {
+                    value += 1;
+                    offset = (value & 0xFFFF) as i32;
+                }
+            }
+        }
+
+        for i in 0..65536 {
+            let index1 = (i / 0x100) & 0xFF;
+            let index2 = i & 0xFF;
+            if let Err(error) = process_unit(private, index1, index2, true) {
+                println!("Warning: Processing unit failed. error: {}", error);
+            }
+        }
+        
+        for i in 0..65536 {
+            let index = (i as i32) + offset;
+            let index1 = (index / 0x100) & 0xFF;
+            let index2 = index & 0xFF;
+            if let Err(error) = process_unit(private, index1, index2, false) {
+                println!("Warning: Processing unit failed. error: {}", error);
+            }
+
+            if (i & 0xFF) == 0 {
+                let private = private.read().unwrap();
+                if let Ok(serialized) = serde_json::to_string(&private.state) {
+                    let mut path = Utf8PathBuf::from(&destination_path);
+                    path.push("state.json");
+                    if let Err(_) = fs::write(&path, &serialized) {
+                        println!("Warning: Writing state failed.");
+                    }
+                }
+            }
+            {
+                let private = private.read().unwrap();
+                if let Some(count) = private.limited_count {
+                    if private.processed_count >= count {
+                        break;
+                    }
+                }
+            }
+        }
+
+        {
+            let private = private.read().unwrap();
+            println!("{} object(s) removed.", private.removed_count);
+        }
+
+        Ok(())
+    }
 }
 
 fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32, large: bool) -> Result<()> {
