@@ -91,6 +91,24 @@ impl ObjectStore {
         }
     }
 
+    fn get_object_path(&self, id: &str, file_size: u64) -> Utf8PathBuf {
+        let path1 = &id[0..2];
+        let path2 = &id[2..4];
+        let path3 = &id[4..6];
+        let path4 = &id[6..8];
+        let mut path = Utf8PathBuf::from(&self.path);
+        if file_size >= 1024 * 1024 * 1024 {
+            path.push(format!("l{}", path1));
+        } else {
+            path.push(path1);
+        }
+        path.push(path2);
+        path.push(path3);
+        path.push(path4);
+
+        path
+    }
+
     /// Adds an object to the store.
     ///
     /// # Arguments
@@ -103,10 +121,9 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn add(&mut self, id: &str, bytes: &Vec<u8>, attributes: &Attributes) -> Result<()> {
+        let file_size = bytes.len() as u64;
+        let path = self.get_object_path(id, file_size);
         let path1 = &id[0..2];
-        let path2 = &id[2..4];
-        let path3 = &id[4..6];
-        let path4 = &id[6..8];
 
         if self.get_cached(id)? {
             return Ok(());
@@ -114,19 +131,13 @@ impl ObjectStore {
         let Ok(index1) = u32::from_str_radix(path1, 16) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
-        let Ok(index2) = u32::from_str_radix(path2, 16) else {
+        let Ok(index2) = u32::from_str_radix(&id[2..4], 16) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
         let ids = &mut self.existing_ids[index];
         ids.push(id.to_string());
 
-        let mut path = Utf8PathBuf::from(&self.path);
-        path.push(path1);
-        path.push(path2);
-        path.push(path3);
-        path.push(path4);
-        // println!("path: {}", path.display());
         match fs::create_dir_all(path.clone()) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
@@ -170,16 +181,13 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn remove(&self, id: &str) -> Result<()> {
-        let path1 = &id[0..2];
-        let path2 = &id[2..4];
-        let path3 = &id[4..6];
-        let path4 = &id[6..8];
-        let mut path = Utf8PathBuf::from(&self.path);
-        path.push(path1);
-        path.push(path2);
-        path.push(path3);
-        path.push(path4);
+        let mut path = self.get_object_path(id, 0);
         path.push(id);
+        if !path.exists() {
+            path = self.get_object_path(id, 1024 * 1024 * 1024);
+            path.push(id);
+        }
+
         if let Err(_) = fs::remove_file(&path) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_REMOVING_OBJECT_FAILED));
         }
@@ -203,16 +211,12 @@ impl ObjectStore {
     ///
     /// A `Result` containing the object's bytes or an `Error` if the operation fails.
     pub fn bytes(&self, id: &str) -> Result<Vec<u8>> {
-        let path1 = &id[0..2];
-        let path2 = &id[2..4];
-        let path3 = &id[4..6];
-        let path4 = &id[6..8];
-        let mut path = Utf8PathBuf::from(&self.path);
-        path.push(path1);
-        path.push(path2);
-        path.push(path3);
-        path.push(path4);
+        let mut path = self.get_object_path(id, 0);
         path.push(id);
+        if !path.exists() {
+            path = self.get_object_path(id, 1024 * 1024 * 1024);
+            path.push(id);
+        }
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
@@ -231,17 +235,12 @@ impl ObjectStore {
     ///
     /// A `Result` containing the object's attributes or an `Error` if the operation fails.
     pub fn attributes(&self, id: &str) -> Result<Attributes> {
-        let path1 = &id[0..2];
-        let path2 = &id[2..4];
-        let path3 = &id[4..6];
-        let path4 = &id[6..8];
-        let mut path = Utf8PathBuf::from(&self.path);
-        path.push(path1);
-        path.push(path2);
-        path.push(path3);
-        path.push(path4);
-        let file_name = id.to_string() + ".attributes";
-        path.push(file_name);
+        let mut path = self.get_object_path(id, 0);
+        path.push(format!("{}.attributes", id));
+        if !path.exists() {
+            path = self.get_object_path(id, 1024 * 1024 * 1024);
+            path.push(format!("{}.attributes", id));
+        }
         let Ok(serialized) = fs::read_to_string(&path) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ATTTIBUTE_FAILED));
         };
@@ -265,8 +264,6 @@ impl ObjectStore {
     pub fn exists(&mut self, id: &str) -> Result<bool> {
         let path1 = &id[0..2];
         let path2 = &id[2..4];
-        let path3 = &id[4..6];
-        let path4 = &id[6..8];
         let Ok(index1) = u32::from_str_radix(path1, 16) else {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
@@ -274,25 +271,36 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &mut self.existing_ids[index];
-        if ids.iter().position(|id1| id1 == id).is_some() {
-            self.cached_count += 1;
+        
+        {
+            let ids = &self.existing_ids[index];
+            if ids.iter().position(|id1| id1 == id).is_some() {
+                self.cached_count += 1;
 
-            return Ok(true);
+                return Ok(true);
+            }
         }
 
-        let mut path = Utf8PathBuf::from(&self.path);
-        path.push(path1);
-        path.push(path2);
-        path.push(path3);
-        path.push(path4);
+        let mut path = self.get_object_path(id, 0);
         path.push(id);
         let exists = match path.try_exists() {
             Ok(exists) => exists,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
         };
-        if exists {
-            ids.push(id.to_string());
+
+        if !exists {
+            let mut path = self.get_object_path(id, 1024 * 1024 * 1024);
+            path.push(id);
+            let exists = match path.try_exists() {
+                Ok(exists) => exists,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
+            };
+            if exists {
+                self.existing_ids[index].push(id.to_string());
+                return Ok(true);
+            }
+        } else {
+            self.existing_ids[index].push(id.to_string());
         }
 
         Ok(exists)
@@ -371,16 +379,8 @@ impl ObjectStore {
     /// # Returns
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
-    pub fn begin_adding(&mut self, id: &str, attributes: &Attributes) -> Result<()> {
-        let path1 = &id[0..2];
-        let path2 = &id[2..4];
-        let path3 = &id[4..6];
-        let path4 = &id[6..8];
-        let mut path = Utf8PathBuf::from(&self.path);
-        path.push(path1);
-        path.push(path2);
-        path.push(path3);
-        path.push(path4);
+    pub fn begin_adding(&mut self, id: &str, attributes: &Attributes, file_size: u64) -> Result<()> {
+        let path = self.get_object_path(id, file_size);
         match fs::create_dir_all(path.clone()) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
@@ -675,7 +675,7 @@ mod tests {
         let id = "0102030405060708".to_string();
         let bytes: Vec<u8> = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         let attribute = Attributes::new("", 0);
-        store.begin_adding(&id, &attribute).unwrap();
+        store.begin_adding(&id, &attribute, bytes.len() as u64).unwrap();
         store.write_adding(&bytes).unwrap();
         store.end_adding();
     }
