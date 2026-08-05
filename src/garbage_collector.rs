@@ -363,7 +363,7 @@ impl GarbageCollector {
                     let mut path = Utf8PathBuf::from(&directory1);
                     path.push(&directory2);
                     path.push(&produced_path);
-                    if let Err(error) = process_object(&self.private, &path.to_string_easy()) {
+                    if let Err(error) = self.process_object(&path.to_string_easy()) {
                         println!(
                             "Warning: error caused when processing objects. error: {}",
                             error
@@ -380,89 +380,89 @@ impl GarbageCollector {
 
         Ok(())
     }
-}
 
-fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
-    let backup_paths: Vec<String>;
-    {
-        let private = private.read().unwrap();
-        if private.count == 0 {
-            println!(
-                "Processing ({}, {}): {}",
-                private.processed_count, private.removed_count, path
-            );
-        }
-        backup_paths = private.backup_paths.clone();
-    }
-    {
-        let mut private = private.write().unwrap();
-        private.count += 1;
-        private.count %= 100;
-    }
-
-    let path1 = Utf8PathBuf::from(&path);
-    let object_id = path1.file_name_or_empty();
-    let attributes: Attributes;
-    {
-        let private = private.read().unwrap();
-        if let Some(ref object_store) = &private.object_store {
-            if object_store.cached(&object_id)? {
-                return Ok(());
+    fn process_object(&self, path: &str) -> Result<()> {
+        let backup_paths: Vec<String>;
+        {
+            let private = self.private.read().unwrap();
+            if private.count == 0 {
+                println!(
+                    "Processing ({}, {}): {}",
+                    private.processed_count, private.removed_count, path
+                );
             }
-            attributes = object_store.attributes(&object_id)?;
-        } else {
-            panic!();
+            backup_paths = private.backup_paths.clone();
         }
-    }
-
-    for backup_path in &backup_paths {
-        let path2 = Utf8PathBuf::from(&backup_path);
-        let backup_name = path2.file_name_or_empty();
-        let backup_created = match NaiveDateTime::parse_from_str(&backup_name, "%Y%m%d-%H%M") {
-            // Add 25 hours because backup_created does not have timezone.
-            Ok(created) => created.and_utc().timestamp() + 25 * 60 * 60,
-            Err(_) => attributes.added,
-        };
-        if (backup_created - attributes.added) < 0 {
-            // All backups after this object is added are checked.
-            // println!("Checking skipped. object_id: {}", object_id);
-
-            break;
+        {
+            let mut private = self.private.write().unwrap();
+            private.count += 1;
+            private.count %= 100;
         }
 
-        let mut option: Option<String> = None;
-        let mut entry_path = Utf8PathBuf::from(&backup_path);
-        entry_path.push(&attributes.path);
-        if let Ok(serialized) = fs::read_to_string(&entry_path) {
-            option = match serde_json::from_str::<Entry>(&serialized) {
-                Ok(entry) => Some(entry.id),
-                Err(_) => None,
+        let path1 = Utf8PathBuf::from(&path);
+        let object_id = path1.file_name_or_empty();
+        let attributes: Attributes;
+        {
+            let private = self.private.read().unwrap();
+            if let Some(ref object_store) = &private.object_store {
+                if object_store.cached(&object_id)? {
+                    return Ok(());
+                }
+                attributes = object_store.attributes(&object_id)?;
+            } else {
+                panic!();
             }
         }
 
-        if let Some(entry_object_id) = option {
-            if entry_object_id == object_id {
-                // println!("Object {} keeped.", path);
+        for backup_path in &backup_paths {
+            let path2 = Utf8PathBuf::from(&backup_path);
+            let backup_name = path2.file_name_or_empty();
+            let backup_created = match NaiveDateTime::parse_from_str(&backup_name, "%Y%m%d-%H%M") {
+                // Add 25 hours because backup_created does not have timezone.
+                Ok(created) => created.and_utc().timestamp() + 25 * 60 * 60,
+                Err(_) => attributes.added,
+            };
+            if (backup_created - attributes.added) < 0 {
+                // All backups after this object is added are checked.
+                // println!("Checking skipped. object_id: {}", object_id);
 
-                return Ok(());
+                break;
+            }
+
+            let mut option: Option<String> = None;
+            let mut entry_path = Utf8PathBuf::from(&backup_path);
+            entry_path.push(&attributes.path);
+            if let Ok(serialized) = fs::read_to_string(&entry_path) {
+                option = match serde_json::from_str::<Entry>(&serialized) {
+                    Ok(entry) => Some(entry.id),
+                    Err(_) => None,
+                }
+            }
+
+            if let Some(entry_object_id) = option {
+                if entry_object_id == object_id {
+                    // println!("Object {} keeped.", path);
+
+                    return Ok(());
+                }
             }
         }
-    }
 
-    {
-        let private = private.read().unwrap();
-        if let Some(object_store) = &private.object_store {
-            if let Err(_) = object_store.remove(&object_id) {
-                println!("Warning: Removing object {} failed.", object_id);
+        {
+            let private = self.private.read().unwrap();
+            if let Some(object_store) = &private.object_store {
+                if let Err(_) = object_store.remove(&object_id) {
+                    println!("Warning: Removing object {} failed.", object_id);
+                }
             }
         }
-    }
-    {
-        let mut private = private.write().unwrap();
-        private.removed_count += 1;
-    }
+        {
+            let mut private = self.private.write().unwrap();
+            private.removed_count += 1;
+        }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 #[cfg(test)]
