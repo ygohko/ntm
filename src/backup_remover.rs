@@ -191,71 +191,71 @@ impl BackupRemover {
         };
         for result in read_dir {
             if let Ok(dir_entry) = result {
-                process_dir_entry(&self.private, &dir_entry)?;
+                self.process_dir_entry(&dir_entry)?;
             }
         }
 
         Ok(())
     }
-}
 
-fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Result<()> {
-    let Ok(metadata) = dir_entry.metadata() else {
-        return Ok(());
-    };
-    if !metadata.is_dir() {
-        return Ok(());
-    }
-    let path = dir_entry.path();
-    let path = path.to_string_easy();
-    if !path.ends_with(".removed") {
-        return Ok(());
-    }
-
-    let mut producer = FilePathProducer::new(&path);
-    let mut done = false;
-    while !done {
-        let file_path = match producer.next() {
-            Ok(file_path) => file_path,
-            Err(error) => {
-                if error.id == file_path_producer::ERROR_ID
-                    && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                {
-                    done = true;
-                } else {
-                    return Err(error);
-                }
-
-                "".to_string()
-            }
+    fn process_dir_entry(&self, dir_entry: &DirEntry) -> Result<()> {
+        let Ok(metadata) = dir_entry.metadata() else {
+            return Ok(());
         };
+        if !metadata.is_dir() {
+            return Ok(());
+        }
+        let path = dir_entry.path();
+        let path = path.to_string_easy();
+        if !path.ends_with(".removed") {
+            return Ok(());
+        }
 
-        if !done {
-            let mut removing_path = Utf8PathBuf::from(&path);
-            removing_path.push(&file_path);
-            {
-                let private = private.read().unwrap();
-                if private.count == 0 {
-                    println!("Removing ({}): {}", private.removed_count, removing_path);
+        let mut producer = FilePathProducer::new(&path);
+        let mut done = false;
+        while !done {
+            let file_path = match producer.next() {
+                Ok(file_path) => file_path,
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
+                        done = true;
+                    } else {
+                        return Err(error);
+                    }
+
+                    "".to_string()
                 }
-            }
-            if let Err(error) = fs::remove_file(&removing_path) {
-                println!("Removing file {} failed. error: {}", removing_path, error);
-            }
-            {
-                let mut private = private.write().unwrap();
-                private.removed_count += 1;
-                private.count += 1;
-                private.count %= 1000;
+            };
+
+            if !done {
+                let mut removing_path = Utf8PathBuf::from(&path);
+                removing_path.push(&file_path);
+                {
+                    let private = self.private.read().unwrap();
+                    if private.count == 0 {
+                        println!("Removing ({}): {}", private.removed_count, removing_path);
+                    }
+                }
+                if let Err(error) = fs::remove_file(&removing_path) {
+                    println!("Removing file {} failed. error: {}", removing_path, error);
+                }
+                {
+                    let mut private = self.private.write().unwrap();
+                    private.removed_count += 1;
+                    private.count += 1;
+                    private.count %= 1000;
+                }
             }
         }
-    }
 
-    if let Err(error) = fs::remove_dir_all(&path) {
-        println!("Removing directory {} failed. error: {}", path, error);
-    }
+        if let Err(error) = fs::remove_dir_all(&path) {
+            println!("Removing directory {} failed. error: {}", path, error);
+        }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 #[cfg(test)]
