@@ -46,6 +46,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_DIRECTORY_FAILED: ErrorCode = 1;
 
 struct Private {
+    join_handle: Option<JoinHandle<Result<()>>>,
     destination_path: String,
     removed_count: i64,
     count: i32,
@@ -54,6 +55,7 @@ struct Private {
 impl Private {
     fn new() -> Self {
         Self {
+            join_handle: None,
             destination_path: ".".to_string(),
             removed_count: 0,
             count: 0,
@@ -61,8 +63,8 @@ impl Private {
     }
 }
 
+#[derive(Clone)]
 pub struct BackupRemover {
-    join_handle: Option<JoinHandle<Result<()>>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -82,8 +84,7 @@ impl Task for BackupRemover {
     /// # Returns
     /// - `Ok(())` if the thread was successfully spawned.
     fn execute(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        let result = main(&private);
+        let result = self.main();
 
         result
     }
@@ -107,9 +108,10 @@ impl Task for BackupRemover {
     ///
     /// `Ok(())` if the thread was successfully spawned.
     fn execute_in_background(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        self.join_handle = Some(thread::spawn(move || {
-            let result = main(&private);
+        let remover = self.clone();
+        let mut private = self.private.write().unwrap();
+        private.join_handle = Some(thread::spawn(move || {
+            let result = remover.main();
 
             result
         }));
@@ -127,7 +129,11 @@ impl Task for BackupRemover {
     /// # Returns
     /// - `Ok(())` if the background thread is successfully spawned.
     fn join(&mut self) -> Result<()> {
-        let handle = self.join_handle.take();
+        let handle: Option<JoinHandle<Result<()>>>;
+        {
+            let mut private = self.private.write().unwrap();
+            handle = private.join_handle.take();
+        }
         let Some(handle) = handle else {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
         };
@@ -148,7 +154,6 @@ impl BackupRemover {
     /// private state, ensuring thread-safe shared access to its data.
     pub fn new() -> Self {
         Self {
-            join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
         }
     }
@@ -167,90 +172,90 @@ impl BackupRemover {
     ///
     /// This method will panic if the `RwLock` is poisoned (i.e., a writer
     /// previously panicked while holding the lock).
-    pub fn set_destination_path(&mut self, path: &str) {
+    pub fn set_destination_path(&self, path: &str) {
         let mut private = self.private.write().unwrap();
         private.destination_path = path.to_string();
     }
-}
 
-fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
-    let destination_path: String;
-    {
-        let private = private.read().unwrap();
-        destination_path = private.destination_path.clone();
-    }
-    let mut path = Utf8PathBuf::from(&destination_path);
-    path.push("Backups");
-
-    let Ok(read_dir) = fs::read_dir(&path) else {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
-    };
-    for result in read_dir {
-        if let Ok(dir_entry) = result {
-            process_dir_entry(private, &dir_entry)?;
+    fn main(&self) -> Result<()> {
+        let destination_path: String;
+        {
+            let private = self.private.read().unwrap();
+            destination_path = private.destination_path.clone();
         }
-    }
+        let mut path = Utf8PathBuf::from(&destination_path);
+        path.push("Backups");
 
-    Ok(())
-}
-
-fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Result<()> {
-    let Ok(metadata) = dir_entry.metadata() else {
-        return Ok(());
-    };
-    if !metadata.is_dir() {
-        return Ok(());
-    }
-    let path = dir_entry.path();
-    let path = path.to_string_easy();
-    if !path.ends_with(".removed") {
-        return Ok(());
-    }
-
-    let mut producer = FilePathProducer::new(&path);
-    let mut done = false;
-    while !done {
-        let file_path = match producer.next() {
-            Ok(file_path) => file_path,
-            Err(error) => {
-                if error.id == file_path_producer::ERROR_ID
-                    && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                {
-                    done = true;
-                } else {
-                    return Err(error);
-                }
-
-                "".to_string()
-            }
+        let Ok(read_dir) = fs::read_dir(&path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
         };
-
-        if !done {
-            let mut removing_path = Utf8PathBuf::from(&path);
-            removing_path.push(&file_path);
-            {
-                let private = private.read().unwrap();
-                if private.count == 0 {
-                    println!("Removing ({}): {}", private.removed_count, removing_path);
-                }
-            }
-            if let Err(error) = fs::remove_file(&removing_path) {
-                println!("Removing file {} failed. error: {}", removing_path, error);
-            }
-            {
-                let mut private = private.write().unwrap();
-                private.removed_count += 1;
-                private.count += 1;
-                private.count %= 1000;
+        for result in read_dir {
+            if let Ok(dir_entry) = result {
+                self.process_dir_entry(&dir_entry)?;
             }
         }
+
+        Ok(())
     }
 
-    if let Err(error) = fs::remove_dir_all(&path) {
-        println!("Removing directory {} failed. error: {}", path, error);
-    }
+    fn process_dir_entry(&self, dir_entry: &DirEntry) -> Result<()> {
+        let Ok(metadata) = dir_entry.metadata() else {
+            return Ok(());
+        };
+        if !metadata.is_dir() {
+            return Ok(());
+        }
+        let path = dir_entry.path();
+        let path = path.to_string_easy();
+        if !path.ends_with(".removed") {
+            return Ok(());
+        }
 
-    Ok(())
+        let mut producer = FilePathProducer::new(&path);
+        let mut done = false;
+        while !done {
+            let file_path = match producer.next() {
+                Ok(file_path) => file_path,
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
+                        done = true;
+                    } else {
+                        return Err(error);
+                    }
+
+                    "".to_string()
+                }
+            };
+
+            if !done {
+                let mut removing_path = Utf8PathBuf::from(&path);
+                removing_path.push(&file_path);
+                {
+                    let private = self.private.read().unwrap();
+                    if private.count == 0 {
+                        println!("Removing ({}): {}", private.removed_count, removing_path);
+                    }
+                }
+                if let Err(error) = fs::remove_file(&removing_path) {
+                    println!("Removing file {} failed. error: {}", removing_path, error);
+                }
+                {
+                    let mut private = self.private.write().unwrap();
+                    private.removed_count += 1;
+                    private.count += 1;
+                    private.count %= 1000;
+                }
+            }
+        }
+
+        if let Err(error) = fs::remove_dir_all(&path) {
+            println!("Removing directory {} failed. error: {}", path, error);
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

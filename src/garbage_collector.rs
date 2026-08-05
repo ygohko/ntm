@@ -65,6 +65,7 @@ impl State {
 }
 
 struct Private {
+    join_handle: Option<JoinHandle<Result<()>>>,
     destination_path: String,
     limited_count: Option<i64>,
     object_store: Option<ObjectStore>,
@@ -78,6 +79,7 @@ struct Private {
 impl Private {
     fn new() -> Self {
         Self {
+            join_handle: None,
             destination_path: ".".to_string(),
             limited_count: None,
             object_store: None,
@@ -90,8 +92,8 @@ impl Private {
     }
 }
 
+#[derive(Clone)]
 pub struct GarbageCollector {
-    join_handle: Option<JoinHandle<Result<()>>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -107,8 +109,7 @@ impl Task for GarbageCollector {
     /// Returns `Ok(())` on successful completion of the `main` function, or an `Err`
     /// containing details if the operation within `main` fails.
     fn execute(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        let result = main(&private);
+        let result = self.main();
 
         result
     }
@@ -133,9 +134,10 @@ impl Task for GarbageCollector {
     /// in a way that returns a `Result`. The `Result<()>` return type might be present
     /// for future error handling or to satisfy a trait's signature.
     fn execute_in_background(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        self.join_handle = Some(thread::spawn(move || {
-            let result = main(&private);
+        let collector = self.clone();
+        let mut private = self.private.write().unwrap();
+        private.join_handle = Some(thread::spawn(move || {
+            let result = collector.main();
 
             result
         }));
@@ -163,7 +165,11 @@ impl Task for GarbageCollector {
     /// A `Result<()>` representing the outcome of the joined task. `Ok(())` on successful
     /// completion, or an `Err` if the task itself returned an error.
     fn join(&mut self) -> Result<()> {
-        let handle = self.join_handle.take();
+        let handle: Option<JoinHandle<Result<()>>>;
+        {
+            let mut private = self.private.write().unwrap();
+            handle = private.join_handle.take();
+        }
         let Some(handle) = handle else {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
         };
@@ -187,7 +193,6 @@ impl GarbageCollector {
     /// A new instance of `GarbageCollector`.
     pub fn new() -> Self {
         Self {
-            join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
         }
     }
@@ -204,7 +209,7 @@ impl GarbageCollector {
     ///
     /// Panics if the internal `RwLock` is poisoned, indicating a previous operation
     /// on the protected data failed catastrophically.
-    pub fn set_destination_path(&mut self, path: &str) {
+    pub fn set_destination_path(&self, path: &str) {
         let mut private = self.private.write().unwrap();
         private.destination_path = path.to_string();
     }
@@ -219,245 +224,245 @@ impl GarbageCollector {
     /// # Arguments
     ///
     /// * `count` - An `i64` value representing the new limited count.
-    pub fn set_limited_count(&mut self, count: i64) {
+    pub fn set_limited_count(&self, count: i64) {
         let mut private = self.private.write().unwrap();
         private.limited_count = Some(count);
     }
-}
 
-fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
-    let destination_path: String;
-    {
-        let private = private.read().unwrap();
-        destination_path = private.destination_path.clone();
-    }
-    let mut path = Utf8PathBuf::from(&destination_path);
-    path.push("Objects");
-    {
-        let mut private = private.write().unwrap();
-        private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
-        if let Some(object_store) = private.object_store.as_mut() {
-            if let Err(error) = object_store.load_cache() {
-                println!("Loading existing IDs failed. error: {}", error);
+    fn main(&self) -> Result<()> {
+        let destination_path: String;
+        {
+            let private = self.private.read().unwrap();
+            destination_path = private.destination_path.clone();
+        }
+        let mut path = Utf8PathBuf::from(&destination_path);
+        path.push("Objects");
+        {
+            let mut private = self.private.write().unwrap();
+            private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
+            if let Some(object_store) = private.object_store.as_mut() {
+                if let Err(error) = object_store.load_cache() {
+                    println!("Loading existing IDs failed. error: {}", error);
+                }
             }
         }
-    }
 
-    let mut backups_path = Utf8PathBuf::from(&destination_path);
-    backups_path.push("Backups");
-    let backup_store = BackupStore::new(&backups_path.to_string_easy());
-    let names = match backup_store.names() {
-        Ok(names) => names,
-        Err(error) => return Err(error),
-    };
+        let mut backups_path = Utf8PathBuf::from(&destination_path);
+        backups_path.push("Backups");
+        let backup_store = BackupStore::new(&backups_path.to_string_easy());
+        let names = match backup_store.names() {
+            Ok(names) => names,
+            Err(error) => return Err(error),
+        };
 
-    {
-        let mut private = private.write().unwrap();
-        for name in names {
-            let backup_path = backups_path.join(&name);
-            private.backup_paths.push(backup_path.to_string_easy());
+        {
+            let mut private = self.private.write().unwrap();
+            for name in names {
+                let backup_path = backups_path.join(&name);
+                private.backup_paths.push(backup_path.to_string_easy());
+            }
+            private.backup_paths.sort_by(|a, b| b.cmp(a));
         }
-        private.backup_paths.sort_by(|a, b| b.cmp(a));
-    }
 
-    let mut offset = 0;
-    let mut state_path = Utf8PathBuf::from(&destination_path);
-    state_path.push("state.json");
-    if let Ok(serialized) = fs::read_to_string(&state_path) {
-        if let Ok(state) = serde_json::from_str::<State>(&serialized) {
-            let string = &state.last_processed_id[0..4];
-            if let Ok(mut value) = u32::from_str_radix(&string, 16) {
-                value += 1;
-                offset = (value & 0xFFFF) as i32;
+        let mut offset = 0;
+        let mut state_path = Utf8PathBuf::from(&destination_path);
+        state_path.push("state.json");
+        if let Ok(serialized) = fs::read_to_string(&state_path) {
+            if let Ok(state) = serde_json::from_str::<State>(&serialized) {
+                let string = &state.last_processed_id[0..4];
+                if let Ok(mut value) = u32::from_str_radix(&string, 16) {
+                    value += 1;
+                    offset = (value & 0xFFFF) as i32;
+                }
             }
         }
+
+        for i in 0..65536 {
+            let index1 = (i / 0x100) & 0xFF;
+            let index2 = i & 0xFF;
+            if let Err(error) = self.process_unit(index1, index2, true) {
+                println!("Warning: Processing unit failed. error: {}", error);
+            }
+        }
+        
+        for i in 0..65536 {
+            let index = (i as i32) + offset;
+            let index1 = (index / 0x100) & 0xFF;
+            let index2 = index & 0xFF;
+            if let Err(error) = self.process_unit(index1, index2, false) {
+                println!("Warning: Processing unit failed. error: {}", error);
+            }
+
+            if (i & 0xFF) == 0 {
+                let private = self.private.read().unwrap();
+                if let Ok(serialized) = serde_json::to_string(&private.state) {
+                    let mut path = Utf8PathBuf::from(&destination_path);
+                    path.push("state.json");
+                    if let Err(_) = fs::write(&path, &serialized) {
+                        println!("Warning: Writing state failed.");
+                    }
+                }
+            }
+            {
+                let private = self.private.read().unwrap();
+                if let Some(count) = private.limited_count {
+                    if private.processed_count >= count {
+                        break;
+                    }
+                }
+            }
+        }
+
+        {
+            let private = self.private.read().unwrap();
+            println!("{} object(s) removed.", private.removed_count);
+        }
+
+        Ok(())
     }
 
-    for i in 0..65536 {
-        let index1 = (i / 0x100) & 0xFF;
-        let index2 = i & 0xFF;
-        if let Err(error) = process_unit(private, index1, index2, true) {
-            println!("Warning: Processing unit failed. error: {}", error);
+    fn process_unit(&self, index1: i32, index2: i32, large: bool) -> Result<()> {
+        let destination_path: String;
+        {
+            let private = self.private.read().unwrap();
+            destination_path = private.destination_path.clone();
         }
-    }
-    
-    for i in 0..65536 {
-        let index = (i as i32) + offset;
-        let index1 = (index / 0x100) & 0xFF;
-        let index2 = index & 0xFF;
-        if let Err(error) = process_unit(private, index1, index2, false) {
-            println!("Warning: Processing unit failed. error: {}", error);
+        let mut directory1 = format!("{:02x}", index1);
+        if large {
+            directory1 = "l".to_string() + &directory1;
+        }
+        let directory2 = format!("{:02x}", index2);
+        let mut object_path = Utf8PathBuf::from(&destination_path);
+        object_path.push("Objects");
+        object_path.push(&directory1);
+        object_path.push(&directory2);
+        if !Path::new(&object_path).exists() {
+            return Ok(());
+        }
+        let mut producer = FilePathProducer::new(&object_path.to_string_easy());
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
+                        done = true;
+                    }
+
+                    None
+                }
+            };
+
+            if let Some(produced_path) = option {
+                let path = Utf8PathBuf::from(&produced_path);
+                let extension = path.extension_or_empty();
+                let file_name = path.file_name_or_empty();
+                if extension == "" {
+                    let mut path = Utf8PathBuf::from(&directory1);
+                    path.push(&directory2);
+                    path.push(&produced_path);
+                    if let Err(error) = self.process_object(&path.to_string_easy()) {
+                        println!(
+                            "Warning: error caused when processing objects. error: {}",
+                            error
+                        );
+                    }
+                    {
+                        let mut private = self.private.write().unwrap();
+                        private.processed_count += 1;
+                        private.state.last_processed_id = file_name;
+                    }
+                }
+            }
         }
 
-        if (i & 0xFF) == 0 {
-            let private = private.read().unwrap();
-            if let Ok(serialized) = serde_json::to_string(&private.state) {
-                let mut path = Utf8PathBuf::from(&destination_path);
-                path.push("state.json");
-                if let Err(_) = fs::write(&path, &serialized) {
-                    println!("Warning: Writing state failed.");
+        Ok(())
+    }
+
+    fn process_object(&self, path: &str) -> Result<()> {
+        let backup_paths: Vec<String>;
+        {
+            let private = self.private.read().unwrap();
+            if private.count == 0 {
+                println!(
+                    "Processing ({}, {}): {}",
+                    private.processed_count, private.removed_count, path
+                );
+            }
+            backup_paths = private.backup_paths.clone();
+        }
+        {
+            let mut private = self.private.write().unwrap();
+            private.count += 1;
+            private.count %= 100;
+        }
+
+        let path1 = Utf8PathBuf::from(&path);
+        let object_id = path1.file_name_or_empty();
+        let attributes: Attributes;
+        {
+            let private = self.private.read().unwrap();
+            if let Some(ref object_store) = &private.object_store {
+                if object_store.cached(&object_id)? {
+                    return Ok(());
+                }
+                attributes = object_store.attributes(&object_id)?;
+            } else {
+                panic!();
+            }
+        }
+
+        for backup_path in &backup_paths {
+            let path2 = Utf8PathBuf::from(&backup_path);
+            let backup_name = path2.file_name_or_empty();
+            let backup_created = match NaiveDateTime::parse_from_str(&backup_name, "%Y%m%d-%H%M") {
+                // Add 25 hours because backup_created does not have timezone.
+                Ok(created) => created.and_utc().timestamp() + 25 * 60 * 60,
+                Err(_) => attributes.added,
+            };
+            if (backup_created - attributes.added) < 0 {
+                // All backups after this object is added are checked.
+                // println!("Checking skipped. object_id: {}", object_id);
+
+                break;
+            }
+
+            let mut option: Option<String> = None;
+            let mut entry_path = Utf8PathBuf::from(&backup_path);
+            entry_path.push(&attributes.path);
+            if let Ok(serialized) = fs::read_to_string(&entry_path) {
+                option = match serde_json::from_str::<Entry>(&serialized) {
+                    Ok(entry) => Some(entry.id),
+                    Err(_) => None,
+                }
+            }
+
+            if let Some(entry_object_id) = option {
+                if entry_object_id == object_id {
+                    // println!("Object {} keeped.", path);
+
+                    return Ok(());
+                }
+            }
+        }
+
+        {
+            let private = self.private.read().unwrap();
+            if let Some(object_store) = &private.object_store {
+                if let Err(_) = object_store.remove(&object_id) {
+                    println!("Warning: Removing object {} failed.", object_id);
                 }
             }
         }
         {
-            let private = private.read().unwrap();
-            if let Some(count) = private.limited_count {
-                if private.processed_count >= count {
-                    break;
-                }
-            }
-        }
-    }
-
-    {
-        let private = private.read().unwrap();
-        println!("{} object(s) removed.", private.removed_count);
-    }
-
-    Ok(())
-}
-
-fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32, large: bool) -> Result<()> {
-    let destination_path: String;
-    {
-        let private = private.read().unwrap();
-        destination_path = private.destination_path.clone();
-    }
-    let mut directory1 = format!("{:02x}", index1);
-    if large {
-        directory1 = "l".to_string() + &directory1;
-    }
-    let directory2 = format!("{:02x}", index2);
-    let mut object_path = Utf8PathBuf::from(&destination_path);
-    object_path.push("Objects");
-    object_path.push(&directory1);
-    object_path.push(&directory2);
-    if !Path::new(&object_path).exists() {
-        return Ok(());
-    }
-    let mut producer = FilePathProducer::new(&object_path.to_string_easy());
-    let mut done = false;
-    while !done {
-        let option = match producer.next() {
-            Ok(path) => Some(path),
-            Err(error) => {
-                if error.id == file_path_producer::ERROR_ID
-                    && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                {
-                    done = true;
-                }
-
-                None
-            }
-        };
-
-        if let Some(produced_path) = option {
-            let path = Utf8PathBuf::from(&produced_path);
-            let extension = path.extension_or_empty();
-            let file_name = path.file_name_or_empty();
-            if extension == "" {
-                let mut path = Utf8PathBuf::from(&directory1);
-                path.push(&directory2);
-                path.push(&produced_path);
-                if let Err(error) = process_object(private, &path.to_string_easy()) {
-                    println!(
-                        "Warning: error caused when processing objects. error: {}",
-                        error
-                    );
-                }
-                {
-                    let mut private = private.write().unwrap();
-                    private.processed_count += 1;
-                    private.state.last_processed_id = file_name;
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
-    let backup_paths: Vec<String>;
-    {
-        let private = private.read().unwrap();
-        if private.count == 0 {
-            println!(
-                "Processing ({}, {}): {}",
-                private.processed_count, private.removed_count, path
-            );
-        }
-        backup_paths = private.backup_paths.clone();
-    }
-    {
-        let mut private = private.write().unwrap();
-        private.count += 1;
-        private.count %= 100;
-    }
-
-    let path1 = Utf8PathBuf::from(&path);
-    let object_id = path1.file_name_or_empty();
-    let attributes: Attributes;
-    {
-        let private = private.read().unwrap();
-        if let Some(ref object_store) = &private.object_store {
-            if object_store.cached(&object_id)? {
-                return Ok(());
-            }
-            attributes = object_store.attributes(&object_id)?;
-        } else {
-            panic!();
-        }
-    }
-
-    for backup_path in &backup_paths {
-        let path2 = Utf8PathBuf::from(&backup_path);
-        let backup_name = path2.file_name_or_empty();
-        let backup_created = match NaiveDateTime::parse_from_str(&backup_name, "%Y%m%d-%H%M") {
-            // Add 25 hours because backup_created does not have timezone.
-            Ok(created) => created.and_utc().timestamp() + 25 * 60 * 60,
-            Err(_) => attributes.added,
-        };
-        if (backup_created - attributes.added) < 0 {
-            // All backups after this object is added are checked.
-            // println!("Checking skipped. object_id: {}", object_id);
-
-            break;
+            let mut private = self.private.write().unwrap();
+            private.removed_count += 1;
         }
 
-        let mut option: Option<String> = None;
-        let mut entry_path = Utf8PathBuf::from(&backup_path);
-        entry_path.push(&attributes.path);
-        if let Ok(serialized) = fs::read_to_string(&entry_path) {
-            option = match serde_json::from_str::<Entry>(&serialized) {
-                Ok(entry) => Some(entry.id),
-                Err(_) => None,
-            }
-        }
-
-        if let Some(entry_object_id) = option {
-            if entry_object_id == object_id {
-                // println!("Object {} keeped.", path);
-
-                return Ok(());
-            }
-        }
+        Ok(())
     }
-
-    {
-        let private = private.read().unwrap();
-        if let Some(object_store) = &private.object_store {
-            if let Err(_) = object_store.remove(&object_id) {
-                println!("Warning: Removing object {} failed.", object_id);
-            }
-        }
-    }
-    {
-        let mut private = private.write().unwrap();
-        private.removed_count += 1;
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]
