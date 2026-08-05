@@ -92,7 +92,7 @@ impl Private {
     }
 }
 
-#[derive(clone)]
+#[derive(Clone)]
 pub struct GarbageCollector {
     private: Arc<RwLock<Private>>,
 }
@@ -109,8 +109,7 @@ impl Task for GarbageCollector {
     /// Returns `Ok(())` on successful completion of the `main` function, or an `Err`
     /// containing details if the operation within `main` fails.
     fn execute(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        let result = main(&private);
+        let result = self.main();
 
         result
     }
@@ -136,7 +135,7 @@ impl Task for GarbageCollector {
     /// for future error handling or to satisfy a trait's signature.
     fn execute_in_background(&mut self) -> Result<()> {
         let collector = self.clone();
-        let mut private = self.private.write.unwrap();
+        let mut private = self.private.write().unwrap();
         private.join_handle = Some(thread::spawn(move || {
             let result = collector.main();
 
@@ -166,7 +165,11 @@ impl Task for GarbageCollector {
     /// A `Result<()>` representing the outcome of the joined task. `Ok(())` on successful
     /// completion, or an `Err` if the task itself returned an error.
     fn join(&mut self) -> Result<()> {
-        let handle = self.join_handle.take();
+        let handle: Option<JoinHandle<Result<()>>>;
+        {
+            let mut private = self.private.write().unwrap();
+            handle = private.join_handle.take();
+        }
         let Some(handle) = handle else {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
         };
@@ -190,7 +193,6 @@ impl GarbageCollector {
     /// A new instance of `GarbageCollector`.
     pub fn new() -> Self {
         Self {
-            join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
         }
     }
@@ -230,13 +232,13 @@ impl GarbageCollector {
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
-            let private = private.read().unwrap();
+            let private = self.private.read().unwrap();
             destination_path = private.destination_path.clone();
         }
         let mut path = Utf8PathBuf::from(&destination_path);
         path.push("Objects");
         {
-            let mut private = private.write().unwrap();
+            let mut private = self.private.write().unwrap();
             private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
             if let Some(object_store) = private.object_store.as_mut() {
                 if let Err(error) = object_store.load_cache() {
@@ -254,7 +256,7 @@ impl GarbageCollector {
         };
 
         {
-            let mut private = private.write().unwrap();
+            let mut private = self.private.write().unwrap();
             for name in names {
                 let backup_path = backups_path.join(&name);
                 private.backup_paths.push(backup_path.to_string_easy());
@@ -278,7 +280,7 @@ impl GarbageCollector {
         for i in 0..65536 {
             let index1 = (i / 0x100) & 0xFF;
             let index2 = i & 0xFF;
-            if let Err(error) = process_unit(private, index1, index2, true) {
+            if let Err(error) = process_unit(&self.private, index1, index2, true) {
                 println!("Warning: Processing unit failed. error: {}", error);
             }
         }
@@ -287,12 +289,12 @@ impl GarbageCollector {
             let index = (i as i32) + offset;
             let index1 = (index / 0x100) & 0xFF;
             let index2 = index & 0xFF;
-            if let Err(error) = process_unit(private, index1, index2, false) {
+            if let Err(error) = process_unit(&self.private, index1, index2, false) {
                 println!("Warning: Processing unit failed. error: {}", error);
             }
 
             if (i & 0xFF) == 0 {
-                let private = private.read().unwrap();
+                let private = self.private.read().unwrap();
                 if let Ok(serialized) = serde_json::to_string(&private.state) {
                     let mut path = Utf8PathBuf::from(&destination_path);
                     path.push("state.json");
@@ -302,7 +304,7 @@ impl GarbageCollector {
                 }
             }
             {
-                let private = private.read().unwrap();
+                let private = self.private.read().unwrap();
                 if let Some(count) = private.limited_count {
                     if private.processed_count >= count {
                         break;
@@ -312,7 +314,7 @@ impl GarbageCollector {
         }
 
         {
-            let private = private.read().unwrap();
+            let private = self.private.read().unwrap();
             println!("{} object(s) removed.", private.removed_count);
         }
 
