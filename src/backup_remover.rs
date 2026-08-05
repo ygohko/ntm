@@ -46,6 +46,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_READING_DIRECTORY_FAILED: ErrorCode = 1;
 
 struct Private {
+    join_handle: Option<JoinHandle<Result<()>>>,
     destination_path: String,
     removed_count: i64,
     count: i32,
@@ -54,6 +55,7 @@ struct Private {
 impl Private {
     fn new() -> Self {
         Self {
+            join_handle: None,
             destination_path: ".".to_string(),
             removed_count: 0,
             count: 0,
@@ -61,8 +63,8 @@ impl Private {
     }
 }
 
+#[derive(Clone)]
 pub struct BackupRemover {
-    join_handle: Option<JoinHandle<Result<()>>>,
     private: Arc<RwLock<Private>>,
 }
 
@@ -82,8 +84,7 @@ impl Task for BackupRemover {
     /// # Returns
     /// - `Ok(())` if the thread was successfully spawned.
     fn execute(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        let result = main(&private);
+        let result = self.main();
 
         result
     }
@@ -107,9 +108,10 @@ impl Task for BackupRemover {
     ///
     /// `Ok(())` if the thread was successfully spawned.
     fn execute_in_background(&mut self) -> Result<()> {
-        let private = self.private.clone();
-        self.join_handle = Some(thread::spawn(move || {
-            let result = main(&private);
+        let remover = self.clone();
+        let private = self.private.write().unwrap();
+        private.join_handle = Some(thread::spawn(move || {
+            let result = remover.main();
 
             result
         }));
@@ -171,27 +173,27 @@ impl BackupRemover {
         let mut private = self.private.write().unwrap();
         private.destination_path = path.to_string();
     }
-}
 
-fn main(private: &Arc<RwLock<Private>>) -> Result<()> {
-    let destination_path: String;
-    {
-        let private = private.read().unwrap();
-        destination_path = private.destination_path.clone();
-    }
-    let mut path = Utf8PathBuf::from(&destination_path);
-    path.push("Backups");
-
-    let Ok(read_dir) = fs::read_dir(&path) else {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
-    };
-    for result in read_dir {
-        if let Ok(dir_entry) = result {
-            process_dir_entry(private, &dir_entry)?;
+    fn main(&self) -> Result<()> {
+        let destination_path: String;
+        {
+            let private = private.read().unwrap();
+            destination_path = private.destination_path.clone();
         }
-    }
+        let mut path = Utf8PathBuf::from(&destination_path);
+        path.push("Backups");
 
-    Ok(())
+        let Ok(read_dir) = fs::read_dir(&path) else {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED));
+        };
+        for result in read_dir {
+            if let Ok(dir_entry) = result {
+                process_dir_entry(private, &dir_entry)?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 fn process_dir_entry(private: &Arc<RwLock<Private>>, dir_entry: &DirEntry) -> Result<()> {
