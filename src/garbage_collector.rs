@@ -209,7 +209,7 @@ impl GarbageCollector {
     ///
     /// Panics if the internal `RwLock` is poisoned, indicating a previous operation
     /// on the protected data failed catastrophically.
-    pub fn set_destination_path(&mut self, path: &str) {
+    pub fn set_destination_path(&self, path: &str) {
         let mut private = self.private.write().unwrap();
         private.destination_path = path.to_string();
     }
@@ -224,7 +224,7 @@ impl GarbageCollector {
     /// # Arguments
     ///
     /// * `count` - An `i64` value representing the new limited count.
-    pub fn set_limited_count(&mut self, count: i64) {
+    pub fn set_limited_count(&self, count: i64) {
         let mut private = self.private.write().unwrap();
         private.limited_count = Some(count);
     }

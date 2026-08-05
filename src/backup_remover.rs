@@ -172,7 +172,7 @@ impl BackupRemover {
     ///
     /// This method will panic if the `RwLock` is poisoned (i.e., a writer
     /// previously panicked while holding the lock).
-    pub fn set_destination_path(&mut self, path: &str) {
+    pub fn set_destination_path(&self, path: &str) {
         let mut private = self.private.write().unwrap();
         private.destination_path = path.to_string();
     }
