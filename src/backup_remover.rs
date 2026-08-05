@@ -109,7 +109,7 @@ impl Task for BackupRemover {
     /// `Ok(())` if the thread was successfully spawned.
     fn execute_in_background(&mut self) -> Result<()> {
         let remover = self.clone();
-        let private = self.private.write().unwrap();
+        let mut private = self.private.write().unwrap();
         private.join_handle = Some(thread::spawn(move || {
             let result = remover.main();
 
@@ -129,7 +129,11 @@ impl Task for BackupRemover {
     /// # Returns
     /// - `Ok(())` if the background thread is successfully spawned.
     fn join(&mut self) -> Result<()> {
-        let handle = self.join_handle.take();
+        let handle: Option<JoinHandle<Result<()>>>;
+        {
+            let mut private = self.private.write().unwrap();
+            handle = private.join_handle.take();
+        }
         let Some(handle) = handle else {
             return Err(Error::new(task::ERROR_ID, task::ERROR_CODE_NOT_SUPPORTED));
         };
@@ -150,7 +154,6 @@ impl BackupRemover {
     /// private state, ensuring thread-safe shared access to its data.
     pub fn new() -> Self {
         Self {
-            join_handle: None,
             private: Arc::new(RwLock::new(Private::new())),
         }
     }
@@ -177,7 +180,7 @@ impl BackupRemover {
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
-            let private = private.read().unwrap();
+            let private = self.private.read().unwrap();
             destination_path = private.destination_path.clone();
         }
         let mut path = Utf8PathBuf::from(&destination_path);
@@ -188,7 +191,7 @@ impl BackupRemover {
         };
         for result in read_dir {
             if let Ok(dir_entry) = result {
-                process_dir_entry(private, &dir_entry)?;
+                process_dir_entry(&self.private, &dir_entry)?;
             }
         }
 
