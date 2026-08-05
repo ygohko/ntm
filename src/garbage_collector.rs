@@ -280,7 +280,7 @@ impl GarbageCollector {
         for i in 0..65536 {
             let index1 = (i / 0x100) & 0xFF;
             let index2 = i & 0xFF;
-            if let Err(error) = process_unit(&self.private, index1, index2, true) {
+            if let Err(error) = self.process_unit(index1, index2, true) {
                 println!("Warning: Processing unit failed. error: {}", error);
             }
         }
@@ -289,7 +289,7 @@ impl GarbageCollector {
             let index = (i as i32) + offset;
             let index1 = (index / 0x100) & 0xFF;
             let index2 = index & 0xFF;
-            if let Err(error) = process_unit(&self.private, index1, index2, false) {
+            if let Err(error) = self.process_unit(index1, index2, false) {
                 println!("Warning: Processing unit failed. error: {}", error);
             }
 
@@ -320,66 +320,66 @@ impl GarbageCollector {
 
         Ok(())
     }
-}
 
-fn process_unit(private: &Arc<RwLock<Private>>, index1: i32, index2: i32, large: bool) -> Result<()> {
-    let destination_path: String;
-    {
-        let private = private.read().unwrap();
-        destination_path = private.destination_path.clone();
-    }
-    let mut directory1 = format!("{:02x}", index1);
-    if large {
-        directory1 = "l".to_string() + &directory1;
-    }
-    let directory2 = format!("{:02x}", index2);
-    let mut object_path = Utf8PathBuf::from(&destination_path);
-    object_path.push("Objects");
-    object_path.push(&directory1);
-    object_path.push(&directory2);
-    if !Path::new(&object_path).exists() {
-        return Ok(());
-    }
-    let mut producer = FilePathProducer::new(&object_path.to_string_easy());
-    let mut done = false;
-    while !done {
-        let option = match producer.next() {
-            Ok(path) => Some(path),
-            Err(error) => {
-                if error.id == file_path_producer::ERROR_ID
-                    && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                {
-                    done = true;
+    fn process_unit(&self, index1: i32, index2: i32, large: bool) -> Result<()> {
+        let destination_path: String;
+        {
+            let private = self.private.read().unwrap();
+            destination_path = private.destination_path.clone();
+        }
+        let mut directory1 = format!("{:02x}", index1);
+        if large {
+            directory1 = "l".to_string() + &directory1;
+        }
+        let directory2 = format!("{:02x}", index2);
+        let mut object_path = Utf8PathBuf::from(&destination_path);
+        object_path.push("Objects");
+        object_path.push(&directory1);
+        object_path.push(&directory2);
+        if !Path::new(&object_path).exists() {
+            return Ok(());
+        }
+        let mut producer = FilePathProducer::new(&object_path.to_string_easy());
+        let mut done = false;
+        while !done {
+            let option = match producer.next() {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
+                        done = true;
+                    }
+
+                    None
                 }
+            };
 
-                None
-            }
-        };
-
-        if let Some(produced_path) = option {
-            let path = Utf8PathBuf::from(&produced_path);
-            let extension = path.extension_or_empty();
-            let file_name = path.file_name_or_empty();
-            if extension == "" {
-                let mut path = Utf8PathBuf::from(&directory1);
-                path.push(&directory2);
-                path.push(&produced_path);
-                if let Err(error) = process_object(private, &path.to_string_easy()) {
-                    println!(
-                        "Warning: error caused when processing objects. error: {}",
-                        error
-                    );
-                }
-                {
-                    let mut private = private.write().unwrap();
-                    private.processed_count += 1;
-                    private.state.last_processed_id = file_name;
+            if let Some(produced_path) = option {
+                let path = Utf8PathBuf::from(&produced_path);
+                let extension = path.extension_or_empty();
+                let file_name = path.file_name_or_empty();
+                if extension == "" {
+                    let mut path = Utf8PathBuf::from(&directory1);
+                    path.push(&directory2);
+                    path.push(&produced_path);
+                    if let Err(error) = process_object(&self.private, &path.to_string_easy()) {
+                        println!(
+                            "Warning: error caused when processing objects. error: {}",
+                            error
+                        );
+                    }
+                    {
+                        let mut private = self.private.write().unwrap();
+                        private.processed_count += 1;
+                        private.state.last_processed_id = file_name;
+                    }
                 }
             }
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 fn process_object(private: &Arc<RwLock<Private>>, path: &str) -> Result<()> {
