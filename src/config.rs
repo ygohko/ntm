@@ -53,6 +53,7 @@ mod tests {
     fn is_creatable() {
         let config = Config::new();
         assert_eq!(config.source_path, "".to_string());
+        assert_eq!(config.cache_size, Some(8));
     }
 
     #[test]
@@ -79,5 +80,18 @@ mod tests {
         };
         assert_eq!(config.source_path, "/a/b/c".to_string());
         assert_eq!(config.excluded_directories, Some(vec!["d".to_string()]));
+
+        let serialized = "{ \"source_path\": \"/a/b/c\", \"excluded_directories\": [ \"d\" ], \"cache_size\": 16 }";
+        let config: Config = match serde_json::from_str(&serialized) {
+            Ok(config) => config,
+            Err(_) => {
+                assert!(false);
+
+                Config::new()
+            }
+        };
+        assert_eq!(config.source_path, "/a/b/c".to_string());
+        assert_eq!(config.excluded_directories, Some(vec!["d".to_string()]));
+        assert_eq!(config.cache_size, Some(16));
     }
 }
