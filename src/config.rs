@@ -27,6 +27,7 @@ use serde::Deserialize;
 pub struct Config {
     pub source_path: String,
     pub excluded_directories: Option<Vec<String>>,
+    pub cache_size: Option<i32>,
 }
 
 impl Config {
@@ -39,6 +40,7 @@ impl Config {
         Self {
             source_path: "".to_string(),
             excluded_directories: Some(vec![]),
+            cache_size: Some(8),
         }
     }
 }
