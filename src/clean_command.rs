@@ -37,6 +37,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub struct CleanCommand {
     destination_path: String,
     limited_count: Option<i64>,
+    object_only: bool,
 }
 
 impl Task for CleanCommand {
@@ -48,9 +49,14 @@ impl Task for CleanCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let mut remover = BackupRemover::new();
-        remover.set_destination_path(&self.destination_path);
-        remover.execute_in_background()?;
+        let mut remover: Option<BackupRemover> = None;
+        if !self.object_only {
+            remover = Some(BackupRemover::new());
+        }
+        if let Some(ref mut remover1) = remover {
+            remover1.set_destination_path(&self.destination_path);
+            remover1.execute_in_background()?;
+        }
 
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&self.destination_path);
@@ -59,8 +65,10 @@ impl Task for CleanCommand {
         }
         collector.execute_in_background()?;
 
-        if let Err(error) = remover.join() {
-            println!("Removing backups failed. error {}", error);
+        if let Some(mut remover1) = remover {
+            if let Err(error) = remover1.join() {
+                println!("Removing backups failed. error {}", error);
+            }
         }
         if let Err(error) = collector.join() {
             println!("Garbage collection failed. error {}", error);
@@ -80,6 +88,7 @@ impl CleanCommand {
         Self {
             destination_path: ".".to_string(),
             limited_count: None,
+            object_only: false,
         }
     }
 
@@ -99,6 +108,15 @@ impl CleanCommand {
     /// * `count` - The maximum number of objects to process.
     pub fn set_limited_count(&mut self, count: i64) {
         self.limited_count = Some(count);
+    }
+
+    /// Sets the object only for this command.
+    ///
+    /// # Arguments
+    ///
+    /// * `object_only` - Whether cleans object only.
+    pub fn set_object_only(&mut self, object_only: bool) {
+        self.object_only = object_only;
     }
 }
 

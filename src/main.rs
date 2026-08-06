@@ -107,6 +107,9 @@ struct GetArguments {
 struct CleanArguments {
     /// Directory to limit getting backuped directories and files
     limited_count: Option<i32>,
+    /// Whether cleans objects only
+    #[arg(short, long)]
+    object_only: bool,
     /// Backup destination that cleaning is executed on
     #[arg(short, long)]
     destination: Option<String>,
@@ -201,6 +204,9 @@ fn main() -> ExitCode {
         }
         if let Some(destination) = arguments.destination {
             command.set_destination_path(&destination);
+        }
+        if arguments.object_only {
+            command.set_object_only(true);
         }
         match command.execute() {
             Ok(_) => (),
