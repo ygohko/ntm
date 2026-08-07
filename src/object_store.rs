@@ -65,6 +65,7 @@ pub struct ObjectStore {
     adding_file: Option<File>,
     existing_ids: Vec<Vec<String>>,
     cached_count: i64,
+    cache_size: usize,
 }
 
 impl ObjectStore {
@@ -88,6 +89,7 @@ impl ObjectStore {
             adding_file: None,
             existing_ids: existing_ids,
             cached_count: 0,
+            cache_size: 8,
         }
     }
 
@@ -491,8 +493,6 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn save_cache(&self) -> Result<()> {
-        const CACHE_SIZE: usize = 16;
-
         let mut cache = Cache {
             existing_ids: Vec::new(),
         };
@@ -500,8 +500,8 @@ impl ObjectStore {
             let ids = &self.existing_ids[i];
             let mut begin = 0;
             let count = ids.len();
-            if count > CACHE_SIZE {
-                begin = count - CACHE_SIZE;
+            if count > self.cache_size {
+                begin = count - self.cache_size;
             }
             for i in begin..count {
                 cache.existing_ids.push(ids[i].clone());
@@ -528,6 +528,15 @@ impl ObjectStore {
     /// Count that indicates how many object cache hit.
     pub fn cached_count(&self) -> i64 {
         self.cached_count
+    }
+
+    /// Sets cache size of this object store.
+    ///
+    /// # Arguments
+    ///
+    /// * `cache_size` - The cache size to be set.
+    pub fn set_cache_size(&mut self, cache_size: usize) {
+        self.cache_size = cache_size;
     }
 }
 

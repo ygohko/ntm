@@ -77,17 +77,6 @@ impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
-        path.push("Objects");
-        let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
-        {
-            if let Ok(mut store1) = store.write() {
-                if let Err(error) = store1.load_cache() {
-                    println!("Loading existing IDs failed. error: {}", error);
-                }
-            }
-        }
-        self.name = self.executing.format("%Y%m%d-%H%M").to_string();
-        let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
@@ -105,6 +94,21 @@ impl Task for BackupExecuteCommand {
         } else {
             config = Config::new();
         }
+        let mut path = Utf8PathBuf::from(&self.destination_path);
+        path.push("Objects");
+        let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
+        {
+            if let Ok(mut store1) = store.write() {
+                if let Err(error) = store1.load_cache() {
+                    println!("Loading existing IDs failed. error: {}", error);
+                }
+            }
+        }
+        if let Some(cache_size) = config.cache_size {
+            let mut store1 = store.write().unwrap();
+            store1.set_cache_size(cache_size as usize);
+        }
+        self.name = self.executing.format("%Y%m%d-%H%M").to_string();
         self.excluded_directories = match config.excluded_directories {
             Some(directories) => directories,
             None => vec![],
