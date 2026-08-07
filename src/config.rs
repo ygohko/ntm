@@ -27,7 +27,7 @@ use serde::Deserialize;
 pub struct Config {
     pub source_path: String,
     pub excluded_directories: Option<Vec<String>>,
-    pub cache_size: Option<i32>,
+    pub cache_size: Option<u32>,
 }
 
 impl Config {
