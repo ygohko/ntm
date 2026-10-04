@@ -84,6 +84,9 @@ impl Task for GetCommand {
         backup_path.push(&self.backup);
         let mut path = Utf8PathBuf::new();
         path.push(&backup_path);
+
+        println!("path: {}", path);
+
         let exists = match path.try_exists() {
             Ok(exists) => exists,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND)),
