@@ -137,30 +137,32 @@ impl Task for GetCommand {
                     Ok(entry) => entry,
                     Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
                 };
-                let bytes = match store.bytes(&entry.id) {
-                    Ok(bytes) => bytes,
-                    // TODO: Skipping file that object is not found may be needed.
-                    Err(error) => return Err(error),
-                };
-                let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
-                gotten_path.push(&self.backup);
-                if self.limited_directory != "".to_string() {
-                    gotten_path.push(&self.limited_directory);
+
+                let result = store.bytes(&entry.id);
+                if let Err(ref error) = result {
+                    println!("store.bytes() failed. error: {}", error);
                 }
-                gotten_path.push(&path);
-                let directories = gotten_path.parent_or_empty();
-                match fs::create_dir_all(&directories) {
-                    Ok(_) => (),
-                    // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                }
-                match fs::write(&gotten_path, bytes) {
-                    Ok(_) => (),
-                    // TODO: Skipping file that writing is failed may be needed.
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                };
-                if let Err(error) = apply_metadata(&gotten_path.to_string_easy(), &entry) {
-                    println!("apply_metadata() failed: error: {}", error);
+                if let Ok(bytes) = result {
+                    let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
+                    gotten_path.push(&self.backup);
+                    if self.limited_directory != "".to_string() {
+                        gotten_path.push(&self.limited_directory);
+                    }
+                    gotten_path.push(&path);
+                    let directories = gotten_path.parent_or_empty();
+                    match fs::create_dir_all(&directories) {
+                        Ok(_) => (),
+                        // TODO: Skipping file that writing is failed may be needed.
+                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                    }
+                    match fs::write(&gotten_path, bytes) {
+                        Ok(_) => (),
+                        // TODO: Skipping file that writing is failed may be needed.
+                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                    };
+                    if let Err(error) = apply_metadata(&gotten_path.to_string_easy(), &entry) {
+                        println!("apply_metadata() failed: error: {}", error);
+                    }
                 }
 
                 self.processed_count += 1;
