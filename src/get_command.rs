@@ -160,9 +160,9 @@ impl Task for GetCommand {
                     if let Err(error) = apply_metadata(&gotten_path.to_string_easy(), &entry) {
                         println!("apply_metadata() failed: error: {}", error);
                     }
-                }
 
-                self.processed_count += 1;
+                    self.processed_count += 1;
+                }
             }
         }
         println!("{} file(s) gotten.", self.processed_count);
