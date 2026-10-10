@@ -32,7 +32,6 @@ mod garbage_collector;
 mod get_command;
 mod init_command;
 mod object_adder;
-mod object_store;
 mod task;
 
 use clap::Parser;

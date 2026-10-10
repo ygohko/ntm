@@ -34,9 +34,9 @@ use ntm_model::error::Error;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
+use ntm_model::object_store;
+use ntm_model::object_store::ObjectStore;
 
-use crate::object_store;
-use crate::object_store::ObjectStore;
 use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "object_adder";
