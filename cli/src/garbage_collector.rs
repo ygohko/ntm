@@ -31,13 +31,13 @@ use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
 
+use ntm_model::attributes::Attributes;
 use ntm_model::entry::Entry;
 use ntm_model::error::Error;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
 
-use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::file_path_producer;
