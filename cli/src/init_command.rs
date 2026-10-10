@@ -93,9 +93,10 @@ impl InitCommand {
 mod tests {
     use tempdir::TempDir;
 
-    use crate::commons::OperatePath;
+    use ntm_model::commons::OperatePath;
+    use ntm_model::task::Task;
+    
     use crate::init_command::InitCommand;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {

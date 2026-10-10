@@ -373,10 +373,11 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
+    use ntm_model::commons::OperatePath;
+    use ntm_model::task::Task;
+
     use crate::backup_execute_command::BackupExecuteCommand;
-    use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {
