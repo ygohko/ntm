@@ -29,14 +29,14 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use ntm_model::attributes::Attributes;
-use ntm_model::error::Error;
-use ntm_model::error::ErrorCode;
-use ntm_model::error::ErrorId;
-use ntm_model::error::Result;
-use ntm_model::object_store;
-use ntm_model::object_store::ObjectStore;
-use ntm_model::task::Task;
+use crate::attributes::Attributes;
+use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
+use crate::error::Result;
+use crate::object_store;
+use crate::object_store::ObjectStore;
+use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "object_adder";
 

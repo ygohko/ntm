@@ -31,7 +31,6 @@ mod file_path_producer;
 mod garbage_collector;
 mod get_command;
 mod init_command;
-mod object_adder;
 
 use clap::Parser;
 use clap::Subcommand;
