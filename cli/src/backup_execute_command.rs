@@ -39,9 +39,10 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::SystemTime;
 
+use model::config::Config;
+
 use crate::background_executer::BackgroundExecuter;
 use crate::commons::OperatePath;
-use crate::config::Config;
 use crate::entry::Entry;
 use crate::entry_saver::EntrySaver;
 use crate::error::Error;

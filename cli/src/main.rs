@@ -28,7 +28,6 @@ mod backup_remover;
 mod backup_store;
 mod clean_command;
 mod commons;
-mod config;
 mod entry;
 mod entry_saver;
 mod error;
