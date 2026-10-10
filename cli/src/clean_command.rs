@@ -20,13 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use ntm_model::backup_remover::BackupRemover;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
 use ntm_model::garbage_collector::GarbageCollector;
 use ntm_model::task::Task;
-
-use crate::backup_remover::BackupRemover;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "clean_command";
