@@ -32,6 +32,7 @@ use std::thread;
 use std::thread::JoinHandle;
 
 use ntm_model::attributes::Attributes;
+use ntm_model::backup_store::BackupStore;
 use ntm_model::commons::OperatePath;
 use ntm_model::entry::Entry;
 use ntm_model::error::Error;
@@ -43,8 +44,6 @@ use ntm_model::file_path_producer::FilePathProducer;
 use ntm_model::object_store::ObjectStore;
 use ntm_model::task;
 use ntm_model::task::Task;
-
-use crate::backup_store::BackupStore;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "garbage_collector";

@@ -1,6 +1,7 @@
 // TODO: Add license notice.
 
 pub mod attributes;
+pub mod backup_store;
 pub mod commons;
 pub mod config;
 pub mod entry;

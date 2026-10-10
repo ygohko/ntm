@@ -24,7 +24,6 @@ mod background_executer;
 mod backup_execute_command;
 mod backup_remove_command;
 mod backup_remover;
-mod backup_store;
 mod clean_command;
 mod garbage_collector;
 mod get_command;
