@@ -32,19 +32,19 @@ mod garbage_collector;
 mod get_command;
 mod init_command;
 mod object_adder;
-mod task;
 
 use clap::Parser;
 use clap::Subcommand;
 use std::process::ExitCode;
 use std::time::SystemTime;
 
+use ntm_model::task::Task;
+
 use crate::backup_execute_command::BackupExecuteCommand;
 use crate::backup_remove_command::BackupRemoveCommand;
 use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
-use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
 struct InitArguments {

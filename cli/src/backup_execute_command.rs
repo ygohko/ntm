@@ -47,13 +47,13 @@ use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
 use ntm_model::commons::OperatePath;
 use ntm_model::object_store::ObjectStore;
+use ntm_model::task::Task;
 
 use crate::background_executer::BackgroundExecuter;
 use crate::entry_saver::EntrySaver;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_adder::ObjectAdder;
-use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "backup_execute_command";
 

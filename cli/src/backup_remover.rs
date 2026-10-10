@@ -33,11 +33,11 @@ use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
 use ntm_model::commons::OperatePath;
+use ntm_model::task;
+use ntm_model::task::Task;
 
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
-use crate::task;
-use crate::task::Task;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "backup_remover";

@@ -29,8 +29,7 @@ use ntm_model::error::Error;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
-
-use crate::task::Task;
+use ntm_model::task::Task;
 
 pub const ERROR_ID: ErrorId = "backup_command";
 
