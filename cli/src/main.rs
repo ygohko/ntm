@@ -29,7 +29,6 @@ mod backup_store;
 mod clean_command;
 mod commons;
 mod entry_saver;
-mod error;
 mod file_path_producer;
 mod garbage_collector;
 mod get_command;

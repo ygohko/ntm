@@ -32,14 +32,14 @@ use std::thread;
 use std::thread::JoinHandle;
 
 use ntm_model::entry::Entry;
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
 
 use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;

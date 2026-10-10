@@ -24,11 +24,12 @@ use camino::Utf8PathBuf;
 use regex::Regex;
 use std::fs;
 
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
+
 use crate::backup_store::BackupStore;
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
 use crate::task::Task;
 
 #[allow(dead_code)]

@@ -20,10 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
+
 use crate::backup_remover::BackupRemover;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
 use crate::garbage_collector::GarbageCollector;
 use crate::task::Task;
 

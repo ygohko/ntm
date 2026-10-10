@@ -41,14 +41,14 @@ use std::time::SystemTime;
 
 use ntm_model::config::Config;
 use ntm_model::entry::Entry;
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
 
 use crate::background_executer::BackgroundExecuter;
 use crate::commons::OperatePath;
 use crate::entry_saver::EntrySaver;
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_adder::ObjectAdder;

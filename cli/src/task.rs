@@ -20,10 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "task";
