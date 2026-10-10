@@ -25,7 +25,6 @@ mod backup_execute_command;
 mod backup_remove_command;
 mod backup_remover;
 mod clean_command;
-mod garbage_collector;
 mod get_command;
 mod init_command;
 

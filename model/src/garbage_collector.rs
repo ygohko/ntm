@@ -31,19 +31,19 @@ use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
 
-use ntm_model::attributes::Attributes;
-use ntm_model::backup_store::BackupStore;
-use ntm_model::commons::OperatePath;
-use ntm_model::entry::Entry;
-use ntm_model::error::Error;
-use ntm_model::error::ErrorCode;
-use ntm_model::error::ErrorId;
-use ntm_model::error::Result;
-use ntm_model::file_path_producer;
-use ntm_model::file_path_producer::FilePathProducer;
-use ntm_model::object_store::ObjectStore;
-use ntm_model::task;
-use ntm_model::task::Task;
+use crate::attributes::Attributes;
+use crate::backup_store::BackupStore;
+use crate::commons::OperatePath;
+use crate::entry::Entry;
+use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
+use crate::error::Result;
+use crate::file_path_producer;
+use crate::file_path_producer::FilePathProducer;
+use crate::object_store::ObjectStore;
+use crate::task;
+use crate::task::Task;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "garbage_collector";
@@ -404,7 +404,7 @@ impl GarbageCollector {
         let attributes: Attributes;
         {
             let private = self.private.read().unwrap();
-            if let Some(ref object_store) = &private.object_store {
+            if let Some(object_store) = &private.object_store {
                 if object_store.cached(&object_id)? {
                     return Ok(());
                 }

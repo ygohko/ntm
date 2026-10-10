@@ -375,6 +375,7 @@ name = "ntm-model"
 version = "0.1.0"
 dependencies = [
  "camino",
+ "chrono",
  "serde",
  "serde_derive",
  "serde_json",
