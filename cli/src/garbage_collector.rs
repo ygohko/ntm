@@ -37,9 +37,9 @@ use ntm_model::error::Error;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
+use ntm_model::commons::OperatePath;
 
 use crate::backup_store::BackupStore;
-use crate::commons::OperatePath;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
 use crate::object_store::ObjectStore;

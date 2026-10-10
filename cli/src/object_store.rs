@@ -33,8 +33,7 @@ use ntm_model::error::Error;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
-
-use crate::commons::OperatePath;
+use ntm_model::commons::OperatePath;
 
 pub const ERROR_ID: ErrorId = "object_store";
 
