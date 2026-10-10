@@ -20,7 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-mod background_executer;
 mod backup_execute_command;
 mod backup_remove_command;
 mod clean_command;

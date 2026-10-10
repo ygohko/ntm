@@ -39,6 +39,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::SystemTime;
 
+use ntm_model::background_executer::BackgroundExecuter;
 use ntm_model::commons::OperatePath;
 use ntm_model::config::Config;
 use ntm_model::entry::Entry;
@@ -52,8 +53,6 @@ use ntm_model::file_path_producer::FilePathProducer;
 use ntm_model::object_adder::ObjectAdder;
 use ntm_model::object_store::ObjectStore;
 use ntm_model::task::Task;
-
-use crate::background_executer::BackgroundExecuter;
 
 pub const ERROR_ID: ErrorId = "backup_execute_command";
 
