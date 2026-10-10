@@ -23,8 +23,9 @@
 use camino::Utf8PathBuf;
 use std::fs;
 
+use ntm_model::entry::Entry;
+
 use crate::commons::OperatePath;
-use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;

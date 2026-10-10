@@ -40,10 +40,10 @@ use std::sync::RwLock;
 use std::time::SystemTime;
 
 use ntm_model::config::Config;
+use ntm_model::entry::Entry;
 
 use crate::background_executer::BackgroundExecuter;
 use crate::commons::OperatePath;
-use crate::entry::Entry;
 use crate::entry_saver::EntrySaver;
 use crate::error::Error;
 use crate::error::ErrorCode;

@@ -35,8 +35,9 @@ use std::time::Duration;
 #[cfg(not(target_os = "windows"))]
 use std::time::SystemTime;
 
+use ntm_model::entry::Entry;
+
 use crate::commons::OperatePath;
-use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
