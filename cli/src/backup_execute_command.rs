@@ -39,7 +39,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::SystemTime;
 
-use model::config::Config;
+use ntm_model::config::Config;
 
 use crate::background_executer::BackgroundExecuter;
 use crate::commons::OperatePath;
