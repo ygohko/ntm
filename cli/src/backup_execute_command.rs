@@ -40,6 +40,7 @@ use std::sync::RwLock;
 use std::time::SystemTime;
 
 use ntm_model::background_executer::BackgroundExecuter;
+use ntm_model::backup_executer::BackupExecuter;
 use ntm_model::commons::OperatePath;
 use ntm_model::config::Config;
 use ntm_model::entry::Entry;
@@ -75,6 +76,14 @@ pub struct BackupExecuteCommand {
 
 impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
+        let mut executer = BackupExecuter::new();
+        let result = executer.execute();
+
+        result
+
+
+
+        /*
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
@@ -160,6 +169,7 @@ impl Task for BackupExecuteCommand {
         }
 
         Ok(())
+        */
     }
 }
 

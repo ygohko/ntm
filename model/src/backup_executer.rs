@@ -170,6 +170,24 @@ impl Task for BackupExecuter {
 }
 
 impl BackupExecuter {
+    /// Creates a new `BackupExecuteCommand` instance.
+    ///
+    /// # Returns
+    ///
+    /// A new `BackupExecuteCommand` instance.
+    pub fn new() -> Self {
+        Self {
+            name: "".to_string(),
+            executer: BackgroundExecuter::new(),
+            executing: Local::now(),
+            destination_path: ".".to_string(),
+            excluded_directories: vec![],
+            processed_count: 0,
+            added_count: Arc::new(AtomicI64::new(0)),
+            count: 0,
+        }
+    }
+
     fn process_file(
         &mut self,
         path: &String,
