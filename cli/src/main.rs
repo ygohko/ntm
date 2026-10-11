@@ -20,37 +20,24 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-mod attributes;
-mod background_executer;
 mod backup_execute_command;
 mod backup_remove_command;
-mod backup_remover;
-mod backup_store;
 mod clean_command;
-mod commons;
-mod config;
-mod entry;
-mod entry_saver;
-mod error;
-mod file_path_producer;
-mod garbage_collector;
 mod get_command;
 mod init_command;
-mod object_adder;
-mod object_store;
-mod task;
 
 use clap::Parser;
 use clap::Subcommand;
 use std::process::ExitCode;
 use std::time::SystemTime;
 
+use ntm_model::task::Task;
+
 use crate::backup_execute_command::BackupExecuteCommand;
 use crate::backup_remove_command::BackupRemoveCommand;
 use crate::clean_command::CleanCommand;
 use crate::get_command::GetCommand;
 use crate::init_command::InitCommand;
-use crate::task::Task;
 
 #[derive(Parser, PartialEq)]
 struct InitArguments {

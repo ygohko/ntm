@@ -23,12 +23,12 @@
 use camino::Utf8PathBuf;
 use std::fs;
 
-use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::commons::OperatePath;
 use crate::task::Task;
 
 pub const ERROR_ID: ErrorId = "entry_saver";

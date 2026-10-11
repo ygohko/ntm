@@ -24,11 +24,11 @@ use camino::Utf8PathBuf;
 use std::fs;
 use std::path::Path;
 
-use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::commons::OperatePath;
 
 pub const ERROR_ID: ErrorId = "file_path_producer";
 

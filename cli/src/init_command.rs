@@ -23,11 +23,11 @@
 use camino::Utf8PathBuf;
 use std::fs;
 
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
-use crate::task::Task;
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
+use ntm_model::task::Task;
 
 pub const ERROR_ID: ErrorId = "init_command";
 
@@ -93,9 +93,10 @@ impl InitCommand {
 mod tests {
     use tempdir::TempDir;
 
-    use crate::commons::OperatePath;
+    use ntm_model::commons::OperatePath;
+    use ntm_model::task::Task;
+    
     use crate::init_command::InitCommand;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {

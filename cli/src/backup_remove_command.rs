@@ -24,12 +24,12 @@ use camino::Utf8PathBuf;
 use regex::Regex;
 use std::fs;
 
-use crate::backup_store::BackupStore;
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
-use crate::task::Task;
+use ntm_model::backup_store::BackupStore;
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
+use ntm_model::task::Task;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "backup_remove_command";
@@ -144,11 +144,12 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
+    use ntm_model::commons::OperatePath;
+    use ntm_model::task::Task;
+
     use crate::backup_execute_command::BackupExecuteCommand;
     use crate::backup_remove_command::BackupRemoveCommand;
-    use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {

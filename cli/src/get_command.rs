@@ -35,16 +35,16 @@ use std::time::Duration;
 #[cfg(not(target_os = "windows"))]
 use std::time::SystemTime;
 
-use crate::commons::OperatePath;
-use crate::entry::Entry;
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
-use crate::file_path_producer;
-use crate::file_path_producer::FilePathProducer;
-use crate::object_store::ObjectStore;
-use crate::task::Task;
+use ntm_model::commons::OperatePath;
+use ntm_model::entry::Entry;
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
+use ntm_model::file_path_producer;
+use ntm_model::file_path_producer::FilePathProducer;
+use ntm_model::object_store::ObjectStore;
+use ntm_model::task::Task;
 
 pub const ERROR_ID: ErrorId = "get_command";
 
@@ -281,11 +281,12 @@ mod tests {
     use std::time::SystemTime;
     use tempdir::TempDir;
 
+    use ntm_model::commons::OperatePath;
+    use ntm_model::task::Task;
+    
     use crate::backup_execute_command::BackupExecuteCommand;
-    use crate::commons::OperatePath;
     use crate::get_command::GetCommand;
     use crate::init_command::InitCommand;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {

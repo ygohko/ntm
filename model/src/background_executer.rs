@@ -31,7 +31,7 @@ use crate::error::ErrorId;
 use crate::error::Result;
 use crate::task::Task;
 
-pub const ERROR_ID: ErrorId = "backup_command";
+pub const ERROR_ID: ErrorId = "background_executer";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;

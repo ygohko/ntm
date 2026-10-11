@@ -39,20 +39,20 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::SystemTime;
 
-use crate::background_executer::BackgroundExecuter;
-use crate::commons::OperatePath;
-use crate::config::Config;
-use crate::entry::Entry;
-use crate::entry_saver::EntrySaver;
-use crate::error::Error;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
-use crate::file_path_producer;
-use crate::file_path_producer::FilePathProducer;
-use crate::object_adder::ObjectAdder;
-use crate::object_store::ObjectStore;
-use crate::task::Task;
+use ntm_model::background_executer::BackgroundExecuter;
+use ntm_model::commons::OperatePath;
+use ntm_model::config::Config;
+use ntm_model::entry::Entry;
+use ntm_model::entry_saver::EntrySaver;
+use ntm_model::error::Error;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
+use ntm_model::file_path_producer;
+use ntm_model::file_path_producer::FilePathProducer;
+use ntm_model::object_adder::ObjectAdder;
+use ntm_model::object_store::ObjectStore;
+use ntm_model::task::Task;
 
 pub const ERROR_ID: ErrorId = "backup_execute_command";
 
@@ -373,10 +373,11 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
+    use ntm_model::commons::OperatePath;
+    use ntm_model::task::Task;
+
     use crate::backup_execute_command::BackupExecuteCommand;
-    use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {

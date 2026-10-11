@@ -20,12 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use crate::backup_remover::BackupRemover;
-use crate::error::ErrorCode;
-use crate::error::ErrorId;
-use crate::error::Result;
-use crate::garbage_collector::GarbageCollector;
-use crate::task::Task;
+use ntm_model::backup_remover::BackupRemover;
+use ntm_model::error::ErrorCode;
+use ntm_model::error::ErrorId;
+use ntm_model::error::Result;
+use ntm_model::garbage_collector::GarbageCollector;
+use ntm_model::task::Task;
 
 #[allow(dead_code)]
 pub const ERROR_ID: ErrorId = "clean_command";
@@ -125,11 +125,12 @@ mod tests {
     use std::fs;
     use tempdir::TempDir;
 
+    use ntm_model::commons::OperatePath;
+    use ntm_model::task::Task;
+
     use crate::backup_execute_command::BackupExecuteCommand;
     use crate::clean_command::CleanCommand;
-    use crate::commons::OperatePath;
     use crate::init_command::InitCommand;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {
