@@ -22,6 +22,7 @@
 
 pub mod attributes;
 pub mod background_executer;
+pub mod backup_executer;
 pub mod backup_remover;
 pub mod backup_store;
 pub mod commons;
