@@ -23,6 +23,7 @@
 use camino::Utf8PathBuf;
 use std::fs;
 
+use ntm_model::destination_initializer::DestinationInitializer;
 use ntm_model::error::Error;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
@@ -49,21 +50,11 @@ impl Task for InitCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let mut path = Utf8PathBuf::from(&self.destination_path);
-        path.push("Backups");
-        match fs::create_dir_all(&path) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
-        };
-        let mut path = Utf8PathBuf::from(&self.destination_path);
-        path.push("Objects");
-        match fs::create_dir_all(&path) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
-        };
-        // TODO: Create ntm.toml.
+        let mut initializer = DestinationInitializer::new();
+        initializer.set_path(&self.destination_path);
+        let result = initializer.execute();
 
-        Ok(())
+        result
     }
 }
 
