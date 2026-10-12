@@ -20,146 +20,23 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use camino::Utf8PathBuf;
-use chrono::DateTime;
-use chrono::Local;
-use hex_string::HexString;
-use sha2::Digest;
-use sha2::Sha256;
-use std::convert::From;
-use std::fs;
-use std::fs::Metadata;
-#[cfg(not(target_os = "windows"))]
-use std::os::unix::fs::MetadataExt;
-#[cfg(not(target_os = "windows"))]
-use std::os::unix::fs::PermissionsExt;
-use std::sync::atomic::AtomicI64;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::RwLock;
-use std::time::SystemTime;
-
-use ntm_model::background_executer::BackgroundExecuter;
-use ntm_model::commons::OperatePath;
-use ntm_model::config::Config;
-use ntm_model::entry::Entry;
-use ntm_model::entry_saver::EntrySaver;
-use ntm_model::error::Error;
-use ntm_model::error::ErrorCode;
-use ntm_model::error::ErrorId;
+use ntm_model::backup_executer::BackupExecuter;
 use ntm_model::error::Result;
-use ntm_model::file_path_producer;
-use ntm_model::file_path_producer::FilePathProducer;
-use ntm_model::object_adder::ObjectAdder;
-use ntm_model::object_store::ObjectStore;
 use ntm_model::task::Task;
-
-pub const ERROR_ID: ErrorId = "backup_execute_command";
-
-#[allow(dead_code)]
-pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_READING_SOURCE_FAILED: ErrorCode = 2;
 
 /// A command to backup files and directories.
 pub struct BackupExecuteCommand {
     name: String,
-    executer: BackgroundExecuter,
-    executing: DateTime<Local>,
     destination_path: String,
-    excluded_directories: Vec<String>,
-    processed_count: i64,
-    added_count: Arc<AtomicI64>,
-    count: i32,
 }
 
 impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
-        self.executer.execute()?;
-        let mut path = Utf8PathBuf::from(&self.destination_path);
-        path.push("ntm.toml");
-        let bytes = match fs::read(&path) {
-            Ok(bytes) => bytes,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
-        };
-        let string = match String::from_utf8(bytes) {
-            Ok(string) => string,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
-        };
-        let result = toml::from_str(&string);
-        let config: Config;
-        if result.is_ok() {
-            config = result.unwrap();
-            // println!("config.source_path: {}", config.source_path);
-        } else {
-            config = Config::new();
-        }
-        let mut path = Utf8PathBuf::from(&self.destination_path);
-        path.push("Objects");
-        let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
-        {
-            if let Ok(mut store1) = store.write() {
-                if let Err(error) = store1.load_cache() {
-                    println!("Loading existing IDs failed. error: {}", error);
-                }
-            }
-        }
-        if let Some(cache_size) = config.cache_size {
-            let mut store1 = store.write().unwrap();
-            store1.set_cache_size(cache_size as usize);
-        }
-        self.name = self.executing.format("%Y%m%d-%H%M").to_string();
-        self.excluded_directories = match config.excluded_directories {
-            Some(directories) => directories,
-            None => vec![],
-        };
+        let mut executer = BackupExecuter::new(&self.destination_path);
+        let result = executer.execute();
+        self.name = executer.name();
 
-        let mut producer = FilePathProducer::new(&config.source_path);
-        if self.excluded_directories.len() > 0 {
-            producer.set_excluded_directories(&self.excluded_directories);
-        }
-        let mut done = false;
-        while !done {
-            let path = match producer.next() {
-                Ok(path) => path,
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID
-                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                    {
-                        done = true;
-                    } else {
-                        return Err(error);
-                    }
-
-                    "".to_string()
-                }
-            };
-
-            if !done {
-                if let Err(error) = self.process_file(&path, &store, &config.source_path) {
-                    println!("process_file() failed: error: {}", error);
-                }
-            }
-        }
-        println!("Waiting for background tasks...");
-        self.executer.terminate()?;
-        {
-            if let Ok(store1) = store.read() {
-                if let Err(error) = store1.save_cache() {
-                    println!("Saving existing IDs failed. error: {}", error);
-                }
-            }
-        }
-
-        println!(
-            "{} object(s) added.",
-            self.added_count.load(Ordering::Relaxed)
-        );
-        if let Ok(store1) = store.read() {
-            println!("{} cached objects hit.", store1.cached_count());
-        }
-
-        Ok(())
+        result
     }
 }
 
@@ -172,13 +49,7 @@ impl BackupExecuteCommand {
     pub fn new() -> Self {
         Self {
             name: "".to_string(),
-            executer: BackgroundExecuter::new(),
-            executing: Local::now(),
             destination_path: ".".to_string(),
-            excluded_directories: vec![],
-            processed_count: 0,
-            added_count: Arc::new(AtomicI64::new(0)),
-            count: 0,
         }
     }
 
@@ -191,7 +62,7 @@ impl BackupExecuteCommand {
         self.destination_path = path.to_string();
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     /// Returns the name of the backup.
     ///
     /// # Returns
@@ -200,172 +71,6 @@ impl BackupExecuteCommand {
     pub fn name(&self) -> String {
         self.name.clone()
     }
-
-    fn process_file(
-        &mut self,
-        path: &String,
-        store: &Arc<RwLock<ObjectStore>>,
-        source_path: &String,
-    ) -> Result<()> {
-        if self.count == 0 {
-            println!(
-                "Processing ({}, {}): {}",
-                self.processed_count,
-                self.added_count.load(Ordering::Relaxed),
-                path
-            );
-        }
-        let path_buf = Utf8PathBuf::from(&path);
-        let path_file_name = path_buf.file_name_or_empty();
-        let path_directries = path_buf.parent_or_empty();
-        self.count += 1;
-        self.count %= 100;
-        let mut path_buf = Utf8PathBuf::new();
-        path_buf.push(&source_path);
-        path_buf.push(path.clone());
-        let metadata = match path_buf.metadata() {
-            Ok(metadata) => metadata,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
-        };
-        let file_size = metadata.len();
-        let mut modified: u64 = 0;
-        if let Ok(system_time) = metadata.modified() {
-            if let Ok(duration) = system_time.duration_since(SystemTime::UNIX_EPOCH) {
-                modified = duration.as_secs();
-            }
-        }
-        let permission = permission(&metadata);
-        let uid = uid(&metadata);
-        let gid = gid(&metadata);
-        let id_path = path_buf.to_string_easy();
-        let string = format!("p,{},{},{}", id_path, modified, file_size);
-        let id = object_id(&string.as_bytes().to_vec());
-
-        let adder = Box::new(ObjectAdder::new(
-            &store.clone(),
-            &id,
-            &path,
-            &source_path,
-            file_size,
-            self.executing.timestamp(),
-            &self.added_count,
-        ));
-        if let Some(sender) = &self.executer.sender {
-            if let Err(error) = sender.send(adder) {
-                println!("Sending a task failed. error: {}", error);
-            }
-        }
-        self.processed_count += 1;
-
-        let mut entry_path = Utf8PathBuf::from(&self.destination_path);
-        entry_path.push("Backups");
-        entry_path.push(self.name.clone());
-        entry_path.push(&path_directries);
-        entry_path.push(&path_file_name);
-        let entry = Entry {
-            id: id,
-            last_modified: modified,
-            permission: permission,
-            uid: uid,
-            gid: gid,
-        };
-        let saver = Box::new(EntrySaver::new(&entry, &entry_path.to_string_easy()));
-        if let Some(sender) = &self.executer.sender {
-            if let Err(error) = sender.send(saver) {
-                println!("Sending a task failed. error: {}", error);
-            }
-        }
-
-        Ok(())
-    }
-}
-
-/// Generates an object ID from the given bytes.
-///
-/// # Arguments
-///
-/// * `bytes` - The bytes to generate the ID from.
-///
-/// # Returns
-///
-/// A `String` representing the generated object ID.
-fn object_id(bytes: &Vec<u8>) -> String {
-    let mut sha256 = Sha256::new();
-    sha256.update(bytes.clone());
-    let hash = sha256.finalize();
-    let hash_values = hash.to_vec();
-    let hex = HexString::from_bytes(&hash_values);
-
-    hex.as_string()
-}
-
-/// Extracts the file permissions from the given metadata.
-///
-/// # Arguments
-///
-/// * `metadata` - The metadata of the file.
-///
-/// # Returns
-///
-/// A `u32` representing the file permissions.
-#[cfg(not(target_os = "windows"))]
-fn permission(metadata: &Metadata) -> u32 {
-    let permissions = metadata.permissions();
-    let mode = permissions.mode();
-
-    mode & 0o777
-}
-
-#[cfg(target_os = "windows")]
-fn permission(metadata: &Metadata) -> u32 {
-    let permissions = metadata.permissions();
-    if permissions.readonly() {
-        return 0o444;
-    }
-
-    0o644
-}
-
-/// Extracts the user ID from the given metadata.
-///
-/// # Arguments
-///
-/// * `metadata` - The metadata of the file.
-///
-/// # Returns
-///
-/// A `u32` representing the user ID.
-#[cfg(not(target_os = "windows"))]
-fn uid(metadata: &Metadata) -> u32 {
-    let uid = metadata.uid();
-
-    uid
-}
-
-#[cfg(target_os = "windows")]
-fn uid(_metadata: &Metadata) -> u32 {
-    0
-}
-
-/// Extracts the group ID from the given metadata.
-///
-/// # Arguments
-///
-/// * `metadata` - The metadata of the file.
-///
-/// # Returns
-///
-/// A `u32` representing the group ID.
-#[cfg(not(target_os = "windows"))]
-fn gid(metadata: &Metadata) -> u32 {
-    let gid = metadata.gid();
-
-    gid
-}
-
-#[cfg(target_os = "windows")]
-fn gid(_metadata: &Metadata) -> u32 {
-    0
 }
 
 #[cfg(test)]

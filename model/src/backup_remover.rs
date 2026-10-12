@@ -258,17 +258,15 @@ impl BackupRemover {
     }
 }
 
-// TODO: Reenable this test.
-/*
 #[cfg(test)]
 mod tests {
     use std::fs;
     use tempdir::TempDir;
 
-    use crate::backup_execute_command::BackupExecuteCommand;
+    use crate::backup_executer::BackupExecuter;
     use crate::backup_remover::BackupRemover;
     use crate::commons::OperatePath;
-    use crate::init_command::InitCommand;
+    use crate::destination_initializer::DestinationInitializer;
     use crate::task::Task;
 
     #[test]
@@ -290,25 +288,23 @@ mod tests {
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
-        let mut command = InitCommand::new();
-        command.set_destination_path(&ntm_path.to_string_easy());
-        command.execute().unwrap();
+        let mut initializer = DestinationInitializer::new(&ntm_path.to_string_easy());
+        initializer.execute().unwrap();
 
         let mut config_path = ntm_path.clone();
         config_path.push("ntm.toml");
         let config = format!("source_path = \"{}\"", source_path.display());
         fs::write(config_path, config).unwrap();
 
-        let mut command = BackupExecuteCommand::new();
-        command.set_destination_path(&ntm_path.to_string_easy());
-        command.execute().unwrap();
+        let mut executer = BackupExecuter::new(&ntm_path.to_string_easy());
+        executer.execute().unwrap();
 
         let mut from_path = ntm_path.clone();
         from_path.push("Backups");
-        from_path.push(&command.name());
+        from_path.push(&executer.name());
         let mut to_path = ntm_path.clone();
         to_path.push("Backups");
-        let mut file_name = command.name().clone();
+        let mut file_name = executer.name().clone();
         file_name.push_str(".removed");
         to_path.push(&file_name);
         fs::rename(&from_path, &to_path).unwrap();
@@ -317,4 +313,3 @@ mod tests {
         remover.execute().unwrap();
     }
 }
-*/
