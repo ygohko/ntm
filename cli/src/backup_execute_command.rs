@@ -62,7 +62,7 @@ impl BackupExecuteCommand {
         self.destination_path = path.to_string();
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     /// Returns the name of the backup.
     ///
     /// # Returns
