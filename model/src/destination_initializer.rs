@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn is_creatable() {
-        let initializer = DestinationInitializer::new("NTM");
+        let _initializer = DestinationInitializer::new("NTM");
     }
 
     #[test]

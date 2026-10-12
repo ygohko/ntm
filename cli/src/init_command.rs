@@ -20,21 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use camino::Utf8PathBuf;
-use std::fs;
-
 use ntm_model::destination_initializer::DestinationInitializer;
-use ntm_model::error::Error;
-use ntm_model::error::ErrorCode;
-use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
 use ntm_model::task::Task;
-
-pub const ERROR_ID: ErrorId = "init_command";
-
-#[allow(dead_code)]
-pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
 
 /// A command to initialize a backup destination.
 pub struct InitCommand {
