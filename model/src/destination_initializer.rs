@@ -73,18 +73,9 @@ impl DestinationInitializer {
     /// # Returns
     ///
     /// * `InitCommand` - A new `InitCommand` instance.
-    pub fn new() -> Self {
+    pub fn new(path: &str) -> Self {
         DestinationInitializer {
-            path: ".".to_string(),
+            path: path.to_string(),
         }
-    }
-
-    /// Sets the path for the initialization.
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - The path to the destination directory.
-    pub fn set_path(&mut self, path: &str) {
-        self.path = path.to_string();
     }
 }

@@ -175,12 +175,12 @@ impl BackupExecuter {
     /// # Returns
     ///
     /// A new `BackupExecuteCommand` instance.
-    pub fn new() -> Self {
+    pub fn new(destination_path: &str) -> Self {
         Self {
             name: "".to_string(),
             executer: BackgroundExecuter::new(),
             executing: Local::now(),
-            destination_path: ".".to_string(),
+            destination_path: destination_path.to_string(),
             excluded_directories: vec![],
             processed_count: 0,
             added_count: Arc::new(AtomicI64::new(0)),
@@ -188,6 +188,16 @@ impl BackupExecuter {
         }
     }
 
+    #[allow(dead_code)]
+    /// Returns the name of the backup.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the name of the backup.
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    
     fn process_file(
         &mut self,
         path: &String,

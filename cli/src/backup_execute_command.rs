@@ -76,8 +76,9 @@ pub struct BackupExecuteCommand {
 
 impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
-        let mut executer = BackupExecuter::new();
+        let mut executer = BackupExecuter::new(&self.destination_path);
         let result = executer.execute();
+        self.name = executer.name();
 
         result
 

@@ -50,8 +50,7 @@ impl Task for InitCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let mut initializer = DestinationInitializer::new();
-        initializer.set_path(&self.destination_path);
+        let mut initializer = DestinationInitializer::new(&self.destination_path);
         let result = initializer.execute();
 
         result
