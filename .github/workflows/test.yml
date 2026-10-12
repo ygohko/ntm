@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ "trunk" ]
+    branches: [ "trunk", "tauri" ]
   pull_request:
-    branches: [ "trunk" ]
+    branches: [ "trunk", "tauri" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,6 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --workspace --exclude ntm-gui
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --workspace --exclude ntm-gui
