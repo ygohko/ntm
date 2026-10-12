@@ -364,3 +364,45 @@ fn gid(metadata: &Metadata) -> u32 {
 fn gid(_metadata: &Metadata) -> u32 {
     0
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::commons::OperatePath;
+    use crate::backup_executer::BackupExecuter;
+    use crate::destination_initializer::DestinationInitializer;
+    use crate::task::Task;
+
+    #[test]
+    fn is_creatable() {
+        let _command = BackupExecuter::new("NTM");
+    }
+
+    #[test]
+    fn is_executable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let temp_path = temp_dir.path().to_path_buf();
+        let mut source_path = temp_path.clone();
+        source_path.push("source");
+        fs::create_dir_all(&source_path).unwrap();
+        let mut file_path = source_path.clone();
+        file_path.push("a.txt");
+        fs::write(&file_path, "ABCDE").unwrap();
+
+        let mut ntm_path = temp_path.clone();
+        ntm_path.push("ntm");
+        fs::create_dir_all(&ntm_path).unwrap();
+        let mut initializer = DestinationInitializer::new(&ntm_path.to_string_easy());
+        initializer.execute().unwrap();
+
+        let mut config_path = ntm_path.clone();
+        config_path.push("ntm.toml");
+        let config = format!("source_path = \"{}\"", source_path.display());
+        fs::write(config_path, config).unwrap();
+
+        let mut executer = BackupExecuter::new(&ntm_path.to_string_easy());
+        executer.execute().unwrap();
+    }
+}

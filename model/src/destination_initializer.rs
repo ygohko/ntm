@@ -79,3 +79,24 @@ impl DestinationInitializer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use tempdir::TempDir;
+
+    use crate::commons::OperatePath;
+    use crate::destination_initializer::DestinationInitializer;
+    use crate::task::Task;
+
+    #[test]
+    fn is_creatable() {
+        let initializer = DestinationInitializer::new("NTM");
+    }
+
+    #[test]
+    fn is_executable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let mut initializer = DestinationInitializer::new(&temp_dir.path().to_string_easy());
+        initializer.execute().unwrap();
+    }
+}
