@@ -1,3 +1,4 @@
+import { dirname } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog"
 import { useNavigate } from 'react-router-dom';
@@ -15,11 +16,12 @@ function App() {
   const navigate = useNavigate();
 
   async function openDestination() {
-    const path = await open();
-    if (!path) {
+    const filePath = await open();
+    if (!filePath) {
       return;
     }
-    await invoke("set_destination_path", { path });
+    const directoryPath = await dirname(filePath);
+    await invoke("set_destination_path", { path: directoryPath });
     navigate("/destination");
   }
 
