@@ -211,6 +211,15 @@ impl BackupExecuter {
         }
     }
 
+    /// Sets the notification sender.
+    ///
+    /// # Arguments
+    ///
+    /// * `sender` - The sender to use sending notifications.
+    pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
+        self.notification_sender = Some(sender);
+    }
+
     #[allow(dead_code)]
     /// Returns the name of the backup.
     ///
@@ -300,10 +309,6 @@ impl BackupExecuter {
         }
 
         Ok(())
-    }
-
-    pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
-        self.notification_sender = Some(sender);
     }
 }
 
