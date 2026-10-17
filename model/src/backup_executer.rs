@@ -40,6 +40,7 @@ use std::sync::RwLock;
 use std::time::SystemTime;
 
 use crate::background_executer::BackgroundExecuter;
+use crate::commons::Notification;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -71,7 +72,7 @@ pub struct BackupExecuter {
     processed_count: i64,
     added_count: Arc<AtomicI64>,
     count: i32,
-    notification_sender: Option<Sender<String>>,
+    notification_sender: Option<Sender<Notification>>,
 }
 
 impl Task for BackupExecuter {
@@ -110,7 +111,7 @@ impl Task for BackupExecuter {
                 if let Err(error) = store1.load_cache() {
                     if let Some(ref sender) = self.notification_sender {
                         let string = format!("Loading existing IDs failed. error: {}", error);
-                        let _ = sender.send(string);
+                        let _ = sender.send(Notification::Error(string));
                     }
                 }
             }
@@ -150,14 +151,14 @@ impl Task for BackupExecuter {
                 if let Err(error) = self.process_file(&path, &store, &config.source_path) {
                     if let Some(ref sender) = self.notification_sender {
                         let string = format!("process_file() failed: error: {}", error);
-                        let _ = sender.send(string);
+                        let _ = sender.send(Notification::Error(string));
                     }
                 }
             }
         }
         if let Some(ref sender) = self.notification_sender {
             let string = format!("Waiting for background tasks...");
-            let _ = sender.send(string);
+            let _ = sender.send(Notification::Progress(string));
         }
         self.executer.terminate()?;
         {
@@ -165,7 +166,7 @@ impl Task for BackupExecuter {
                 if let Err(error) = store1.save_cache() {
                     if let Some(ref sender) = self.notification_sender {
                         let string = format!("Saving existing IDs failed. error: {}", error);
-                        let _ = sender.send(string);
+                        let _ = sender.send(Notification::Error(string));
                     }
                 }
             }
@@ -176,10 +177,10 @@ impl Task for BackupExecuter {
                 "{} object(s) added.",
                 self.added_count.load(Ordering::Relaxed)
             );
-            let _ = sender.send(string);
+            let _ = sender.send(Notification::Progress(string));
             if let Ok(store1) = store.read() {
                 let string = format!("{} cached objects hit.", store1.cached_count());
-                let _ = sender.send(string);
+                let _ = sender.send(Notification::Progress(string));
             }
         }
         if self.notification_sender.is_some() {
@@ -234,7 +235,7 @@ impl BackupExecuter {
                     self.added_count.load(Ordering::Relaxed),
                     path
                 );
-                let _ = sender.send(string);
+                let _ = sender.send(Notification::Progress(string));
             }
         }
         let path_buf = Utf8PathBuf::from(&path);
@@ -301,7 +302,7 @@ impl BackupExecuter {
         Ok(())
     }
 
-    pub fn set_notification_sender(&mut self, sender: Sender<String>) {
+    pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
         self.notification_sender = Some(sender);
     }
 }

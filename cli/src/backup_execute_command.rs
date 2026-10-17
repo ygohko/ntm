@@ -25,6 +25,7 @@ use std::sync::mpsc::Receiver;
 use std::thread;
 
 use ntm_model::backup_executer::BackupExecuter;
+use ntm_model::commons::Notification;
 use ntm_model::error::Result;
 use ntm_model::task::Task;
 
@@ -36,7 +37,7 @@ pub struct BackupExecuteCommand {
 
 impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
-        let (sender, receiver) = mpsc::channel::<String>();
+        let (sender, receiver) = mpsc::channel::<Notification>();
         let handle = thread::spawn(move || {
             Self::receive_notification(receiver);
         });
@@ -83,13 +84,16 @@ impl BackupExecuteCommand {
         self.name.clone()
     }
 
-    fn receive_notification(receiver: Receiver<String>) {
+    fn receive_notification(receiver: Receiver<Notification>) {
         loop {
-            let string = match receiver.recv() {
-                Ok(string) => string,
+            let notification = match receiver.recv() {
+                Ok(notification) => notification,
                 Err(_) => break,
             };
-            println!("{}", string);
+            match notification {
+                Notification::Error(string) => println!("Error: {}", string),
+                Notification::Progress(string) => println!("{}", string),
+            };
         }
     }
 }

@@ -25,6 +25,14 @@ use camino::Utf8PathBuf;
 use std::path::Path;
 use std::path::PathBuf;
 
+/// A enum that represents notification.
+pub enum Notification {
+    /// A error.
+    Error(String),
+    /// A progress.
+    Progress(String),
+}
+
 /// A trait for operating on file paths.
 pub trait OperatePath {
     /// Returns the file name of the path, or an empty string if not present.
