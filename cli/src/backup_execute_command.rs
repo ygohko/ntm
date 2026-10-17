@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+use std::thread;
+
 use ntm_model::backup_executer::BackupExecuter;
 use ntm_model::error::Result;
 use ntm_model::task::Task;
@@ -32,9 +36,16 @@ pub struct BackupExecuteCommand {
 
 impl Task for BackupExecuteCommand {
     fn execute(&mut self) -> Result<()> {
+        let (sender, receiver) = mpsc::channel::<String>();
+        let handle = thread::spawn(move || {
+            Self::receive_notification(receiver);
+        });
+
         let mut executer = BackupExecuter::new(&self.destination_path);
+        executer.set_notification_sender(sender);
         let result = executer.execute();
         self.name = executer.name();
+        let _ = handle.join();
 
         result
     }
@@ -70,6 +81,16 @@ impl BackupExecuteCommand {
     /// A `String` representing the name of the backup.
     pub fn name(&self) -> String {
         self.name.clone()
+    }
+
+    fn receive_notification(receiver: Receiver<String>) {
+        loop {
+            let string = match receiver.recv() {
+                Ok(string) => string,
+                Err(_) => break,
+            };
+            println!("{}", string);
+        }
     }
 }
 
