@@ -34,11 +34,13 @@ use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::SystemTime;
 
 use crate::background_executer::BackgroundExecuter;
+use crate::commons::Notification;
 use crate::commons::OperatePath;
 use crate::config::Config;
 use crate::entry::Entry;
@@ -70,6 +72,7 @@ pub struct BackupExecuter {
     processed_count: i64,
     added_count: Arc<AtomicI64>,
     count: i32,
+    notification_sender: Option<Sender<Notification>>,
 }
 
 impl Task for BackupExecuter {
@@ -106,7 +109,10 @@ impl Task for BackupExecuter {
         {
             if let Ok(mut store1) = store.write() {
                 if let Err(error) = store1.load_cache() {
-                    println!("Loading existing IDs failed. error: {}", error);
+                    if let Some(ref sender) = self.notification_sender {
+                        let string = format!("Loading existing IDs failed. error: {}", error);
+                        let _ = sender.send(Notification::Error(string));
+                    }
                 }
             }
         }
@@ -143,26 +149,39 @@ impl Task for BackupExecuter {
 
             if !done {
                 if let Err(error) = self.process_file(&path, &store, &config.source_path) {
-                    println!("process_file() failed: error: {}", error);
+                    if let Some(ref sender) = self.notification_sender {
+                        let string = format!("process_file() failed: error: {}", error);
+                        let _ = sender.send(Notification::Error(string));
+                    }
                 }
             }
         }
-        println!("Waiting for background tasks...");
+        if let Some(ref sender) = self.notification_sender {
+            let string = format!("Waiting for background tasks...");
+            let _ = sender.send(Notification::Progress(string));
+        }
         self.executer.terminate()?;
         {
             if let Ok(store1) = store.read() {
                 if let Err(error) = store1.save_cache() {
-                    println!("Saving existing IDs failed. error: {}", error);
+                    if let Some(ref sender) = self.notification_sender {
+                        let string = format!("Saving existing IDs failed. error: {}", error);
+                        let _ = sender.send(Notification::Error(string));
+                    }
                 }
             }
         }
 
-        println!(
-            "{} object(s) added.",
-            self.added_count.load(Ordering::Relaxed)
-        );
-        if let Ok(store1) = store.read() {
-            println!("{} cached objects hit.", store1.cached_count());
+        if let Some(ref sender) = self.notification_sender {
+            let string = format!(
+                "{} object(s) added.",
+                self.added_count.load(Ordering::Relaxed)
+            );
+            let _ = sender.send(Notification::Progress(string));
+            if let Ok(store1) = store.read() {
+                let string = format!("{} cached objects hit.", store1.cached_count());
+                let _ = sender.send(Notification::Progress(string));
+            }
         }
 
         Ok(())
@@ -185,7 +204,17 @@ impl BackupExecuter {
             processed_count: 0,
             added_count: Arc::new(AtomicI64::new(0)),
             count: 0,
+            notification_sender: None,
         }
+    }
+
+    /// Sets the notification sender.
+    ///
+    /// # Arguments
+    ///
+    /// * `sender` - The sender to use sending notifications.
+    pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
+        self.notification_sender = Some(sender);
     }
 
     #[allow(dead_code)]
@@ -205,12 +234,15 @@ impl BackupExecuter {
         source_path: &String,
     ) -> Result<()> {
         if self.count == 0 {
-            println!(
-                "Processing ({}, {}): {}",
-                self.processed_count,
-                self.added_count.load(Ordering::Relaxed),
-                path
-            );
+            if let Some(ref sender) = self.notification_sender {
+                let string = format!(
+                    "Processing ({}, {}): {}",
+                    self.processed_count,
+                    self.added_count.load(Ordering::Relaxed),
+                    path
+                );
+                let _ = sender.send(Notification::Progress(string));
+            }
         }
         let path_buf = Utf8PathBuf::from(&path);
         let path_file_name = path_buf.file_name_or_empty();
