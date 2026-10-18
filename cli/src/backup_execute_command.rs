@@ -42,10 +42,13 @@ impl Task for BackupExecuteCommand {
             Self::receive_notification(receiver);
         });
 
-        let mut executer = BackupExecuter::new(&self.destination_path);
-        executer.set_notification_sender(sender);
-        let result = executer.execute();
-        self.name = executer.name();
+        let result: Result<()>;
+        {
+            let mut executer = BackupExecuter::new(&self.destination_path);
+            executer.set_notification_sender(sender);
+            result = executer.execute();
+            self.name = executer.name();
+        }
         let _ = handle.join();
 
         result

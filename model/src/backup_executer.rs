@@ -183,9 +183,6 @@ impl Task for BackupExecuter {
                 let _ = sender.send(Notification::Progress(string));
             }
         }
-        if self.notification_sender.is_some() {
-            self.notification_sender = None;
-        }
 
         Ok(())
     }
