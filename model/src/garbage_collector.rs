@@ -22,12 +22,12 @@
 
 use camino::Utf8PathBuf;
 use chrono::NaiveDateTime;
+use parking_lot::RwLock;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
 
@@ -135,7 +135,7 @@ impl Task for GarbageCollector {
     /// for future error handling or to satisfy a trait's signature.
     fn execute_in_background(&mut self) -> Result<()> {
         let collector = self.clone();
-        let mut private = self.private.write().unwrap();
+        let mut private = self.private.write();
         private.join_handle = Some(thread::spawn(move || {
             let result = collector.main();
 
@@ -167,7 +167,7 @@ impl Task for GarbageCollector {
     fn join(&mut self) -> Result<()> {
         let handle: Option<JoinHandle<Result<()>>>;
         {
-            let mut private = self.private.write().unwrap();
+            let mut private = self.private.write();
             handle = private.join_handle.take();
         }
         let Some(handle) = handle else {
@@ -204,13 +204,8 @@ impl GarbageCollector {
     /// # Arguments
     ///
     /// * `path` - The new path as a string slice. The path is cloned and stored internally.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal `RwLock` is poisoned, indicating a previous operation
-    /// on the protected data failed catastrophically.
     pub fn set_destination_path(&self, path: &str) {
-        let mut private = self.private.write().unwrap();
+        let mut private = self.private.write();
         private.destination_path = path.to_string();
     }
 
@@ -218,27 +213,25 @@ impl GarbageCollector {
     ///
     /// This method attempts to acquire a write lock on the private data.
     /// If the lock is successfully acquired, the `limited_count` is updated to `Some(count)`.
-    /// If acquiring the lock fails (e.g., due to the lock being poisoned),
-    /// the operation silently fails, and the count is not updated.
     ///
     /// # Arguments
     ///
     /// * `count` - An `i64` value representing the new limited count.
     pub fn set_limited_count(&self, count: i64) {
-        let mut private = self.private.write().unwrap();
+        let mut private = self.private.write();
         private.limited_count = Some(count);
     }
 
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
-            let private = self.private.read().unwrap();
+            let private = self.private.read();
             destination_path = private.destination_path.clone();
         }
         let mut path = Utf8PathBuf::from(&destination_path);
         path.push("Objects");
         {
-            let mut private = self.private.write().unwrap();
+            let mut private = self.private.write();
             private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
             if let Some(object_store) = private.object_store.as_mut() {
                 if let Err(error) = object_store.load_cache() {
@@ -256,7 +249,7 @@ impl GarbageCollector {
         };
 
         {
-            let mut private = self.private.write().unwrap();
+            let mut private = self.private.write();
             for name in names {
                 let backup_path = backups_path.join(&name);
                 private.backup_paths.push(backup_path.to_string_easy());
@@ -294,7 +287,7 @@ impl GarbageCollector {
             }
 
             if (i & 0xFF) == 0 {
-                let private = self.private.read().unwrap();
+                let private = self.private.read();
                 if let Ok(serialized) = serde_json::to_string(&private.state) {
                     let mut path = Utf8PathBuf::from(&destination_path);
                     path.push("state.json");
@@ -304,7 +297,7 @@ impl GarbageCollector {
                 }
             }
             {
-                let private = self.private.read().unwrap();
+                let private = self.private.read();
                 if let Some(count) = private.limited_count {
                     if private.processed_count >= count {
                         break;
@@ -314,7 +307,7 @@ impl GarbageCollector {
         }
 
         {
-            let private = self.private.read().unwrap();
+            let private = self.private.read();
             println!("{} object(s) removed.", private.removed_count);
         }
 
@@ -324,7 +317,7 @@ impl GarbageCollector {
     fn process_unit(&self, index1: i32, index2: i32, large: bool) -> Result<()> {
         let destination_path: String;
         {
-            let private = self.private.read().unwrap();
+            let private = self.private.read();
             destination_path = private.destination_path.clone();
         }
         let mut directory1 = format!("{:02x}", index1);
@@ -370,7 +363,7 @@ impl GarbageCollector {
                         );
                     }
                     {
-                        let mut private = self.private.write().unwrap();
+                        let mut private = self.private.write();
                         private.processed_count += 1;
                         private.state.last_processed_id = file_name;
                     }
@@ -384,7 +377,7 @@ impl GarbageCollector {
     fn process_object(&self, path: &str) -> Result<()> {
         let backup_paths: Vec<String>;
         {
-            let private = self.private.read().unwrap();
+            let private = self.private.read();
             if private.count == 0 {
                 println!(
                     "Processing ({}, {}): {}",
@@ -394,7 +387,7 @@ impl GarbageCollector {
             backup_paths = private.backup_paths.clone();
         }
         {
-            let mut private = self.private.write().unwrap();
+            let mut private = self.private.write();
             private.count += 1;
             private.count %= 100;
         }
@@ -403,7 +396,7 @@ impl GarbageCollector {
         let object_id = path1.file_name_or_empty();
         let attributes: Attributes;
         {
-            let private = self.private.read().unwrap();
+            let private = self.private.read();
             if let Some(object_store) = &private.object_store {
                 if object_store.cached(&object_id)? {
                     return Ok(());
@@ -449,7 +442,7 @@ impl GarbageCollector {
         }
 
         {
-            let private = self.private.read().unwrap();
+            let private = self.private.read();
             if let Some(object_store) = &private.object_store {
                 if let Err(_) = object_store.remove(&object_id) {
                     println!("Warning: Removing object {} failed.", object_id);
@@ -457,7 +450,7 @@ impl GarbageCollector {
             }
         }
         {
-            let mut private = self.private.write().unwrap();
+            let mut private = self.private.write();
             private.removed_count += 1;
         }
 

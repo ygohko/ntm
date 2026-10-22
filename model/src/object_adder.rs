@@ -21,13 +21,13 @@
  */
 
 use camino::Utf8PathBuf;
+use parking_lot::RwLock;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Read;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use crate::attributes::Attributes;
 use crate::error::Error;
@@ -68,7 +68,7 @@ impl Task for ObjectAdder {
         const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
         const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
 
-        let mut store = self.store.write().unwrap();
+        let mut store = self.store.write();
         let exists = match store.exists(&self.id) {
             Ok(exists) => exists,
             Err(error) => return Err(error),
@@ -169,9 +169,9 @@ impl ObjectAdder {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use parking_lot::RwLock;
     use std::sync::atomic::AtomicI64;
     use std::sync::Arc;
-    use std::sync::RwLock;
     use tempdir::TempDir;
 
     use crate::commons::OperatePath;
