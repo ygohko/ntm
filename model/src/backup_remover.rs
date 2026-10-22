@@ -21,10 +21,10 @@
  */
 
 use camino::Utf8PathBuf;
+use parking_lot::RwLock;
 use std::fs;
 use std::fs::DirEntry;
 use std::sync::Arc;
-use std::sync::RwLock;
 use std::thread;
 use std::thread::JoinHandle;
 
@@ -109,7 +109,7 @@ impl Task for BackupRemover {
     /// `Ok(())` if the thread was successfully spawned.
     fn execute_in_background(&mut self) -> Result<()> {
         let remover = self.clone();
-        let mut private = self.private.write().unwrap();
+        let mut private = self.private.write();
         private.join_handle = Some(thread::spawn(move || {
             let result = remover.main();
 
@@ -131,7 +131,7 @@ impl Task for BackupRemover {
     fn join(&mut self) -> Result<()> {
         let handle: Option<JoinHandle<Result<()>>>;
         {
-            let mut private = self.private.write().unwrap();
+            let mut private = self.private.write();
             handle = private.join_handle.take();
         }
         let Some(handle) = handle else {
@@ -173,14 +173,14 @@ impl BackupRemover {
     /// This method will panic if the `RwLock` is poisoned (i.e., a writer
     /// previously panicked while holding the lock).
     pub fn set_destination_path(&self, path: &str) {
-        let mut private = self.private.write().unwrap();
+        let mut private = self.private.write();
         private.destination_path = path.to_string();
     }
 
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
-            let private = self.private.read().unwrap();
+            let private = self.private.read();
             destination_path = private.destination_path.clone();
         }
         let mut path = Utf8PathBuf::from(&destination_path);
@@ -233,7 +233,7 @@ impl BackupRemover {
                 let mut removing_path = Utf8PathBuf::from(&path);
                 removing_path.push(&file_path);
                 {
-                    let private = self.private.read().unwrap();
+                    let private = self.private.read();
                     if private.count == 0 {
                         println!("Removing ({}): {}", private.removed_count, removing_path);
                     }
@@ -242,7 +242,7 @@ impl BackupRemover {
                     println!("Removing file {} failed. error: {}", removing_path, error);
                 }
                 {
-                    let mut private = self.private.write().unwrap();
+                    let mut private = self.private.write();
                     private.removed_count += 1;
                     private.count += 1;
                     private.count %= 1000;

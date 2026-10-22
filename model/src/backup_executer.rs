@@ -24,6 +24,7 @@ use camino::Utf8PathBuf;
 use chrono::DateTime;
 use chrono::Local;
 use hex_string::HexString;
+use parking_lot::RwLock;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs;
@@ -36,7 +37,6 @@ use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::sync::RwLock;
 use std::time::SystemTime;
 
 use crate::background_executer::BackgroundExecuter;
@@ -107,17 +107,16 @@ impl Task for BackupExecuter {
         path.push("Objects");
         let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
         {
-            if let Ok(mut store1) = store.write() {
-                if let Err(error) = store1.load_cache() {
-                    if let Some(ref sender) = self.notification_sender {
-                        let string = format!("Loading existing IDs failed. error: {}", error);
-                        let _ = sender.send(Notification::Error(string));
-                    }
+            let mut store1 = store.write();
+            if let Err(error) = store1.load_cache() {
+                if let Some(ref sender) = self.notification_sender {
+                    let string = format!("Loading existing IDs failed. error: {}", error);
+                    let _ = sender.send(Notification::Error(string));
                 }
             }
         }
         if let Some(cache_size) = config.cache_size {
-            let mut store1 = store.write().unwrap();
+            let mut store1 = store.write();
             store1.set_cache_size(cache_size as usize);
         }
         self.name = self.executing.format("%Y%m%d-%H%M").to_string();
@@ -162,12 +161,11 @@ impl Task for BackupExecuter {
         }
         self.executer.terminate()?;
         {
-            if let Ok(store1) = store.read() {
-                if let Err(error) = store1.save_cache() {
-                    if let Some(ref sender) = self.notification_sender {
-                        let string = format!("Saving existing IDs failed. error: {}", error);
-                        let _ = sender.send(Notification::Error(string));
-                    }
+            let store1 = store.read();
+            if let Err(error) = store1.save_cache() {
+                if let Some(ref sender) = self.notification_sender {
+                    let string = format!("Saving existing IDs failed. error: {}", error);
+                    let _ = sender.send(Notification::Error(string));
                 }
             }
         }
@@ -178,10 +176,9 @@ impl Task for BackupExecuter {
                 self.added_count.load(Ordering::Relaxed)
             );
             let _ = sender.send(Notification::Progress(string));
-            if let Ok(store1) = store.read() {
-                let string = format!("{} cached objects hit.", store1.cached_count());
-                let _ = sender.send(Notification::Progress(string));
-            }
+            let store1 = store.read();
+            let string = format!("{} cached objects hit.", store1.cached_count());
+            let _ = sender.send(Notification::Progress(string));
         }
 
         Ok(())
