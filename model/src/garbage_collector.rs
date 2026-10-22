@@ -204,11 +204,6 @@ impl GarbageCollector {
     /// # Arguments
     ///
     /// * `path` - The new path as a string slice. The path is cloned and stored internally.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal `RwLock` is poisoned, indicating a previous operation
-    /// on the protected data failed catastrophically.
     pub fn set_destination_path(&self, path: &str) {
         let mut private = self.private.write();
         private.destination_path = path.to_string();
@@ -218,8 +213,6 @@ impl GarbageCollector {
     ///
     /// This method attempts to acquire a write lock on the private data.
     /// If the lock is successfully acquired, the `limited_count` is updated to `Some(count)`.
-    /// If acquiring the lock fails (e.g., due to the lock being poisoned),
-    /// the operation silently fails, and the count is not updated.
     ///
     /// # Arguments
     ///
