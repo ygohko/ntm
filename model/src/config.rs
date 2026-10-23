@@ -57,6 +57,17 @@ impl Config {
         }
     }
 
+    /// Loads a `Config` instance from a TOML file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the TOML configuration file.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the loaded `Config`, or an `Error` with
+    /// `ERROR_CODE_READING_CONFIG_FAILED` if the file cannot be read, is not
+    /// valid UTF-8, or cannot be parsed as a `Config`.
     pub fn load(path: impl AsRef<Path>) -> Result<Self> {
         let bytes = match fs::read(path) {
             Ok(bytes) => bytes,
@@ -77,6 +88,10 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use tempdir::TempDir;
+
+    use crate::config;
     use crate::config::Config;
 
     #[test]
@@ -123,5 +138,84 @@ mod tests {
         assert_eq!(config.source_path, "/a/b/c".to_string());
         assert_eq!(config.excluded_directories, Some(vec!["d".to_string()]));
         assert_eq!(config.cache_size, Some(16));
+    }
+
+    #[test]
+    fn is_loadable() {
+        let temp_dir = TempDir::new("test").unwrap();
+
+        let path = temp_dir.path().join("config1.toml");
+        fs::write(&path, "source_path = \"/a/b/c\"\n").unwrap();
+        let config = Config::load(&path).unwrap();
+        assert_eq!(config.source_path, "/a/b/c".to_string());
+        assert_eq!(config.excluded_directories, None);
+        assert_eq!(config.cache_size, None);
+
+        let path = temp_dir.path().join("config2.toml");
+        fs::write(
+            &path,
+            "source_path = \"/a/b/c\"\nexcluded_directories = [ \"d\", \"e\" ]\ncache_size = 16\n",
+        )
+        .unwrap();
+        let config = Config::load(&path).unwrap();
+        assert_eq!(config.source_path, "/a/b/c".to_string());
+        assert_eq!(
+            config.excluded_directories,
+            Some(vec!["d".to_string(), "e".to_string()])
+        );
+        assert_eq!(config.cache_size, Some(16));
+    }
+
+    #[test]
+    fn fails_to_load_nonexistent_file() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let path = temp_dir.path().join("nonexistent.toml");
+        match Config::load(&path) {
+            Ok(_) => assert!(false),
+            Err(error) => {
+                assert_eq!(error.id, config::ERROR_ID);
+                assert_eq!(error.code, config::ERROR_CODE_READING_CONFIG_FAILED);
+            }
+        }
+    }
+
+    #[test]
+    fn fails_to_load_non_utf8_file() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let path = temp_dir.path().join("config.toml");
+        fs::write(&path, [0xff, 0xfe, 0xfd]).unwrap();
+        match Config::load(&path) {
+            Ok(_) => assert!(false),
+            Err(error) => {
+                assert_eq!(error.id, config::ERROR_ID);
+                assert_eq!(error.code, config::ERROR_CODE_READING_CONFIG_FAILED);
+            }
+        }
+    }
+
+    #[test]
+    fn fails_to_load_invalid_toml() {
+        let temp_dir = TempDir::new("test").unwrap();
+
+        let path = temp_dir.path().join("config1.toml");
+        fs::write(&path, "source_path = \n").unwrap();
+        match Config::load(&path) {
+            Ok(_) => assert!(false),
+            Err(error) => {
+                assert_eq!(error.id, config::ERROR_ID);
+                assert_eq!(error.code, config::ERROR_CODE_READING_CONFIG_FAILED);
+            }
+        }
+
+        // Missing the required source_path field.
+        let path = temp_dir.path().join("config2.toml");
+        fs::write(&path, "cache_size = 16\n").unwrap();
+        match Config::load(&path) {
+            Ok(_) => assert!(false),
+            Err(error) => {
+                assert_eq!(error.id, config::ERROR_ID);
+                assert_eq!(error.code, config::ERROR_CODE_READING_CONFIG_FAILED);
+            }
+        }
     }
 }
