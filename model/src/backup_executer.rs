@@ -27,7 +27,6 @@ use hex_string::HexString;
 use parking_lot::RwLock;
 use sha2::Digest;
 use sha2::Sha256;
-use std::fs;
 use std::fs::Metadata;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
@@ -87,22 +86,11 @@ impl Task for BackupExecuter {
         self.executer.execute()?;
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("ntm.toml");
-        let bytes = match fs::read(&path) {
-            Ok(bytes) => bytes,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
+
+        let config = match Config::load(&path) {
+            Ok(config) => config,
+            Err(_) => Config::new(),
         };
-        let string = match String::from_utf8(bytes) {
-            Ok(string) => string,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
-        };
-        let result = toml::from_str(&string);
-        let config: Config;
-        if result.is_ok() {
-            config = result.unwrap();
-            // println!("config.source_path: {}", config.source_path);
-        } else {
-            config = Config::new();
-        }
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
         let store = Arc::new(RwLock::new(ObjectStore::new(&path.to_string_easy())));
