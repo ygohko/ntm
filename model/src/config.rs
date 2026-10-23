@@ -20,7 +20,20 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::fs;
+use std::path::Path;
 use serde::Deserialize;
+
+use crate::error::Error;
+use crate::error::ErrorCode;
+use crate::error::ErrorId;
+use crate::error::Result;
+
+pub const ERROR_ID: ErrorId = "config";
+
+#[allow(dead_code)]
+pub const ERROR_CODE_GENERAL: ErrorCode = 0;
+pub const ERROR_CODE_READING_CONFIG_FAILED: ErrorCode = 1;
 
 /// Represents the application configuration.
 #[derive(Deserialize)]
@@ -42,6 +55,23 @@ impl Config {
             excluded_directories: Some(vec![]),
             cache_size: Some(8),
         }
+    }
+
+    pub fn load(path: impl AsRef<Path>) -> Result<Self> {
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
+        };
+        let string = match String::from_utf8(bytes) {
+            Ok(string) => string,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
+        };
+        let config = match toml::from_str(&string) {
+            Ok(config) => config,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_CONFIG_FAILED)),
+        };
+
+        Ok(config)
     }
 }
 
