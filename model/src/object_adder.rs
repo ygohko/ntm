@@ -21,7 +21,6 @@
  */
 
 use camino::Utf8PathBuf;
-use parking_lot::RwLock;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Read;

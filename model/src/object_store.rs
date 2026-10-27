@@ -152,8 +152,11 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &mut self.private.write().existing_ids[index];
-        ids.push(id.to_string());
+        {
+            let mut private = self.private.write();
+            let ids = &mut private.existing_ids[index];
+            ids.push(id.to_string());
+        }
 
         match fs::create_dir_all(path.clone()) {
             Ok(_) => (),
@@ -344,10 +347,13 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &self.private.read().existing_ids[index];
-        if ids.iter().position(|id1| id1 == id).is_none() {
-            return Ok(false);
-        };
+        {
+            let private = &self.private.read();
+            let ids = &private.existing_ids[index];
+            if ids.iter().position(|id1| id1 == id).is_none() {
+                return Ok(false);
+            };
+        }
 
         Ok(true)
     }
@@ -374,13 +380,16 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &mut self.private.write().existing_ids[index];
-        let Some(index) = ids.iter().position(|id1| id1 == id) else {
-            return Ok(false);
-        };
+        {
+            let mut private = self.private.write();
+            let ids = &mut private.existing_ids[index];
+            let Some(index) = ids.iter().position(|id1| id1 == id) else {
+                return Ok(false);
+            };
 
-        ids.remove(index);
-        ids.push(id.to_string());
+            ids.remove(index);
+            ids.push(id.to_string());
+        }
 
         Ok(true)
     }
@@ -514,10 +523,11 @@ impl ObjectStore {
             existing_ids: Vec::new(),
         };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
-            let ids = &self.private.read().existing_ids[i];
+            let private = self.private.read();
+            let ids = &private.existing_ids[i];
             let mut begin = 0;
             let count = ids.len();
-            let cache_size = self.private.read().cache_size;
+            let cache_size = private.cache_size;
             if count > cache_size {
                 begin = count - cache_size;
             }

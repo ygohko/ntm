@@ -24,7 +24,6 @@ use camino::Utf8PathBuf;
 use chrono::DateTime;
 use chrono::Local;
 use hex_string::HexString;
-use parking_lot::RwLock;
 use sha2::Digest;
 use sha2::Sha256;
 use std::fs::Metadata;
