@@ -449,14 +449,12 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn write_adding(&self, bytes: &Vec<u8>) -> Result<()> {
-
-        // TODO: Clean up.
-
-        if self.private.read().adding_file.is_none() {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
-        }
-
-        if let Err(_) = self.private.read().adding_file.as_ref().unwrap().write(bytes) {
+        let private = self.private.read();
+        let mut adding_file = match private.adding_file {
+            Some(ref adding_file) => adding_file,
+            None => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+        };
+        if let Err(_) = adding_file.write(bytes) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
         }
 
