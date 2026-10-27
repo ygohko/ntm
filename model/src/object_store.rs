@@ -87,6 +87,7 @@ impl Private {
 }
 
 /// Manages the storage and retrieval of objects (files) and their attributes.
+#[derive(Clone)]
 pub struct ObjectStore {
     private: Arc<RwLock<Private>>,
 }

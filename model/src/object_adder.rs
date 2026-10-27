@@ -47,7 +47,7 @@ pub const ERROR_CODE_WRITING_OBJECT_FAILED: ErrorCode = 2;
 
 /// A task for adding an object (file) to the object store.
 pub struct ObjectAdder {
-    store: Arc<RwLock<ObjectStore>>,
+    store: ObjectStore,
     id: String,
     path: String,
     source_path: String,
@@ -68,8 +68,7 @@ impl Task for ObjectAdder {
         const DIVIDED_WRITING_THRESHOLD: u64 = 1024 * 1024 * 1024;
         const DIVIDED_WRITING_SIZE: i64 = 100 * 1024 * 1024;
 
-        let mut store = self.store.write();
-        let exists = match store.exists(&self.id) {
+        let exists = match self.store.exists(&self.id) {
             Ok(exists) => exists,
             Err(error) => return Err(error),
         };
@@ -85,7 +84,7 @@ impl Task for ObjectAdder {
                 Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_SOURCE_FAILED)),
             };
             let attribute = Attributes::new(&self.path, self.time_stamp);
-            store.add(&self.id, &bytes, &attribute)?;
+            self.store.add(&self.id, &bytes, &attribute)?;
         } else {
             let mut remains: i64 = self.file_size as i64;
             let mut file = match OpenOptions::new().read(true).open(&joined_path) {
@@ -94,7 +93,7 @@ impl Task for ObjectAdder {
             };
             let attribute = Attributes::new(&self.path, self.time_stamp);
             let mut needs_writing = true;
-            if let Err(error) = store.begin_adding(&self.id, &attribute, self.file_size) {
+            if let Err(error) = self.store.begin_adding(&self.id, &attribute, self.file_size) {
                 if error.id == object_store::ERROR_ID
                     && error.code == object_store::ERROR_CODE_OBJECT_ALREADY_EXISTS
                 {
@@ -115,12 +114,12 @@ impl Task for ObjectAdder {
                     if let Err(_) = file.read(&mut bytes) {
                         return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
                     }
-                    store.write_adding(&bytes)?;
+                    self.store.write_adding(&bytes)?;
 
                     remains -= reading;
                 }
 
-                store.end_adding();
+                self.store.end_adding();
             }
         }
         self.added_count.fetch_add(1, Ordering::SeqCst);
@@ -146,7 +145,7 @@ impl ObjectAdder {
     ///
     /// * `ObjectAdder` - A new `ObjectAdder` instance.
     pub fn new(
-        store: &Arc<RwLock<ObjectStore>>,
+        store: &ObjectStore,
         id: &str,
         path: &str,
         source_path: &str,
@@ -186,7 +185,7 @@ mod tests {
         let mut store_path = temp_path.clone();
         store_path.push("Objects");
         fs::create_dir_all(&store_path).unwrap();
-        let store = Arc::new(RwLock::new(ObjectStore::new(&store_path.to_string_easy())));
+        let store = ObjectStore::new(&store_path.to_string_easy());
         let mut file_path = temp_path.clone();
         file_path.push("a.txt");
         fs::write(&file_path, "abcdef").unwrap();
@@ -209,7 +208,7 @@ mod tests {
         let mut store_path = temp_path.clone();
         store_path.push("Objects");
         fs::create_dir_all(&store_path).unwrap();
-        let store = Arc::new(RwLock::new(ObjectStore::new(&store_path.to_string_easy())));
+        let store = ObjectStore::new(&store_path.to_string_easy());
         let mut file_path = temp_path.clone();
         file_path.push("a.txt");
         fs::write(&file_path, "abcdef").unwrap();
