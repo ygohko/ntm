@@ -21,12 +21,14 @@
  */
 
 use camino::Utf8PathBuf;
+use parking_lot::RwLock;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::sync::Arc;
 
 use crate::attributes::Attributes;
 use crate::error::Error;
@@ -59,13 +61,35 @@ struct Cache {
     existing_ids: Vec<String>,
 }
 
-/// Manages the storage and retrieval of objects (files) and their attributes.
-pub struct ObjectStore {
+struct Private {
     path: String,
     adding_file: Option<File>,
     existing_ids: Vec<Vec<String>>,
     cached_count: i64,
     cache_size: usize,
+}
+
+impl Private {
+    pub fn new(path: &str) -> Self {
+        let mut existing_ids: Vec<Vec<String>> = Vec::new();
+        for _ in 0..EXISTING_IDS_TABLE_COUNT {
+            existing_ids.push(Vec::new());
+        }
+
+        Private {
+            path: path.to_string(),
+            adding_file: None,
+            existing_ids: existing_ids,
+            cached_count: 0,
+            cache_size: 8,
+        }
+    }
+}
+
+/// Manages the storage and retrieval of objects (files) and their attributes.
+#[derive(Clone)]
+pub struct ObjectStore {
+    private: Arc<RwLock<Private>>,
 }
 
 impl ObjectStore {
@@ -79,17 +103,8 @@ impl ObjectStore {
     ///
     /// * `ObjectStore` - A new `ObjectStore` instance.
     pub fn new(path: &str) -> Self {
-        let mut existing_ids: Vec<Vec<String>> = Vec::new();
-        for _ in 0..EXISTING_IDS_TABLE_COUNT {
-            existing_ids.push(Vec::new());
-        }
-
         ObjectStore {
-            path: path.to_string(),
-            adding_file: None,
-            existing_ids: existing_ids,
-            cached_count: 0,
-            cache_size: 8,
+            private: Arc::new(RwLock::new(Private::new(path))),
         }
     }
 
@@ -98,7 +113,7 @@ impl ObjectStore {
         let path2 = &id[2..4];
         let path3 = &id[4..6];
         let path4 = &id[6..8];
-        let mut path = Utf8PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&self.private.read().path);
         if file_size >= 1024 * 1024 * 1024 {
             path.push(format!("l{}", path1));
         } else {
@@ -137,8 +152,11 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &mut self.existing_ids[index];
-        ids.push(id.to_string());
+        {
+            let mut private = self.private.write();
+            let ids = &mut private.existing_ids[index];
+            ids.push(id.to_string());
+        }
 
         match fs::create_dir_all(path.clone()) {
             Ok(_) => (),
@@ -275,9 +293,10 @@ impl ObjectStore {
         let index = (index1 * 0x100 + index2) as usize;
         
         {
-            let ids = &self.existing_ids[index];
+            let private = &mut self.private.write();
+            let ids = &private.existing_ids[index];
             if ids.iter().position(|id1| id1 == id).is_some() {
-                self.cached_count += 1;
+                private.cached_count += 1;
 
                 return Ok(true);
             }
@@ -298,11 +317,11 @@ impl ObjectStore {
                 Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_OBJECT_FAILED)),
             };
             if exists {
-                self.existing_ids[index].push(id.to_string());
+                self.private.write().existing_ids[index].push(id.to_string());
                 return Ok(true);
             }
         } else {
-            self.existing_ids[index].push(id.to_string());
+            self.private.write().existing_ids[index].push(id.to_string());
         }
 
         Ok(exists)
@@ -328,10 +347,13 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &self.existing_ids[index];
-        if ids.iter().position(|id1| id1 == id).is_none() {
-            return Ok(false);
-        };
+        {
+            let private = &self.private.read();
+            let ids = &private.existing_ids[index];
+            if ids.iter().position(|id1| id1 == id).is_none() {
+                return Ok(false);
+            };
+        }
 
         Ok(true)
     }
@@ -358,13 +380,16 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
         };
         let index = (index1 * 0x100 + index2) as usize;
-        let ids = &mut self.existing_ids[index];
-        let Some(index) = ids.iter().position(|id1| id1 == id) else {
-            return Ok(false);
-        };
+        {
+            let mut private = self.private.write();
+            let ids = &mut private.existing_ids[index];
+            let Some(index) = ids.iter().position(|id1| id1 == id) else {
+                return Ok(false);
+            };
 
-        ids.remove(index);
-        ids.push(id.to_string());
+            ids.remove(index);
+            ids.push(id.to_string());
+        }
 
         Ok(true)
     }
@@ -398,7 +423,7 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_OBJECT_ALREADY_EXISTS));
         }
 
-        self.adding_file = match OpenOptions::new()
+        self.private.write().adding_file = match OpenOptions::new()
             .write(true)
             .create(true)
             .open(&object_path)
@@ -433,11 +458,12 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn write_adding(&self, bytes: &Vec<u8>) -> Result<()> {
-        if self.adding_file.is_none() {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
-        }
-
-        if let Err(_) = self.adding_file.as_ref().unwrap().write(bytes) {
+        let private = self.private.read();
+        let mut adding_file = match private.adding_file {
+            Some(ref adding_file) => adding_file,
+            None => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED)),
+        };
+        if let Err(_) = adding_file.write(bytes) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_OBJECT_FAILED));
         }
 
@@ -448,10 +474,10 @@ impl ObjectStore {
     ///
     /// This method finalizes the writing process and closes the file.
     pub fn end_adding(&mut self) {
-        if self.adding_file.is_none() {
+        if self.private.read().adding_file.is_none() {
             return;
         }
-        self.adding_file = None;
+        self.private.write().adding_file = None;
     }
 
     /// Loads cache from a file.
@@ -460,7 +486,7 @@ impl ObjectStore {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     pub fn load_cache(&mut self) -> Result<()> {
-        let path = Utf8PathBuf::from(&self.path).parent_or_empty();
+        let path = Utf8PathBuf::from(&self.private.read().path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
         path.push(CACHE_FILE_NAME);
         let Ok(serialized) = fs::read_to_string(&path) else {
@@ -481,7 +507,7 @@ impl ObjectStore {
                 return Err(Error::new(ERROR_ID, ERROR_CODE_INVALID_OBJECT_ID));
             };
             let index = (index1 * 0x100 + index2) as usize;
-            self.existing_ids[index].push(id);
+            self.private.write().existing_ids[index].push(id);
         }
 
         Ok(())
@@ -497,11 +523,13 @@ impl ObjectStore {
             existing_ids: Vec::new(),
         };
         for i in 0..EXISTING_IDS_TABLE_COUNT {
-            let ids = &self.existing_ids[i];
+            let private = self.private.read();
+            let ids = &private.existing_ids[i];
             let mut begin = 0;
             let count = ids.len();
-            if count > self.cache_size {
-                begin = count - self.cache_size;
+            let cache_size = private.cache_size;
+            if count > cache_size {
+                begin = count - cache_size;
             }
             for i in begin..count {
                 cache.existing_ids.push(ids[i].clone());
@@ -511,7 +539,7 @@ impl ObjectStore {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_CACHED_FAILED));
         };
 
-        let path = Utf8PathBuf::from(&self.path).parent_or_empty();
+        let path = Utf8PathBuf::from(&self.private.read().path).parent_or_empty();
         let mut path = Utf8PathBuf::from(path);
         path.push(CACHE_FILE_NAME);
         if let Err(_) = fs::write(&path, &serialized) {
@@ -527,7 +555,7 @@ impl ObjectStore {
     ///
     /// Count that indicates how many object cache hit.
     pub fn cached_count(&self) -> i64 {
-        self.cached_count
+        self.private.read().cached_count
     }
 
     /// Sets cache size of this object store.
@@ -536,7 +564,7 @@ impl ObjectStore {
     ///
     /// * `cache_size` - The cache size to be set.
     pub fn set_cache_size(&mut self, cache_size: usize) {
-        self.cache_size = cache_size;
+        self.private.write().cache_size = cache_size;
     }
 }
 
