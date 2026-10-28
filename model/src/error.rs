@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use serde_derive::Serialize;
 use std::backtrace::Backtrace;
 use std::fmt;
 
@@ -36,7 +37,7 @@ pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_NOT_IMPLEMENTED: ErrorCode = 1;
 
 /// Represents an error that can occur within the application.
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Error {
     pub id: &'static str,
     pub code: i32,
