@@ -167,7 +167,6 @@ impl ObjectAdder {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use parking_lot::RwLock;
     use std::sync::atomic::AtomicI64;
     use std::sync::Arc;
     use tempdir::TempDir;
