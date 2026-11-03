@@ -23,6 +23,7 @@
 use camino::Utf8PathBuf;
 use std::fs;
 
+use crate::backup_store::BackupStore;
 use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
@@ -79,6 +80,14 @@ impl Destination {
         };
 
         Ok(result)
+    }
+
+    pub fn backup_store(&self) -> BackupStore {
+        let mut path = Utf8PathBuf::from(&self.path);
+        path.push("Backups");
+        let store = BackupStore::new(path.as_str());
+
+        store
     }
 }
 

@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use camino::Utf8PathBuf;
 use std::fs;
 
 use crate::error::Error;
@@ -33,6 +34,7 @@ pub const ERROR_ID: ErrorId = "backup_store";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_FINDING_BACKUP_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_MARKING_AS_REMOVED_FAILED: ErrorCode = 2;
 
 /// Manages backup directories.
 pub struct BackupStore {
@@ -80,6 +82,20 @@ impl BackupStore {
         }
 
         Ok(names)
+    }
+
+    fn mark_as_removed(&self, name: &str) -> Result<()> {
+        let mut from_path = Utf8PathBuf::from(&self.path);
+        from_path.push(name);
+        let mut to_path = Utf8PathBuf::from(&self.path);
+        let mut removed_name = name.to_string();
+        removed_name.push_str(".removed");
+        to_path.push(name);
+        if let Err(_) = fs::rename(&from_path, &to_path) {
+            return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_AS_REMOVED_FAILED));
+        };
+
+        Ok(())
     }
 }
 

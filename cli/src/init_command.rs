@@ -38,9 +38,8 @@ impl Task for InitCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let destination = match Destination::init(&self.destination_path) {
-            Ok(destination) => destination,
-            Err(error) => return Err(error),
+        if let Err(error) = Destination::init(&self.destination_path) {
+            return Err(error);
         };
 
         Ok(())
