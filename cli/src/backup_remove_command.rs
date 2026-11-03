@@ -84,7 +84,8 @@ impl Task for BackupRemoveCommand {
                 removed_name.push_str(".removed");
                 to_path.push(&removed_name);
                 println!("Marking ({}): {}", processed_count, name);
-                match fs::rename(&from_path, &to_path) {
+
+                match store.mark_as_removed(&name) {
                     Ok(()) => {
                         marked_count += 1;
                     },
