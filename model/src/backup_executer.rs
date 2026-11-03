@@ -382,7 +382,7 @@ mod tests {
 
     use crate::commons::OperatePath;
     use crate::backup_executer::BackupExecuter;
-    use crate::destination_initializer::DestinationInitializer;
+    use crate::destination::Destination;
     use crate::task::Task;
 
     #[test]
@@ -404,8 +404,7 @@ mod tests {
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
-        let mut initializer = DestinationInitializer::new(&ntm_path.to_string_easy());
-        initializer.execute().unwrap();
+        let _ = Destination::init(&ntm_path.to_string_easy()).unwrap();
 
         let mut config_path = ntm_path.clone();
         config_path.push("ntm.toml");

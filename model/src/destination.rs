@@ -87,18 +87,17 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::commons::OperatePath;
-    use crate::destination_initializer::DestinationInitializer;
+    use crate::destination::Destination;
     use crate::task::Task;
 
     #[test]
     fn is_creatable() {
-        let _initializer = DestinationInitializer::new("NTM");
+        let _destination = Destination::new("NTM");
     }
 
     #[test]
-    fn is_executable() {
+    fn is_initializable() {
         let temp_dir = TempDir::new("test").unwrap();
-        let mut initializer = DestinationInitializer::new(&temp_dir.path().to_string_easy());
-        initializer.execute().unwrap();
+        let _ = Destination::init(&temp_dir.path().to_string_easy()).unwrap();
     }
 }
