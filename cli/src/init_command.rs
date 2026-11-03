@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use ntm_model::destination_initializer::DestinationInitializer;
+use ntm_model::destination::Destination;
 use ntm_model::error::Result;
 use ntm_model::task::Task;
 
@@ -38,10 +38,12 @@ impl Task for InitCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let mut initializer = DestinationInitializer::new(&self.destination_path);
-        let result = initializer.execute();
+        let destination = match Destination::init(&self.destination_path) {
+            Ok(destination) => destination,
+            Err(error) => return Err(error),
+        };
 
-        result
+        Ok(())
     }
 }
 

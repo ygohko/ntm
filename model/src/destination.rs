@@ -23,24 +23,35 @@
 use camino::Utf8PathBuf;
 use std::fs;
 
+use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
-use crate::task::Task;
 
-pub const ERROR_ID: ErrorId = "destination_initializer";
+pub const ERROR_ID: ErrorId = "destination";
 
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
 
 /// A task for initializing backup destination
-pub struct DestinationInitializer {
+pub struct Destination {
     path: String,
 }
 
-impl Task for DestinationInitializer {
+impl Destination {
+    /// Creates a new `Destination` instance.
+    ///
+    /// # Returns
+    ///
+    /// * `Destination` - A new `Destination` instance.
+    pub fn new(path: &str) -> Self {
+        Destination {
+            path: path.to_string(),
+        }
+    }
+
     /// Executes the destination initializer task.
     ///
     /// This method initializes the backup destination.
@@ -48,14 +59,14 @@ impl Task for DestinationInitializer {
     /// # Returns
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
-    fn execute(&mut self) -> Result<()> {
-        let mut path = Utf8PathBuf::from(&self.path);
+    pub fn init(path: &str) -> Result<Self> {
+        let mut path = Utf8PathBuf::from(&path);
         path.push("Backups");
         match fs::create_dir_all(&path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
-        let mut path = Utf8PathBuf::from(&self.path);
+        let mut path = Utf8PathBuf::from(&path);
         path.push("Objects");
         match fs::create_dir_all(&path) {
             Ok(_) => (),
@@ -63,20 +74,11 @@ impl Task for DestinationInitializer {
         };
         // TODO: Create ntm.toml.
 
-        Ok(())
-    }
-}
+        let result = Self {
+            path: path.to_string_easy(),
+        };
 
-impl DestinationInitializer {
-    /// Creates a new `InitCommand` instance.
-    ///
-    /// # Returns
-    ///
-    /// * `InitCommand` - A new `InitCommand` instance.
-    pub fn new(path: &str) -> Self {
-        DestinationInitializer {
-            path: path.to_string(),
-        }
+        Ok(result)
     }
 }
 
