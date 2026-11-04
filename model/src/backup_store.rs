@@ -90,7 +90,7 @@ impl BackupStore {
         let mut to_path = Utf8PathBuf::from(&self.path);
         let mut removed_name = name.to_string();
         removed_name.push_str(".removed");
-        to_path.push(name);
+        to_path.push(removed_name);
         if let Err(_) = fs::rename(&from_path, &to_path) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_MARKING_AS_REMOVED_FAILED));
         };
