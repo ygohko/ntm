@@ -24,7 +24,6 @@ use camino::Utf8PathBuf;
 use std::fs;
 
 use crate::backup_store::BackupStore;
-use crate::commons::OperatePath;
 use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
@@ -42,37 +41,69 @@ pub struct Destination {
 }
 
 impl Destination {
-    // TODO: Add doc comments.
+    /// Creates a new `Destination` instance for an existing destination.
+    ///
+    /// This does not touch the file system. Use `Destination::init()` to create
+    /// the directories of a new destination.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the backup destination.
+    ///
+    /// # Returns
+    ///
+    /// A new `Destination` instance.
     pub fn new(path: &str) -> Self {
         Destination {
             path: path.to_string(),
         }
     }
 
-    // TODO: Add doc comments.
+    /// Initializes a backup destination and returns a `Destination` instance for it.
+    ///
+    /// Creates the `Backups` and `Objects` directories under `path`. Existing
+    /// directories are left as they are.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the backup destination.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)`: If creating
+    ///   a directory fails.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a new `Destination` instance, or an `Error` if the
+    /// initialization fails.
     pub fn init(path: &str) -> Result<Self> {
-        let mut path = Utf8PathBuf::from(&path);
-        path.push("Backups");
-        match fs::create_dir_all(&path) {
+        let mut backup_path = Utf8PathBuf::from(&path);
+        backup_path.push("Backups");
+        match fs::create_dir_all(&backup_path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
-        let mut path = Utf8PathBuf::from(&path);
-        path.push("Objects");
-        match fs::create_dir_all(&path) {
+        let mut object_path = Utf8PathBuf::from(&path);
+        object_path.push("Objects");
+        match fs::create_dir_all(&object_path) {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
         // TODO: Create ntm.toml.
 
         let result = Self {
-            path: path.to_string_easy(),
+            path: path.to_string(),
         };
 
         Ok(result)
     }
 
-    // TODO: Add doc comments.
+    /// Returns a `BackupStore` for the `Backups` directory of the destination.
+    ///
+    /// # Returns
+    ///
+    /// A new `BackupStore` instance.
     pub fn backup_store(&self) -> BackupStore {
         let mut path = Utf8PathBuf::from(&self.path);
         path.push("Backups");
