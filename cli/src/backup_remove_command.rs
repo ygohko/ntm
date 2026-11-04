@@ -22,7 +22,6 @@
 
 use camino::Utf8PathBuf;
 use regex::Regex;
-use std::fs;
 
 use ntm_model::backup_store::BackupStore;
 use ntm_model::error::Error;
@@ -75,23 +74,15 @@ impl Task for BackupRemoveCommand {
         let mut marked_count = 0;
         for name in names {
             if re.is_match(&name) {
-                let mut from_path = Utf8PathBuf::from(&self.destination_path);
-                from_path.push("Backups");
-                from_path.push(&name);
-                let mut to_path = Utf8PathBuf::from(&self.destination_path);
-                to_path.push("Backups");
-                let mut removed_name = name.clone();
-                removed_name.push_str(".removed");
-                to_path.push(&removed_name);
                 println!("Marking ({}): {}", processed_count, name);
-                match fs::rename(&from_path, &to_path) {
+                match store.mark_as_removed(&name) {
                     Ok(()) => {
                         marked_count += 1;
                     },
                     Err(error) => {
                         println!(
                             "Error: Could not mark to removed {}. error: {}",
-                            from_path, error
+                            name, error
                         );
                     },
                 };
