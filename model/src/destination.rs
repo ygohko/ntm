@@ -119,7 +119,6 @@ mod tests {
 
     use crate::commons::OperatePath;
     use crate::destination::Destination;
-    use crate::task::Task;
 
     #[test]
     fn is_creatable() {
