@@ -283,7 +283,7 @@ mod tests {
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
-        let _ = Destination::init(&ntm_path.to_string_easy()).unwrap();
+        Destination::init(&ntm_path.to_string_easy()).unwrap();
 
         let mut config_path = ntm_path.clone();
         config_path.push("ntm.toml");
