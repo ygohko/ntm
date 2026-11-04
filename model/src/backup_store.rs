@@ -84,6 +84,7 @@ impl BackupStore {
         Ok(names)
     }
 
+    // TODO: Add doc comments.
     pub fn mark_as_removed(&self, name: &str) -> Result<()> {
         let mut from_path = Utf8PathBuf::from(&self.path);
         from_path.push(name);

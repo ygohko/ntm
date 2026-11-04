@@ -42,24 +42,14 @@ pub struct Destination {
 }
 
 impl Destination {
-    /// Creates a new `Destination` instance.
-    ///
-    /// # Returns
-    ///
-    /// * `Destination` - A new `Destination` instance.
+    // TODO: Add doc comments.
     pub fn new(path: &str) -> Self {
         Destination {
             path: path.to_string(),
         }
     }
 
-    /// Executes the destination initializer task.
-    ///
-    /// This method initializes the backup destination.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` indicating success or an `Error` if the operation fails.
+    // TODO: Add doc comments.
     pub fn init(path: &str) -> Result<Self> {
         let mut path = Utf8PathBuf::from(&path);
         path.push("Backups");
@@ -82,6 +72,7 @@ impl Destination {
         Ok(result)
     }
 
+    // TODO: Add doc comments.
     pub fn backup_store(&self) -> BackupStore {
         let mut path = Utf8PathBuf::from(&self.path);
         path.push("Backups");
