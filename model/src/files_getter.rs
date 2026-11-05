@@ -51,7 +51,7 @@ pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
 
 pub struct FilesGetter {
     name: String,
-    limited_directory: String,
+    extraction_path: String,
     destination_path: String,
     gotten_path: String,
     processed_count: i64,
@@ -85,8 +85,11 @@ impl Task for FilesGetter {
             return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
         }
 
-        if self.limited_directory != "".to_string() {
-            path.push(&self.limited_directory);
+        // TODO: Do single file extraction if extraction_path points a file.
+
+        // TODO: Move to other method.
+        if self.extraction_path != "".to_string() {
+            path.push(&self.extraction_path);
         }
         let mut producer = FilePathProducer::new(&path.to_string_easy());
         let mut done = false;
@@ -109,8 +112,8 @@ impl Task for FilesGetter {
             if !done {
                 let mut entry_path = Utf8PathBuf::new();
                 entry_path.push(&backup_path);
-                if self.limited_directory != "".to_string() {
-                    entry_path.push(&self.limited_directory);
+                if self.extraction_path != "".to_string() {
+                    entry_path.push(&self.extraction_path);
                 }
                 entry_path.push(&path);
                 if self.count == 0 {
@@ -135,8 +138,8 @@ impl Task for FilesGetter {
                 if let Ok(bytes) = result {
                     let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
                     gotten_path.push(&self.name);
-                    if self.limited_directory != "".to_string() {
-                        gotten_path.push(&self.limited_directory);
+                    if self.extraction_path != "".to_string() {
+                        gotten_path.push(&self.extraction_path);
                     }
                     gotten_path.push(&path);
                     let directories = gotten_path.parent_or_empty();
@@ -174,10 +177,10 @@ impl FilesGetter {
     /// # Returns
     ///
     /// * `GetCommand` - A new `GetCommand` instance.
-    pub fn new(name: &str, limited_directory: &str, destination_path: &str, gotten_path: &str) -> Self {
+    pub fn new(name: &str, extraction_path: &str, destination_path: &str, gotten_path: &str) -> Self {
         Self {
             name: name.to_string(),
-            limited_directory: limited_directory.to_string(),
+            extraction_path: extraction_path.to_string(),
             destination_path: destination_path.to_string(),
             gotten_path: gotten_path.to_string(),
             processed_count: 0,
