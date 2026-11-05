@@ -50,6 +50,7 @@ pub const ERROR_CODE_READING_ENTRY_FAILED: ErrorCode = 2;
 pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
 pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
 
+/// The task to get files from backups.
 pub struct FilesGetter {
     name: String,
     extraction_path: String,
@@ -60,14 +61,7 @@ pub struct FilesGetter {
 }
 
 impl Task for FilesGetter {
-    /// Executes the files getter.
-    ///
-    /// This method retrieves backed-up files and directories from the object store
-    /// and restores them to the specified destination.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` indicating success or an `Error` if the operation fails.
+    // TODO: Add doc comments.
     fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
         let mut path = Utf8PathBuf::from(&self.destination_path);
@@ -86,7 +80,6 @@ impl Task for FilesGetter {
             return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
         }
 
-        // TODO: Do single file extraction if extraction_path points a file.
         let mut is_file = false;
         if self.extraction_path != "".to_string() {
             let mut path = Utf8PathBuf::new();
@@ -94,8 +87,6 @@ impl Task for FilesGetter {
 
             is_file = Self::is_file(&path)?;
         }
-
-
         if is_file {
             self.process_file(&store, &backup_path.to_string_easy())?;
         } else {
@@ -103,99 +94,11 @@ impl Task for FilesGetter {
         }
 
         Ok(())
-
-        // TODO: Move to other method.
-        /*
-        if self.extraction_path != "".to_string() {
-            path.push(&self.extraction_path);
-        }
-        let mut producer = FilePathProducer::new(&path.to_string_easy());
-        let mut done = false;
-        while !done {
-            let path = match producer.next() {
-                Ok(path) => path,
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID
-                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                    {
-                        done = true;
-                    } else {
-                        return Err(error);
-                    }
-
-                    "".to_string()
-                }
-            };
-
-            if !done {
-                let mut entry_path = Utf8PathBuf::new();
-                entry_path.push(&backup_path);
-                if self.extraction_path != "".to_string() {
-                    entry_path.push(&self.extraction_path);
-                }
-                entry_path.push(&path);
-                if self.count == 0 {
-                    println!("Processing ({}): {}", self.processed_count, entry_path);
-                }
-                self.count += 1;
-                self.count %= 100;
-                let string = match fs::read_to_string(entry_path.clone()) {
-                    Ok(bytes) => bytes,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
-                };
-
-                let entry: Entry = match serde_json::from_str(&string) {
-                    Ok(entry) => entry,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
-                };
-
-                let result = store.bytes(&entry.id);
-                if let Err(ref error) = result {
-                    println!("store.bytes() failed. error: {}", error);
-                }
-                if let Ok(bytes) = result {
-                    let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
-                    gotten_path.push(&self.name);
-                    if self.extraction_path != "".to_string() {
-                        gotten_path.push(&self.extraction_path);
-                    }
-                    gotten_path.push(&path);
-                    let directories = gotten_path.parent_or_empty();
-                    match fs::create_dir_all(&directories) {
-                        Ok(_) => (),
-                        // TODO: Skipping file that writing is failed may be needed.
-                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                    }
-                    match fs::write(&gotten_path, bytes) {
-                        Ok(_) => (),
-                        // TODO: Skipping file that writing is failed may be needed.
-                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                    };
-                    if let Err(error) = Self::apply_metadata(&gotten_path.to_string_easy(), &entry) {
-                        println!("apply_metadata() failed: error: {}", error);
-                    }
-
-                    self.processed_count += 1;
-                }
-            }
-        }
-        println!("{} file(s) gotten.", self.processed_count);
-
-        Ok(())
-        */
     }
 }
 
 impl FilesGetter {
-    /// Creates a new `FilesGetter` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The name of the backup to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// * `GetCommand` - A new `GetCommand` instance.
+    // TODO: Add doc comments.
     pub fn new(name: &str, extraction_path: &str, destination_path: &str, gotten_path: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -208,12 +111,7 @@ impl FilesGetter {
     }
 
     fn process_directory(&mut self, store: &ObjectStore, backup_path: &str) -> Result<()> {
-
         let mut path = Utf8PathBuf::from(&backup_path);
-
-
-
-        // TODO: Move to other method.
         if self.extraction_path != "".to_string() {
             path.push(&self.extraction_path);
         }

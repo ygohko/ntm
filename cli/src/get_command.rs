@@ -76,106 +76,15 @@ impl Task for GetCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let mut getter = FilesGetter::new(&self.name, &self.limited_directory, &self.destination_path, &self.gotten_path);
-        let result = getter.execute();
-
-        result
-
-        /*
-        // TODO: Return error if path is invalid.
-        let mut path = Utf8PathBuf::from(&self.destination_path);
-        path.push("Objects");
-        let store = ObjectStore::new(&path.to_string_easy());
-        let mut backup_path = Utf8PathBuf::from(&self.destination_path);
-        backup_path.push("Backups");
-        backup_path.push(&self.name);
-        let mut path = Utf8PathBuf::new();
-        path.push(&backup_path);
-        let exists = match path.try_exists() {
-            Ok(exists) => exists,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND)),
-        };
-        if !exists {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND));
-        }
-
-        if self.limited_directory != "".to_string() {
-            path.push(&self.limited_directory);
-        }
-        let mut producer = FilePathProducer::new(&path.to_string_easy());
-        let mut done = false;
-        while !done {
-            let path = match producer.next() {
-                Ok(path) => path,
-                Err(error) => {
-                    if error.id == file_path_producer::ERROR_ID
-                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
-                    {
-                        done = true;
-                    } else {
-                        return Err(error);
-                    }
-
-                    "".to_string()
-                }
-            };
-
-            if !done {
-                let mut entry_path = Utf8PathBuf::new();
-                entry_path.push(&backup_path);
-                if self.limited_directory != "".to_string() {
-                    entry_path.push(&self.limited_directory);
-                }
-                entry_path.push(&path);
-                if self.count == 0 {
-                    println!("Processing ({}): {}", self.processed_count, entry_path);
-                }
-                self.count += 1;
-                self.count %= 100;
-                let string = match fs::read_to_string(entry_path.clone()) {
-                    Ok(bytes) => bytes,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
-                };
-
-                let entry: Entry = match serde_json::from_str(&string) {
-                    Ok(entry) => entry,
-                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
-                };
-
-                let result = store.bytes(&entry.id);
-                if let Err(ref error) = result {
-                    println!("store.bytes() failed. error: {}", error);
-                }
-                if let Ok(bytes) = result {
-                    let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
-                    gotten_path.push(&self.name);
-                    if self.limited_directory != "".to_string() {
-                        gotten_path.push(&self.limited_directory);
-                    }
-                    gotten_path.push(&path);
-                    let directories = gotten_path.parent_or_empty();
-                    match fs::create_dir_all(&directories) {
-                        Ok(_) => (),
-                        // TODO: Skipping file that writing is failed may be needed.
-                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                    }
-                    match fs::write(&gotten_path, bytes) {
-                        Ok(_) => (),
-                        // TODO: Skipping file that writing is failed may be needed.
-                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
-                    };
-                    if let Err(error) = apply_metadata(&gotten_path.to_string_easy(), &entry) {
-                        println!("apply_metadata() failed: error: {}", error);
-                    }
-
-                    self.processed_count += 1;
-                }
-            }
-        }
-        println!("{} file(s) gotten.", self.processed_count);
+        let mut getter = FilesGetter::new(
+            &self.name,
+            &self.limited_directory,
+            &self.destination_path,
+            &self.gotten_path,
+        );
+        getter.execute()?;
 
         Ok(())
-        */
     }
 }
 
