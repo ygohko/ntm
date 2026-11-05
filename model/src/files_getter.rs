@@ -26,6 +26,7 @@ use std::fs::File;
 use std::ops::Add;
 use std::os::unix::fs as unix_fs;
 use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -86,6 +87,23 @@ impl Task for FilesGetter {
         }
 
         // TODO: Do single file extraction if extraction_path points a file.
+        let mut is_file = false;
+        if self.extraction_path != "".to_string() {
+            let mut path = Utf8PathBuf::new();
+            path.push(&self.extraction_path);
+
+            is_file = match Self::is_file(&path) {
+                Ok(is_file) => is_file,
+                Err(error) => return Err(error),
+            };
+        }
+
+
+        if is_file {
+            self.process_file();
+        } else {
+            self.process_directory();
+        }
 
         // TODO: Move to other method.
         if self.extraction_path != "".to_string() {
@@ -153,7 +171,7 @@ impl Task for FilesGetter {
                         // TODO: Skipping file that writing is failed may be needed.
                         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                     };
-                    if let Err(error) = apply_metadata(&gotten_path.to_string_easy(), &entry) {
+                    if let Err(error) = Self::apply_metadata(&gotten_path.to_string_easy(), &entry) {
                         println!("apply_metadata() failed: error: {}", error);
                     }
 
@@ -187,57 +205,80 @@ impl FilesGetter {
             count: 0,
         }
     }
-}
 
-#[cfg(not(target_os = "windows"))]
-fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
-    };
-    let mut modified = SystemTime::UNIX_EPOCH;
-    modified = modified.add(Duration::from_secs(entry.last_modified));
-    if let Err(_) = file.set_modified(modified) {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+    fn process_directory(&mut self) -> Result<()> {
+        Ok(())
+    }
+    
+    fn process_file(&mut self) -> Result<()> {
+        Ok(())
     }
 
-    if entry.permission != 0 {
-        let metadata = match fs::metadata(path) {
-            Ok(metadata) => metadata,
+    #[cfg(not(target_os = "windows"))]
+    fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
+        let file = match File::open(path) {
+            Ok(file) => file,
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
         };
-        let mut permissions = metadata.permissions();
-        permissions.set_mode(entry.permission);
-        if let Err(_) = fs::set_permissions(path, permissions) {
+        let mut modified = SystemTime::UNIX_EPOCH;
+        modified = modified.add(Duration::from_secs(entry.last_modified));
+        if let Err(_) = file.set_modified(modified) {
             return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
         }
-    }
 
-    if entry.uid != 0 && entry.gid != 0 {
-        if let Err(_) = unix_fs::chown(path, Some(entry.uid), Some(entry.gid)) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+        if entry.permission != 0 {
+            let metadata = match fs::metadata(path) {
+                Ok(metadata) => metadata,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+            };
+            let mut permissions = metadata.permissions();
+            permissions.set_mode(entry.permission);
+            if let Err(_) = fs::set_permissions(path, permissions) {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+            }
         }
+
+        if entry.uid != 0 && entry.gid != 0 {
+            if let Err(_) = unix_fs::chown(path, Some(entry.uid), Some(entry.gid)) {
+                return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
+            }
+        }
+
+        Ok(())
     }
 
-    Ok(())
-}
+    #[cfg(target_os = "windows")]
+    fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
+        if entry.permission != 0 {
+            let metadata = match fs::metadata(path) {
+                Ok(metadata) => metadata,
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+            };
+            let mut permissions = metadata.permissions();
+            let readonly: bool;
+            if (entry.permission & 0o200) != 0 {
+                readonly = false;
+            } else {
+                readonly = true;
+            }
+            permissions.set_readonly(readonly);
+        }
 
-#[cfg(target_os = "windows")]
-fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
-    if entry.permission != 0 {
-        let metadata = match fs::metadata(path) {
+        Ok(())
+    }
+
+    fn is_file(path: impl AsRef<Path>) -> Result<bool> {
+        let metadata = match fs::metadata(&path) {
             Ok(metadata) => metadata,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
         };
-        let mut permissions = metadata.permissions();
-        let readonly: bool;
-        if (entry.permission & 0o200) != 0 {
-            readonly = false;
-        } else {
-            readonly = true;
+        if metadata.is_file() {
+            return Ok(true);
         }
-        permissions.set_readonly(readonly);
-    }
+        if metadata.is_dir() {
+            return Ok(false);
+        }
 
-    Ok(())
+        Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
+    }
 }
