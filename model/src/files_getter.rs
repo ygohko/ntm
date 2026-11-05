@@ -67,7 +67,31 @@ pub struct FilesGetter {
 }
 
 impl Task for FilesGetter {
-    // TODO: Add doc comments.
+    /// Gets files from the backup and writes them under the gotten path.
+    ///
+    /// The files are written to `<gotten_path>/<name>/<extraction_path>`, keeping
+    /// their relative paths in the backup. If the extraction path is empty, all
+    /// files in the backup are gotten. If it points to a directory, the files under
+    /// the directory are gotten. If it points to a file, only the file is gotten.
+    ///
+    /// A file whose object cannot be read from the object store is skipped.
+    /// Failing to apply the metadata (modification time, permission and owner) to
+    /// a gotten file does not stop the processing either.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(ERROR_ID, ERROR_CODE_BACKUP_NOT_FOUND)`: If the backup does
+    ///   not exist.
+    /// * `Error::new(ERROR_ID, ERROR_CODE_GENERAL)`: If the extraction path does
+    ///   not exist in the backup.
+    /// * `Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)`: If reading or
+    ///   parsing an entry fails.
+    /// * `Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)`: If creating a
+    ///   directory or writing a file under the gotten path fails.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an `Error` if the execution fails.
     fn execute(&mut self) -> Result<()> {
         // TODO: Return error if path is invalid.
         let mut path = Utf8PathBuf::from(&self.destination_path);
@@ -103,7 +127,22 @@ impl Task for FilesGetter {
 }
 
 impl FilesGetter {
-    // TODO: Add doc comments.
+    /// Creates a new `FilesGetter` instance.
+    ///
+    /// This does not touch the file system. Call `execute()` to get the files.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the backup to get files from (e.g. `20261102-0900`).
+    /// * `extraction_path` - The path of a file or a directory in the backup to be
+    ///   gotten, relative to the backup root. An empty string means the whole
+    ///   backup.
+    /// * `destination_path` - The path to the backup destination.
+    /// * `gotten_path` - The path of the directory to write the gotten files to.
+    ///
+    /// # Returns
+    ///
+    /// A new `FilesGetter` instance.
     pub fn new(name: &str, extraction_path: &str, destination_path: &str, gotten_path: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -300,5 +339,187 @@ impl FilesGetter {
         }
 
         Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::Path;
+    use std::path::PathBuf;
+    use tempdir::TempDir;
+
+    use crate::attributes::Attributes;
+    use crate::commons::OperatePath;
+    use crate::entry::Entry;
+    use crate::files_getter;
+    use crate::files_getter::FilesGetter;
+    use crate::object_store::ObjectStore;
+    use crate::task::Task;
+
+    const BACKUP_NAME: &str = "11111111-1111";
+
+    /// Creates a destination with a backup containing `files`. Each file is a
+    /// tuple of the relative path, the object ID and the content.
+    fn create_destination(path: &Path, files: &[(&str, &str, &[u8])]) {
+        let mut store = ObjectStore::new(&path.join("Objects").to_string_easy());
+        let backup_path = path.join("Backups").join(BACKUP_NAME);
+        for (file_path, id, bytes) in files {
+            store.add(id, &bytes.to_vec(), &Attributes::new(file_path, 0)).unwrap();
+            write_entry(&backup_path, file_path, id);
+        }
+    }
+
+    fn write_entry(backup_path: &Path, file_path: &str, id: &str) {
+        let entry = Entry {
+            id: id.to_string(),
+            last_modified: 1_000_000_000,
+            permission: 0,
+            uid: 0,
+            gid: 0,
+        };
+        let entry_path = backup_path.join(file_path);
+        fs::create_dir_all(entry_path.parent().unwrap()).unwrap();
+        fs::write(&entry_path, serde_json::to_string(&entry).unwrap()).unwrap();
+    }
+
+    fn get(destination_path: &Path, extraction_path: &str, gotten_path: &Path) -> crate::error::Result<()> {
+        let mut getter = FilesGetter::new(
+            BACKUP_NAME,
+            extraction_path,
+            &destination_path.to_string_easy(),
+            &gotten_path.to_string_easy(),
+        );
+        getter.execute()
+    }
+
+    fn gotten_file(gotten_path: &Path, file_path: &str) -> PathBuf {
+        gotten_path.join(BACKUP_NAME).join(file_path)
+    }
+
+    const FILES: [(&str, &str, &[u8]); 3] = [
+        ("a.txt", "0101010101010101", b"a"),
+        ("dir/b.txt", "0202020202020202", b"b"),
+        ("dir/sub/c.txt", "0303030303030303", b"c"),
+    ];
+
+    #[test]
+    fn whole_backup_is_gettable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        create_destination(&destination_path, &FILES);
+
+        get(&destination_path, "", &gotten_path).unwrap();
+
+        for (file_path, _, bytes) in FILES {
+            assert_eq!(fs::read(gotten_file(&gotten_path, file_path)).unwrap(), bytes);
+        }
+    }
+
+    #[test]
+    fn directory_is_gettable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        create_destination(&destination_path, &FILES);
+
+        get(&destination_path, "dir", &gotten_path).unwrap();
+
+        assert!(!gotten_file(&gotten_path, "a.txt").exists());
+        assert_eq!(fs::read(gotten_file(&gotten_path, "dir/b.txt")).unwrap(), b"b");
+        assert_eq!(fs::read(gotten_file(&gotten_path, "dir/sub/c.txt")).unwrap(), b"c");
+    }
+
+    #[test]
+    fn file_is_gettable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        create_destination(&destination_path, &FILES);
+
+        get(&destination_path, "dir/b.txt", &gotten_path).unwrap();
+
+        assert!(!gotten_file(&gotten_path, "a.txt").exists());
+        assert_eq!(fs::read(gotten_file(&gotten_path, "dir/b.txt")).unwrap(), b"b");
+        assert!(!gotten_file(&gotten_path, "dir/sub/c.txt").exists());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn modification_time_is_applied() {
+        use std::time::Duration;
+        use std::time::SystemTime;
+
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        create_destination(&destination_path, &FILES);
+
+        get(&destination_path, "", &gotten_path).unwrap();
+
+        let modified = fs::metadata(gotten_file(&gotten_path, "a.txt")).unwrap().modified().unwrap();
+        assert_eq!(modified, SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000_000));
+    }
+
+    #[test]
+    fn file_whose_object_is_missing_is_skipped() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        create_destination(&destination_path, &FILES);
+        let backup_path = destination_path.join("Backups").join(BACKUP_NAME);
+        write_entry(&backup_path, "missing.txt", "0404040404040404");
+
+        get(&destination_path, "", &gotten_path).unwrap();
+
+        assert!(!gotten_file(&gotten_path, "missing.txt").exists());
+        for (file_path, _, bytes) in FILES {
+            assert_eq!(fs::read(gotten_file(&gotten_path, file_path)).unwrap(), bytes);
+        }
+    }
+
+    #[test]
+    fn getting_from_nonexistent_backup_fails() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        fs::create_dir_all(destination_path.join("Backups")).unwrap();
+        fs::create_dir_all(destination_path.join("Objects")).unwrap();
+
+        let error = get(&destination_path, "", &gotten_path).unwrap_err();
+
+        assert_eq!(error.id, files_getter::ERROR_ID);
+        assert_eq!(error.code, files_getter::ERROR_CODE_BACKUP_NOT_FOUND);
+        assert!(!gotten_path.exists());
+    }
+
+    #[test]
+    fn getting_nonexistent_extraction_path_fails() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        create_destination(&destination_path, &FILES);
+
+        let error = get(&destination_path, "nonexistent", &gotten_path).unwrap_err();
+
+        assert_eq!(error.id, files_getter::ERROR_ID);
+        assert_eq!(error.code, files_getter::ERROR_CODE_GENERAL);
+        assert!(!gotten_path.exists());
+    }
+
+    #[test]
+    fn getting_invalid_entry_fails() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("Destination");
+        let gotten_path = temp_dir.path().join("Gotten");
+        create_destination(&destination_path, &FILES);
+        let backup_path = destination_path.join("Backups").join(BACKUP_NAME);
+        fs::write(backup_path.join("invalid.txt"), "invalid").unwrap();
+
+        let error = get(&destination_path, "invalid.txt", &gotten_path).unwrap_err();
+
+        assert_eq!(error.id, files_getter::ERROR_ID);
+        assert_eq!(error.code, files_getter::ERROR_CODE_READING_ENTRY_FAILED);
     }
 }

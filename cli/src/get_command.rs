@@ -194,6 +194,7 @@ fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    #[cfg(not(target_os = "windows"))]
     use std::os::unix::fs::PermissionsExt;
     use std::time::SystemTime;
     use tempdir::TempDir;
