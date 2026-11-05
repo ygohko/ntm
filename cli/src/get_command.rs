@@ -43,6 +43,7 @@ use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
 use ntm_model::file_path_producer;
 use ntm_model::file_path_producer::FilePathProducer;
+use ntm_model::files_getter::FilesGetter;
 use ntm_model::object_store::ObjectStore;
 use ntm_model::task::Task;
 
@@ -75,6 +76,12 @@ impl Task for GetCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
+        let mut getter = FilesGetter::new(&self.name, &self.limited_directory, &self.destination_path, &self.gotten_path);
+        let result = getter.execute();
+
+        result
+
+        /*
         // TODO: Return error if path is invalid.
         let mut path = Utf8PathBuf::from(&self.destination_path);
         path.push("Objects");
@@ -168,6 +175,7 @@ impl Task for GetCommand {
         println!("{} file(s) gotten.", self.processed_count);
 
         Ok(())
+        */
     }
 }
 
