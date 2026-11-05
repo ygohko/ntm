@@ -57,7 +57,7 @@ pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
 
 /// A command to get backuped files and directories.
 pub struct GetCommand {
-    backup: String,
+    name: String,
     limited_directory: String,
     destination_path: String,
     gotten_path: String,
@@ -81,7 +81,7 @@ impl Task for GetCommand {
         let store = ObjectStore::new(&path.to_string_easy());
         let mut backup_path = Utf8PathBuf::from(&self.destination_path);
         backup_path.push("Backups");
-        backup_path.push(&self.backup);
+        backup_path.push(&self.name);
         let mut path = Utf8PathBuf::new();
         path.push(&backup_path);
         let exists = match path.try_exists() {
@@ -141,7 +141,7 @@ impl Task for GetCommand {
                 }
                 if let Ok(bytes) = result {
                     let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
-                    gotten_path.push(&self.backup);
+                    gotten_path.push(&self.name);
                     if self.limited_directory != "".to_string() {
                         gotten_path.push(&self.limited_directory);
                     }
@@ -176,14 +176,14 @@ impl GetCommand {
     ///
     /// # Arguments
     ///
-    /// * `backup` - The name of the backup to retrieve.
+    /// * `name` - The name of the backup to retrieve.
     ///
     /// # Returns
     ///
     /// * `GetCommand` - A new `GetCommand` instance.
-    pub fn new(backup: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         GetCommand {
-            backup: backup.to_string(),
+            name: name.to_string(),
             limited_directory: "".to_string(),
             destination_path: ".".to_string(),
             gotten_path: ".".to_string(),

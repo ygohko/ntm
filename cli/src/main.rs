@@ -81,8 +81,8 @@ struct BackupArguments {
 
 #[derive(Parser, PartialEq)]
 struct GetArguments {
-    /// Backup to get from this backup destination
-    backup: String,
+    /// Backup name to get from this backup destination
+    name: String,
     /// Directory to limit getting backuped directories and files
     limited_directory: Option<String>,
     /// Backup destination that directries and files are gotten from
@@ -168,8 +168,8 @@ fn main() -> ExitCode {
             }
         }
     } else if let CommandKind::Get(arguments) = command {
-        let backup = arguments.backup;
-        let mut command = GetCommand::new(&backup);
+        let name = arguments.name;
+        let mut command = GetCommand::new(&name);
         if let Some(directory) = arguments.limited_directory {
             command.set_limited_directory(&directory);
         }
