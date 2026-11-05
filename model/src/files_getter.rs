@@ -82,9 +82,8 @@ impl Task for FilesGetter {
 
         let mut is_file = false;
         if self.extraction_path != "".to_string() {
-            let mut path = Utf8PathBuf::new();
+            let mut path = backup_path.clone();
             path.push(&self.extraction_path);
-
             is_file = Self::is_file(&path)?;
         }
         if is_file {
