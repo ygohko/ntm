@@ -329,6 +329,7 @@ impl FilesGetter {
     fn is_file(path: impl AsRef<Path>) -> Result<bool> {
         let metadata = match fs::metadata(&path) {
             Ok(metadata) => metadata,
+            // TODO: Add a error code.
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
         };
         if metadata.is_file() {

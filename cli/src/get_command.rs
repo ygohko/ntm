@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Yasuaki Gohko
+ * Copyright (c) 2025 - 2026 Yasuaki Gohko
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,41 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use camino::Utf8PathBuf;
-use std::fs;
-#[cfg(not(target_os = "windows"))]
-use std::fs::File;
-#[cfg(not(target_os = "windows"))]
-use std::ops::Add;
-#[cfg(not(target_os = "windows"))]
-use std::os::unix::fs as unix_fs;
-#[cfg(not(target_os = "windows"))]
-use std::os::unix::fs::PermissionsExt;
-#[cfg(not(target_os = "windows"))]
-use std::time::Duration;
-#[cfg(not(target_os = "windows"))]
-use std::time::SystemTime;
-
-use ntm_model::commons::OperatePath;
-use ntm_model::entry::Entry;
-use ntm_model::error::Error;
-use ntm_model::error::ErrorCode;
-use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
-use ntm_model::file_path_producer;
-use ntm_model::file_path_producer::FilePathProducer;
 use ntm_model::files_getter::FilesGetter;
-use ntm_model::object_store::ObjectStore;
 use ntm_model::task::Task;
-
-pub const ERROR_ID: ErrorId = "get_command";
-
-#[allow(dead_code)]
-pub const ERROR_CODE_GENERAL: ErrorCode = 0;
-pub const ERROR_CODE_BACKUP_NOT_FOUND: ErrorCode = 1;
-pub const ERROR_CODE_READING_ENTRY_FAILED: ErrorCode = 2;
-pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
-pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
 
 /// A command to get backuped files and directories.
 pub struct GetCommand {
@@ -62,8 +30,6 @@ pub struct GetCommand {
     limited_directory: String,
     destination_path: String,
     gotten_path: String,
-    processed_count: i64,
-    count: i32,
 }
 
 impl Task for GetCommand {
@@ -104,8 +70,6 @@ impl GetCommand {
             limited_directory: "".to_string(),
             destination_path: ".".to_string(),
             gotten_path: ".".to_string(),
-            processed_count: 0,
-            count: 0,
         }
     }
 
@@ -136,59 +100,6 @@ impl GetCommand {
     pub fn set_gotten_path(&mut self, path: &str) {
         self.gotten_path = path.to_string();
     }
-}
-
-#[cfg(not(target_os = "windows"))]
-fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
-    };
-    let mut modified = SystemTime::UNIX_EPOCH;
-    modified = modified.add(Duration::from_secs(entry.last_modified));
-    if let Err(_) = file.set_modified(modified) {
-        return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
-    }
-
-    if entry.permission != 0 {
-        let metadata = match fs::metadata(path) {
-            Ok(metadata) => metadata,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
-        };
-        let mut permissions = metadata.permissions();
-        permissions.set_mode(entry.permission);
-        if let Err(_) = fs::set_permissions(path, permissions) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
-        }
-    }
-
-    if entry.uid != 0 && entry.gid != 0 {
-        if let Err(_) = unix_fs::chown(path, Some(entry.uid), Some(entry.gid)) {
-            return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED));
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(target_os = "windows")]
-fn apply_metadata(path: &str, entry: &Entry) -> Result<()> {
-    if entry.permission != 0 {
-        let metadata = match fs::metadata(path) {
-            Ok(metadata) => metadata,
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_METADATA_FAILED)),
-        };
-        let mut permissions = metadata.permissions();
-        let readonly: bool;
-        if (entry.permission & 0o200) != 0 {
-            readonly = false;
-        } else {
-            readonly = true;
-        }
-        permissions.set_readonly(readonly);
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]
