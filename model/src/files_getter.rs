@@ -293,7 +293,41 @@ impl FilesGetter {
     }
     
     fn process_file(&mut self, store: &ObjectStore, backup_path: &str) -> Result<()> {
-        // TODO: Implement this.
+        let mut entry_path = Utf8PathBuf::from(&backup_path);
+        entry_path.push(&self.extraction_path);
+        let string = match fs::read_to_string(entry_path.clone()) {
+            Ok(bytes) => bytes,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
+        };
+        let entry: Entry = match serde_json::from_str(&string) {
+            Ok(entry) => entry,
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
+        };
+
+        let result = store.bytes(&entry.id);
+        if let Err(ref error) = result {
+            println!("store.bytes() failed. error: {}", error);
+        }
+        if let Ok(bytes) = result {
+            let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
+            gotten_path.push(&self.name);
+            gotten_path.push(&self.extraction_path);
+            let directories = gotten_path.parent_or_empty();
+            match fs::create_dir_all(&directories) {
+                Ok(_) => (),
+                // TODO: Skipping file that writing is failed may be needed.
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+            }
+            match fs::write(&gotten_path, bytes) {
+                Ok(_) => (),
+                // TODO: Skipping file that writing is failed may be needed.
+                Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+            };
+            if let Err(error) = Self::apply_metadata(&gotten_path.to_string_easy(), &entry) {
+                println!("apply_metadata() failed: error: {}", error);
+            }
+        }
+
         Ok(())
     }
 
