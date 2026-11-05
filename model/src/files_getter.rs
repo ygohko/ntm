@@ -92,18 +92,126 @@ impl Task for FilesGetter {
             let mut path = Utf8PathBuf::new();
             path.push(&self.extraction_path);
 
-            is_file = match Self::is_file(&path) {
-                Ok(is_file) => is_file,
-                Err(error) => return Err(error),
-            };
+            is_file = Self::is_file(&path)?;
         }
 
 
         if is_file {
-            self.process_file();
+            self.process_file(&store, &backup_path.to_string_easy())?;
         } else {
-            self.process_directory();
+            self.process_directory(&store, &backup_path.to_string_easy())?;
         }
+
+        Ok(())
+
+        // TODO: Move to other method.
+        /*
+        if self.extraction_path != "".to_string() {
+            path.push(&self.extraction_path);
+        }
+        let mut producer = FilePathProducer::new(&path.to_string_easy());
+        let mut done = false;
+        while !done {
+            let path = match producer.next() {
+                Ok(path) => path,
+                Err(error) => {
+                    if error.id == file_path_producer::ERROR_ID
+                        && error.code == file_path_producer::ERROR_CODE_PRODUCING_FINISHED
+                    {
+                        done = true;
+                    } else {
+                        return Err(error);
+                    }
+
+                    "".to_string()
+                }
+            };
+
+            if !done {
+                let mut entry_path = Utf8PathBuf::new();
+                entry_path.push(&backup_path);
+                if self.extraction_path != "".to_string() {
+                    entry_path.push(&self.extraction_path);
+                }
+                entry_path.push(&path);
+                if self.count == 0 {
+                    println!("Processing ({}): {}", self.processed_count, entry_path);
+                }
+                self.count += 1;
+                self.count %= 100;
+                let string = match fs::read_to_string(entry_path.clone()) {
+                    Ok(bytes) => bytes,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
+                };
+
+                let entry: Entry = match serde_json::from_str(&string) {
+                    Ok(entry) => entry,
+                    Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_ENTRY_FAILED)),
+                };
+
+                let result = store.bytes(&entry.id);
+                if let Err(ref error) = result {
+                    println!("store.bytes() failed. error: {}", error);
+                }
+                if let Ok(bytes) = result {
+                    let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
+                    gotten_path.push(&self.name);
+                    if self.extraction_path != "".to_string() {
+                        gotten_path.push(&self.extraction_path);
+                    }
+                    gotten_path.push(&path);
+                    let directories = gotten_path.parent_or_empty();
+                    match fs::create_dir_all(&directories) {
+                        Ok(_) => (),
+                        // TODO: Skipping file that writing is failed may be needed.
+                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                    }
+                    match fs::write(&gotten_path, bytes) {
+                        Ok(_) => (),
+                        // TODO: Skipping file that writing is failed may be needed.
+                        Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
+                    };
+                    if let Err(error) = Self::apply_metadata(&gotten_path.to_string_easy(), &entry) {
+                        println!("apply_metadata() failed: error: {}", error);
+                    }
+
+                    self.processed_count += 1;
+                }
+            }
+        }
+        println!("{} file(s) gotten.", self.processed_count);
+
+        Ok(())
+        */
+    }
+}
+
+impl FilesGetter {
+    /// Creates a new `FilesGetter` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the backup to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// * `GetCommand` - A new `GetCommand` instance.
+    pub fn new(name: &str, extraction_path: &str, destination_path: &str, gotten_path: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            extraction_path: extraction_path.to_string(),
+            destination_path: destination_path.to_string(),
+            gotten_path: gotten_path.to_string(),
+            processed_count: 0,
+            count: 0,
+        }
+    }
+
+    fn process_directory(&mut self, store: &ObjectStore, backup_path: &str) -> Result<()> {
+
+        let mut path = Utf8PathBuf::from(&backup_path);
+
+
 
         // TODO: Move to other method.
         if self.extraction_path != "".to_string() {
@@ -183,34 +291,9 @@ impl Task for FilesGetter {
 
         Ok(())
     }
-}
-
-impl FilesGetter {
-    /// Creates a new `FilesGetter` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The name of the backup to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// * `GetCommand` - A new `GetCommand` instance.
-    pub fn new(name: &str, extraction_path: &str, destination_path: &str, gotten_path: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            extraction_path: extraction_path.to_string(),
-            destination_path: destination_path.to_string(),
-            gotten_path: gotten_path.to_string(),
-            processed_count: 0,
-            count: 0,
-        }
-    }
-
-    fn process_directory(&mut self) -> Result<()> {
-        Ok(())
-    }
     
-    fn process_file(&mut self) -> Result<()> {
+    fn process_file(&mut self, store: &ObjectStore, backup_path: &str) -> Result<()> {
+        // TODO: Implement this.
         Ok(())
     }
 
