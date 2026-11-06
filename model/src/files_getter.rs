@@ -158,7 +158,18 @@ impl FilesGetter {
         }
     }
 
-    // TODO: Add doc comments.
+    /// Sets the notification sender.
+    ///
+    /// While `execute()` gets files from a directory, the progress (every 100
+    /// files and the number of gotten files at the end) is sent as
+    /// `Notification::Progress`. In both directory and file extraction, the
+    /// skipped files and the metadata failures are sent as `Notification::Error`.
+    /// If no sender is set, no notifications are sent. Failing to send a
+    /// notification does not stop the processing.
+    ///
+    /// # Arguments
+    ///
+    /// * `sender` - The sender to use sending notifications.
     pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
         self.notification_sender = Some(sender);
     }
