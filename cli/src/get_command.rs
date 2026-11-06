@@ -136,6 +136,7 @@ mod tests {
     use std::fs;
     #[cfg(not(target_os = "windows"))]
     use std::os::unix::fs::PermissionsExt;
+    #[cfg(not(target_os = "windows"))]
     use std::time::SystemTime;
     use tempdir::TempDir;
 

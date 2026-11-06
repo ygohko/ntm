@@ -124,7 +124,6 @@ impl CleanCommand {
 mod tests {
     use std::env::consts;
     use std::fs;
-    use std::path::PathBuf;
     use tempdir::TempDir;
 
     use ntm_model::commons::OperatePath;
@@ -143,11 +142,6 @@ mod tests {
     fn is_executable() {
         let temp_dir = TempDir::new("test").unwrap();
         let temp_path = &temp_dir.path().to_path_buf();
-
-        fs::create_dir_all("C:\\Users\\gony\\AppData\\Local\\Temp\\TestCleanCommand");
-        let temp_path = PathBuf::from("C:\\Users\\gony\\AppData\\Local\\Temp\\TestCleanCommand");
-
-        println!("temp_path: {}", temp_path.display());
 
         let mut source_path = temp_path.clone();
         source_path.push("source");
@@ -179,8 +173,6 @@ mod tests {
         backup_path.push("Backups");
         backup_path.push(&command.name());
 
-        println!("backup_path: {}", backup_path.display());
-        
         fs::remove_dir_all(&backup_path).unwrap();
         let mut command = CleanCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
