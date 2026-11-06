@@ -55,8 +55,9 @@ pub const ERROR_ID: ErrorId = "files_getter";
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_BACKUP_NOT_FOUND: ErrorCode = 1;
 pub const ERROR_CODE_READING_ENTRY_FAILED: ErrorCode = 2;
-pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 3;
-pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 4;
+pub const ERROR_CODE_READING_METADATA_FAILED: ErrorCode = 3;
+pub const ERROR_CODE_WRITING_BYTES_FAILED: ErrorCode = 4;
+pub const ERROR_CODE_WRITING_METADATA_FAILED: ErrorCode = 5;
 
 /// The task to get files from backups.
 pub struct FilesGetter {
@@ -367,8 +368,7 @@ impl FilesGetter {
     fn is_file(path: impl AsRef<Path>) -> Result<bool> {
         let metadata = match fs::metadata(&path) {
             Ok(metadata) => metadata,
-            // TODO: Add a error code.
-            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL)),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_READING_METADATA_FAILED)),
         };
         if metadata.is_file() {
             return Ok(true);
@@ -377,7 +377,7 @@ impl FilesGetter {
             return Ok(false);
         }
 
-        Err(Error::new(ERROR_ID, ERROR_CODE_GENERAL))
+        Err(Error::new(ERROR_ID, ERROR_CODE_READING_METADATA_FAILED))
     }
 }
 
@@ -543,7 +543,7 @@ mod tests {
         let error = get(&destination_path, "nonexistent", &gotten_path).unwrap_err();
 
         assert_eq!(error.id, files_getter::ERROR_ID);
-        assert_eq!(error.code, files_getter::ERROR_CODE_GENERAL);
+        assert_eq!(error.code, files_getter::ERROR_CODE_READING_METADATA_FAILED);
         assert!(!gotten_path.exists());
     }
 
