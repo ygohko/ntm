@@ -142,7 +142,6 @@ mod tests {
     fn is_executable() {
         let temp_dir = TempDir::new("test").unwrap();
         let temp_path = &temp_dir.path().to_path_buf();
-
         let mut source_path = temp_path.clone();
         source_path.push("source");
         fs::create_dir_all(&source_path).unwrap();
@@ -172,7 +171,6 @@ mod tests {
         let mut backup_path = ntm_path.clone();
         backup_path.push("Backups");
         backup_path.push(&command.name());
-
         fs::remove_dir_all(&backup_path).unwrap();
         let mut command = CleanCommand::new();
         command.set_destination_path(&ntm_path.to_string_easy());
