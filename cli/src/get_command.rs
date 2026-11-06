@@ -20,6 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+use std::thread;
+
+use ntm_model::commons::Notification;
 use ntm_model::error::Result;
 use ntm_model::files_getter::FilesGetter;
 use ntm_model::task::Task;
@@ -42,15 +47,25 @@ impl Task for GetCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let mut getter = FilesGetter::new(
-            &self.name,
-            &self.limited_directory,
-            &self.destination_path,
-            &self.gotten_path,
-        );
-        getter.execute()?;
+        let (sender, receiver) = mpsc::channel::<Notification>();
+        let handle = thread::spawn(move || {
+            Self::receive_notification(receiver);
+        });
 
-        Ok(())
+        let result: Result<()>;
+        {
+            let mut getter = FilesGetter::new(
+                &self.name,
+                &self.limited_directory,
+                &self.destination_path,
+                &self.gotten_path,
+            );
+            getter.set_notification_sender(sender);
+            result = getter.execute();
+        }
+        let _ = handle.join();
+
+        result
     }
 }
 
@@ -99,6 +114,19 @@ impl GetCommand {
     /// * `path` - The path to store the gotten files.
     pub fn set_gotten_path(&mut self, path: &str) {
         self.gotten_path = path.to_string();
+    }
+
+    fn receive_notification(receiver: Receiver<Notification>) {
+        loop {
+            let notification = match receiver.recv() {
+                Ok(notification) => notification,
+                Err(_) => break,
+            };
+            match notification {
+                Notification::Error(string) => println!("Error: {}", string),
+                Notification::Progress(string) => println!("{}", string),
+            };
+        }
     }
 }
 
