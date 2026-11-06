@@ -307,6 +307,12 @@ impl FilesGetter {
                     let _ = sender.send(Notification::Error(string));
                 }
             }
+
+            self.processed_count += 1;
+        }
+        if let Some(ref sender) = self.notification_sender {
+            let string = format!("{} file(s) gotten.", self.processed_count);
+            let _ = sender.send(Notification::Progress(string));
         }
 
         Ok(())
