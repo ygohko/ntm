@@ -132,9 +132,11 @@ impl GetCommand {
 
 #[cfg(test)]
 mod tests {
+    use std::env::consts;
     use std::fs;
     #[cfg(not(target_os = "windows"))]
     use std::os::unix::fs::PermissionsExt;
+    #[cfg(not(target_os = "windows"))]
     use std::time::SystemTime;
     use tempdir::TempDir;
 
@@ -170,7 +172,10 @@ mod tests {
 
         let mut config_path = ntm_path.clone();
         config_path.push("ntm.toml");
-        let config = format!("source_path = \"{}\"", source_path.display());
+        let mut config = format!("source_path = \"{}\"", source_path.display());
+        if consts::OS == "windows" {
+            config = config.replace("\\", "\\\\");
+        }
         fs::write(config_path, config).unwrap();
 
         let mut command = BackupExecuteCommand::new();
