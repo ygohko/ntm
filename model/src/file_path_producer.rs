@@ -154,6 +154,7 @@ impl FilePathProducer {
 
 #[cfg(test)]
 mod tests {
+    use std::env::consts;
     use std::fs;
     use tempdir::TempDir;
 
@@ -196,7 +197,11 @@ mod tests {
         let Ok(path) = producer.next() else {
             panic!();
         };
-        assert_eq!(path, "b/c.txt".to_string());
+        if consts::OS != "windows" {
+            assert_eq!(path, "b/c.txt".to_string());
+        } else {
+            assert_eq!(path, "b\\c.txt".to_string());
+        }
         let Err(error) = producer.next() else {
             panic!();
         };
