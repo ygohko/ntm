@@ -31,11 +31,13 @@ use std::os::unix::fs as unix_fs;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::sync::mpsc::Sender;
 #[cfg(not(target_os = "windows"))]
 use std::time::Duration;
 #[cfg(not(target_os = "windows"))]
 use std::time::SystemTime;
 
+use crate::commons::Notification;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
@@ -64,6 +66,7 @@ pub struct FilesGetter {
     gotten_path: String,
     processed_count: i64,
     count: i32,
+    notification_sender: Option<Sender<Notification>>,
 }
 
 impl Task for FilesGetter {
@@ -151,7 +154,13 @@ impl FilesGetter {
             gotten_path: gotten_path.to_string(),
             processed_count: 0,
             count: 0,
+            notification_sender: None,
         }
+    }
+
+    // TODO: Add doc comments.
+    pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
+        self.notification_sender = Some(sender);
     }
 
     fn process_directory(&mut self, store: &ObjectStore, backup_path: &str) -> Result<()> {
@@ -185,7 +194,10 @@ impl FilesGetter {
                 }
                 entry_path.push(&path);
                 if self.count == 0 {
-                    println!("Processing ({}): {}", self.processed_count, entry_path);
+                    if let Some(ref sender) = self.notification_sender {
+                        let string = format!("Processing ({}): {}", self.processed_count, entry_path);
+                        let _ = sender.send(Notification::Progress(string));
+                    }
                 }
                 self.count += 1;
                 self.count %= 100;
@@ -201,7 +213,10 @@ impl FilesGetter {
 
                 let result = store.bytes(&entry.id);
                 if let Err(ref error) = result {
-                    println!("store.bytes() failed. error: {}", error);
+                    if let Some(ref sender) = self.notification_sender {
+                        let string = format!("store.bytes() failed. error: {}", error);
+                        let _ = sender.send(Notification::Error(string));
+                    }
                 }
                 if let Ok(bytes) = result {
                     let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
@@ -222,14 +237,20 @@ impl FilesGetter {
                         Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
                     };
                     if let Err(error) = Self::apply_metadata(&gotten_path.to_string_easy(), &entry) {
-                        println!("apply_metadata() failed: error: {}", error);
+                        if let Some(ref sender) = self.notification_sender {
+                            let string = format!("apply_metadata() failed: error: {}", error);
+                            let _ = sender.send(Notification::Error(string));
+                        }
                     }
 
                     self.processed_count += 1;
                 }
             }
         }
-        println!("{} file(s) gotten.", self.processed_count);
+        if let Some(ref sender) = self.notification_sender {
+            let string = format!("{} file(s) gotten.", self.processed_count);
+            let _ = sender.send(Notification::Progress(string));
+        }
 
         Ok(())
     }
@@ -248,7 +269,10 @@ impl FilesGetter {
 
         let result = store.bytes(&entry.id);
         if let Err(ref error) = result {
-            println!("store.bytes() failed. error: {}", error);
+            if let Some(ref sender) = self.notification_sender {
+                let string = format!("store.bytes() failed. error: {}", error);
+                let _ = sender.send(Notification::Error(string));
+            }
         }
         if let Ok(bytes) = result {
             let mut gotten_path = Utf8PathBuf::from(&self.gotten_path);
@@ -266,7 +290,10 @@ impl FilesGetter {
                 Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_WRITING_BYTES_FAILED)),
             };
             if let Err(error) = Self::apply_metadata(&gotten_path.to_string_easy(), &entry) {
-                println!("apply_metadata() failed: error: {}", error);
+                if let Some(ref sender) = self.notification_sender {
+                    let string = format!("apply_metadata() failed: error: {}", error);
+                    let _ = sender.send(Notification::Error(string));
+                }
             }
         }
 
