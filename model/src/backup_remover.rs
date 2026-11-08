@@ -71,20 +71,26 @@ pub struct BackupRemover {
 }
 
 impl Task for BackupRemover {
-    /// Spawns a new thread to execute the main logic with a copy of the private data.
+    /// Removes the backups marked as removed in the calling thread.
     ///
-    /// This method first clones the `self.private` field to ensure that the data
-    /// can be safely moved into the new thread's closure. A new thread is then
-    /// spawned, and the cloned `private` data is moved into it. The new thread
-    /// will then invoke the `main` function, passing a reference to this `private`
-    /// data.
+    /// Scans `<destination_path>/Backups` and, for each `.removed` directory,
+    /// removes its files one by one and then the directory itself. The other
+    /// entries are left as they are. Failing to remove a file or a directory is
+    /// printed and the removal continues. If `terminate()` is called, the removal
+    /// stops as described there.
     ///
-    /// The `JoinHandle` for the newly created thread is stored in `self.join_handle`,
-    /// allowing the program to potentially wait for the thread's completion later
-    /// if necessary.
+    /// This blocks until the removal finishes. Use `execute_in_background()` to
+    /// run it in another thread.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED)`: If the
+    ///   `Backups` directory cannot be read.
+    /// * An error of `FilePathProducer` other than finishing is returned as it is.
     ///
     /// # Returns
-    /// - `Ok(())` if the thread was successfully spawned.
+    ///
+    /// A `Result` indicating success or an `Error` if the removal fails.
     fn execute(&mut self) -> Result<()> {
         let result = self.main();
 
@@ -174,7 +180,17 @@ impl BackupRemover {
         private.destination_path = path.to_string();
     }
 
-    // TODO: Add doc comments.
+    /// Requests the running removal to terminate.
+    ///
+    /// This only sets a flag and returns immediately. The removal checks the flag
+    /// after each file is removed, and stops removing the remaining files and
+    /// backups. The `.removed` directory being processed at that time is still
+    /// removed with its remaining contents, and `execute()` or `join()` returns
+    /// `Ok(())`. Use `join()` to wait for the termination when the removal is
+    /// executed in the background.
+    ///
+    /// The flag is never reset, so calling this before the execution makes the
+    /// removal stop after the first entry in the `Backups` directory is processed.
     pub fn terminate(&self) {
         self.private.write().termination_requested = true;
     }

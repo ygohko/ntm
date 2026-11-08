@@ -100,16 +100,34 @@ pub struct GarbageCollector {
 }
 
 impl Task for GarbageCollector {
-    /// Executes the main operational logic by leveraging the instance's private data.
+    /// Removes the objects that are no longer referred to by any backup, in the
+    /// calling thread.
     ///
-    /// This method first accesses and clones the `private` field from the instance (`self.private`).
-    /// It then invokes the `main` function, passing a reference to this cloned private data.
-    /// The `Result` returned by the `main` function is directly propagated and returned by this method.
+    /// For each object in `<destination_path>/Objects`, the backups created after
+    /// the object was added are checked. If none of them has an entry at the
+    /// object's path that refers to the object, the object is removed. Objects in
+    /// the cache of the object store are kept without checking.
+    ///
+    /// The large objects are processed first, then the other objects. The other
+    /// objects are processed from the unit next to the last processed one saved in
+    /// `<destination_path>/state.json`, and the progress is saved there every 256
+    /// units. The processing stops when the number of processed objects reaches the
+    /// count set by `set_limited_count()`, or when `terminate()` is called.
+    ///
+    /// Failing to process or remove an object, to load the cache or to save the
+    /// state is printed as a warning and the processing continues.
+    ///
+    /// This blocks until the processing finishes. Use `execute_in_background()` to
+    /// run it in another thread.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(backup_store::ERROR_ID, backup_store::ERROR_CODE_FINDING_BACKUP_FAILED)`:
+    ///   If the `Backups` directory cannot be read.
     ///
     /// # Returns
-    /// A `Result<()>` which represents the outcome of the `main` function's execution.
-    /// Returns `Ok(())` on successful completion of the `main` function, or an `Err`
-    /// containing details if the operation within `main` fails.
+    ///
+    /// A `Result` indicating success or an `Error` if the garbage collection fails.
     fn execute(&mut self) -> Result<()> {
         let result = self.main();
 
@@ -224,7 +242,18 @@ impl GarbageCollector {
         private.limited_count = Some(count);
     }
 
-    // TODO: Add doc comments.
+    /// Requests the running garbage collection to terminate.
+    ///
+    /// This only sets a flag and returns immediately. The flag is checked after
+    /// the large objects are processed and after each unit of the other objects
+    /// is processed, so the garbage collection stops at that point and
+    /// `execute()` or `join()` returns `Ok(())`. Processing the large objects is
+    /// not interrupted on the way. Use `join()` to wait for the termination when
+    /// the garbage collection is executed in the background.
+    ///
+    /// The progress is saved to `state.json` only every 256 units, so the next
+    /// garbage collection resumes from the last saved point, not from the point
+    /// where it was terminated.
     pub fn terminate(&self) {
         self.private.write().termination_requested = true;
     }
