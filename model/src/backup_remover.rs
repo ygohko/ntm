@@ -50,6 +50,7 @@ struct Private {
     destination_path: String,
     removed_count: i64,
     count: i32,
+    termination_requested: bool,
 }
 
 impl Private {
@@ -59,6 +60,7 @@ impl Private {
             destination_path: ".".to_string(),
             removed_count: 0,
             count: 0,
+            termination_requested: false,
         }
     }
 }
@@ -172,6 +174,11 @@ impl BackupRemover {
         private.destination_path = path.to_string();
     }
 
+    // TODO: Add doc comments.
+    pub fn terminate(&self) {
+        self.private.write().termination_requested = true;
+    }
+    
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
@@ -187,6 +194,9 @@ impl BackupRemover {
         for result in read_dir {
             if let Ok(dir_entry) = result {
                 self.process_dir_entry(&dir_entry)?;
+            }
+            if self.private.read().termination_requested {
+                break;
             }
         }
 
@@ -242,6 +252,9 @@ impl BackupRemover {
                     private.count += 1;
                     private.count %= 1000;
                 }
+            }
+            if self.private.read().termination_requested {
+                done = true;
             }
         }
 
