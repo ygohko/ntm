@@ -50,6 +50,7 @@ struct Private {
     destination_path: String,
     removed_count: i64,
     count: i32,
+    termination_requested: bool,
 }
 
 impl Private {
@@ -59,6 +60,7 @@ impl Private {
             destination_path: ".".to_string(),
             removed_count: 0,
             count: 0,
+            termination_requested: false,
         }
     }
 }
@@ -69,20 +71,26 @@ pub struct BackupRemover {
 }
 
 impl Task for BackupRemover {
-    /// Spawns a new thread to execute the main logic with a copy of the private data.
+    /// Removes the backups marked as removed in the calling thread.
     ///
-    /// This method first clones the `self.private` field to ensure that the data
-    /// can be safely moved into the new thread's closure. A new thread is then
-    /// spawned, and the cloned `private` data is moved into it. The new thread
-    /// will then invoke the `main` function, passing a reference to this `private`
-    /// data.
+    /// Scans `<destination_path>/Backups` and, for each `.removed` directory,
+    /// removes its files one by one and then the directory itself. The other
+    /// entries are left as they are. Failing to remove a file or a directory is
+    /// printed and the removal continues. If `terminate()` is called, the removal
+    /// stops as described there.
     ///
-    /// The `JoinHandle` for the newly created thread is stored in `self.join_handle`,
-    /// allowing the program to potentially wait for the thread's completion later
-    /// if necessary.
+    /// This blocks until the removal finishes. Use `execute_in_background()` to
+    /// run it in another thread.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(ERROR_ID, ERROR_CODE_READING_DIRECTORY_FAILED)`: If the
+    ///   `Backups` directory cannot be read.
+    /// * An error of `FilePathProducer` other than finishing is returned as it is.
     ///
     /// # Returns
-    /// - `Ok(())` if the thread was successfully spawned.
+    ///
+    /// A `Result` indicating success or an `Error` if the removal fails.
     fn execute(&mut self) -> Result<()> {
         let result = self.main();
 
@@ -172,6 +180,21 @@ impl BackupRemover {
         private.destination_path = path.to_string();
     }
 
+    /// Requests the running removal to terminate.
+    ///
+    /// This only sets a flag and returns immediately. The removal checks the flag
+    /// after each file is removed, and stops removing the remaining files and
+    /// backups. The `.removed` directory being processed at that time is still
+    /// removed with its remaining contents, and `execute()` or `join()` returns
+    /// `Ok(())`. Use `join()` to wait for the termination when the removal is
+    /// executed in the background.
+    ///
+    /// The flag is never reset, so calling this before the execution makes the
+    /// removal stop after the first entry in the `Backups` directory is processed.
+    pub fn terminate(&self) {
+        self.private.write().termination_requested = true;
+    }
+    
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
@@ -187,6 +210,9 @@ impl BackupRemover {
         for result in read_dir {
             if let Ok(dir_entry) = result {
                 self.process_dir_entry(&dir_entry)?;
+            }
+            if self.private.read().termination_requested {
+                break;
             }
         }
 
@@ -243,6 +269,9 @@ impl BackupRemover {
                     private.count %= 1000;
                 }
             }
+            if self.private.read().termination_requested {
+                done = true;
+            }
         }
 
         if let Err(error) = fs::remove_dir_all(&path) {
@@ -257,6 +286,7 @@ impl BackupRemover {
 mod tests {
     use std::env::consts;
     use std::fs;
+    use std::path::Path;
     use tempdir::TempDir;
 
     use crate::backup_executer::BackupExecuter;
@@ -309,5 +339,72 @@ mod tests {
         let mut remover = BackupRemover::new();
         remover.set_destination_path(&ntm_path.to_string_easy());
         remover.execute().unwrap();
+    }
+
+    const FILE_COUNT: usize = 10;
+
+    /// Creates `Backups/<name>` containing `FILE_COUNT` files for each name.
+    fn create_backups(destination_path: &Path, names: &[String]) {
+        for name in names {
+            let backup_path = destination_path.join("Backups").join(name).join("dir");
+            fs::create_dir_all(&backup_path).unwrap();
+            for i in 0..FILE_COUNT {
+                fs::write(backup_path.join(format!("{}.txt", i)), "entry").unwrap();
+            }
+        }
+    }
+
+    fn removed_names(count: usize) -> Vec<String> {
+        (0..count).map(|i| format!("2026110{}-0000.removed", i)).collect()
+    }
+
+    fn existing_names(destination_path: &Path, names: &[String]) -> Vec<String> {
+        names
+            .iter()
+            .filter(|name| destination_path.join("Backups").join(name).exists())
+            .cloned()
+            .collect()
+    }
+
+    fn file_count(backup_path: &Path) -> usize {
+        fs::read_dir(backup_path.join("dir")).unwrap().count()
+    }
+
+    #[test]
+    fn termination_before_execution_stops_after_first_backup() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        let names = removed_names(2);
+        create_backups(&destination_path, &names);
+
+        let mut remover = BackupRemover::new();
+        remover.set_destination_path(&destination_path.to_string_easy());
+        remover.terminate();
+        remover.execute().unwrap();
+
+        // The first backup is removed entirely even though the termination is
+        // requested in the middle of it, and the next one is not processed.
+        let remaining_names = existing_names(&destination_path, &names);
+        assert_eq!(remaining_names.len(), 1);
+        let remaining_path = destination_path.join("Backups").join(&remaining_names[0]);
+        assert_eq!(file_count(&remaining_path), FILE_COUNT);
+    }
+
+    #[test]
+    fn termination_in_background_is_joinable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        let names = removed_names(10);
+        create_backups(&destination_path, &names);
+
+        let mut remover = BackupRemover::new();
+        remover.set_destination_path(&destination_path.to_string_easy());
+        remover.execute_in_background().unwrap();
+        remover.terminate();
+        remover.join().unwrap();
+
+        // Removing all the files takes far longer than calling terminate(), so
+        // the termination is requested before all the backups are removed.
+        assert!(!existing_names(&destination_path, &names).is_empty());
     }
 }

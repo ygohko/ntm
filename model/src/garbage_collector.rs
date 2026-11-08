@@ -74,6 +74,7 @@ struct Private {
     processed_count: i64,
     removed_count: i64,
     count: i32,
+    termination_requested: bool,
 }
 
 impl Private {
@@ -88,6 +89,7 @@ impl Private {
             processed_count: 0,
             removed_count: 0,
             count: 0,
+            termination_requested: false,
         }
     }
 }
@@ -98,16 +100,34 @@ pub struct GarbageCollector {
 }
 
 impl Task for GarbageCollector {
-    /// Executes the main operational logic by leveraging the instance's private data.
+    /// Removes the objects that are no longer referred to by any backup, in the
+    /// calling thread.
     ///
-    /// This method first accesses and clones the `private` field from the instance (`self.private`).
-    /// It then invokes the `main` function, passing a reference to this cloned private data.
-    /// The `Result` returned by the `main` function is directly propagated and returned by this method.
+    /// For each object in `<destination_path>/Objects`, the backups created after
+    /// the object was added are checked. If none of them has an entry at the
+    /// object's path that refers to the object, the object is removed. Objects in
+    /// the cache of the object store are kept without checking.
+    ///
+    /// The large objects are processed first, then the other objects. The other
+    /// objects are processed from the unit next to the last processed one saved in
+    /// `<destination_path>/state.json`, and the progress is saved there every 256
+    /// units. The processing stops when the number of processed objects reaches the
+    /// count set by `set_limited_count()`, or when `terminate()` is called.
+    ///
+    /// Failing to process or remove an object, to load the cache or to save the
+    /// state is printed as a warning and the processing continues.
+    ///
+    /// This blocks until the processing finishes. Use `execute_in_background()` to
+    /// run it in another thread.
+    ///
+    /// # Errors
+    ///
+    /// * `Error::new(backup_store::ERROR_ID, backup_store::ERROR_CODE_FINDING_BACKUP_FAILED)`:
+    ///   If the `Backups` directory cannot be read.
     ///
     /// # Returns
-    /// A `Result<()>` which represents the outcome of the `main` function's execution.
-    /// Returns `Ok(())` on successful completion of the `main` function, or an `Err`
-    /// containing details if the operation within `main` fails.
+    ///
+    /// A `Result` indicating success or an `Error` if the garbage collection fails.
     fn execute(&mut self) -> Result<()> {
         let result = self.main();
 
@@ -222,6 +242,22 @@ impl GarbageCollector {
         private.limited_count = Some(count);
     }
 
+    /// Requests the running garbage collection to terminate.
+    ///
+    /// This only sets a flag and returns immediately. The flag is checked after
+    /// the large objects are processed and after each unit of the other objects
+    /// is processed, so the garbage collection stops at that point and
+    /// `execute()` or `join()` returns `Ok(())`. Processing the large objects is
+    /// not interrupted on the way. Use `join()` to wait for the termination when
+    /// the garbage collection is executed in the background.
+    ///
+    /// The progress is saved to `state.json` only every 256 units, so the next
+    /// garbage collection resumes from the last saved point, not from the point
+    /// where it was terminated.
+    pub fn terminate(&self) {
+        self.private.write().termination_requested = true;
+    }
+
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
@@ -277,6 +313,9 @@ impl GarbageCollector {
                 println!("Warning: Processing unit failed. error: {}", error);
             }
         }
+        if self.private.read().termination_requested {
+            return Ok(());
+        }
         
         for i in 0..65536 {
             let index = (i as i32) + offset;
@@ -302,6 +341,9 @@ impl GarbageCollector {
                     if private.processed_count >= count {
                         break;
                     }
+                }
+                if private.termination_requested {
+                    break;
                 }
             }
         }
@@ -462,9 +504,12 @@ impl GarbageCollector {
 mod tests {
     use std::env::consts;
     use std::fs;
+    use std::path::Path;
     use tempdir::TempDir;
 
+    use crate::attributes::Attributes;
     use crate::backup_executer::BackupExecuter;
+    use crate::object_store::ObjectStore;
     use crate::commons::OperatePath;
     use crate::garbage_collector::GarbageCollector;
     use crate::destination::Destination;
@@ -509,5 +554,88 @@ mod tests {
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&ntm_path.to_string_easy());
         collector.execute().unwrap();
+    }
+
+    const NORMAL_OBJECT_IDS: [&str; 2] = ["0101010101010101", "0202020202020202"];
+    const LARGE_OBJECT_ID: &str = "0303030303030303";
+
+    /// Creates a destination with no backups. Its objects are not referred to by
+    /// any backup, so all of them are garbage.
+    fn create_destination(path: &Path) {
+        Destination::init(&path.to_string_easy()).unwrap();
+        let objects_path = path.join("Objects");
+        let mut store = ObjectStore::new(&objects_path.to_string_easy());
+        for id in NORMAL_OBJECT_IDS {
+            store.add(id, &b"normal".to_vec(), &Attributes::new("normal.txt", 0)).unwrap();
+        }
+
+        // Adding a large object needs 1 GiB of bytes, so it is placed directly.
+        let large_path = objects_path.join("l03").join("03").join("03").join("03");
+        fs::create_dir_all(&large_path).unwrap();
+        fs::write(large_path.join(LARGE_OBJECT_ID), "large").unwrap();
+        let attributes = serde_json::to_string(&Attributes::new("large.bin", 0)).unwrap();
+        fs::write(large_path.join(format!("{}.attributes", LARGE_OBJECT_ID)), attributes).unwrap();
+    }
+
+    fn object_exists(destination_path: &Path, id: &str) -> bool {
+        let store = ObjectStore::new(&destination_path.join("Objects").to_string_easy());
+        store.bytes(id).is_ok()
+    }
+
+    #[test]
+    fn garbage_objects_are_removed_without_termination() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        create_destination(&destination_path);
+
+        let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&destination_path.to_string_easy());
+        collector.execute().unwrap();
+
+        for id in NORMAL_OBJECT_IDS {
+            assert!(!object_exists(&destination_path, id));
+        }
+        assert!(!object_exists(&destination_path, LARGE_OBJECT_ID));
+        assert!(destination_path.join("state.json").exists());
+    }
+
+    #[test]
+    fn termination_stops_after_large_objects() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        create_destination(&destination_path);
+
+        let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&destination_path.to_string_easy());
+        collector.terminate();
+        collector.execute().unwrap();
+
+        // Processing the large objects is not interrupted.
+        assert!(!object_exists(&destination_path, LARGE_OBJECT_ID));
+        // The other objects are not processed.
+        for id in NORMAL_OBJECT_IDS {
+            assert!(object_exists(&destination_path, id));
+        }
+        // The state is not saved because no other objects are processed.
+        assert!(!destination_path.join("state.json").exists());
+    }
+
+    #[test]
+    fn termination_in_background_is_joinable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        create_destination(&destination_path);
+
+        let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&destination_path.to_string_easy());
+        collector.execute_in_background().unwrap();
+        collector.terminate();
+        collector.join().unwrap();
+
+        // Scanning all units of the large objects takes far longer than calling
+        // terminate(), so the termination is requested before the other objects.
+        for id in NORMAL_OBJECT_IDS {
+            assert!(object_exists(&destination_path, id));
+        }
     }
 }
