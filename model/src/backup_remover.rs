@@ -286,6 +286,7 @@ impl BackupRemover {
 mod tests {
     use std::env::consts;
     use std::fs;
+    use std::path::Path;
     use tempdir::TempDir;
 
     use crate::backup_executer::BackupExecuter;
@@ -338,5 +339,72 @@ mod tests {
         let mut remover = BackupRemover::new();
         remover.set_destination_path(&ntm_path.to_string_easy());
         remover.execute().unwrap();
+    }
+
+    const FILE_COUNT: usize = 10;
+
+    /// Creates `Backups/<name>` containing `FILE_COUNT` files for each name.
+    fn create_backups(destination_path: &Path, names: &[String]) {
+        for name in names {
+            let backup_path = destination_path.join("Backups").join(name).join("dir");
+            fs::create_dir_all(&backup_path).unwrap();
+            for i in 0..FILE_COUNT {
+                fs::write(backup_path.join(format!("{}.txt", i)), "entry").unwrap();
+            }
+        }
+    }
+
+    fn removed_names(count: usize) -> Vec<String> {
+        (0..count).map(|i| format!("2026110{}-0000.removed", i)).collect()
+    }
+
+    fn existing_names(destination_path: &Path, names: &[String]) -> Vec<String> {
+        names
+            .iter()
+            .filter(|name| destination_path.join("Backups").join(name).exists())
+            .cloned()
+            .collect()
+    }
+
+    fn file_count(backup_path: &Path) -> usize {
+        fs::read_dir(backup_path.join("dir")).unwrap().count()
+    }
+
+    #[test]
+    fn termination_before_execution_stops_after_first_backup() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        let names = removed_names(2);
+        create_backups(&destination_path, &names);
+
+        let mut remover = BackupRemover::new();
+        remover.set_destination_path(&destination_path.to_string_easy());
+        remover.terminate();
+        remover.execute().unwrap();
+
+        // The first backup is removed entirely even though the termination is
+        // requested in the middle of it, and the next one is not processed.
+        let remaining_names = existing_names(&destination_path, &names);
+        assert_eq!(remaining_names.len(), 1);
+        let remaining_path = destination_path.join("Backups").join(&remaining_names[0]);
+        assert_eq!(file_count(&remaining_path), FILE_COUNT);
+    }
+
+    #[test]
+    fn termination_in_background_is_joinable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        let names = removed_names(10);
+        create_backups(&destination_path, &names);
+
+        let mut remover = BackupRemover::new();
+        remover.set_destination_path(&destination_path.to_string_easy());
+        remover.execute_in_background().unwrap();
+        remover.terminate();
+        remover.join().unwrap();
+
+        // Removing all the files takes far longer than calling terminate(), so
+        // the termination is requested before all the backups are removed.
+        assert!(!existing_names(&destination_path, &names).is_empty());
     }
 }

@@ -504,9 +504,12 @@ impl GarbageCollector {
 mod tests {
     use std::env::consts;
     use std::fs;
+    use std::path::Path;
     use tempdir::TempDir;
 
+    use crate::attributes::Attributes;
     use crate::backup_executer::BackupExecuter;
+    use crate::object_store::ObjectStore;
     use crate::commons::OperatePath;
     use crate::garbage_collector::GarbageCollector;
     use crate::destination::Destination;
@@ -551,5 +554,88 @@ mod tests {
         let mut collector = GarbageCollector::new();
         collector.set_destination_path(&ntm_path.to_string_easy());
         collector.execute().unwrap();
+    }
+
+    const NORMAL_OBJECT_IDS: [&str; 2] = ["0101010101010101", "0202020202020202"];
+    const LARGE_OBJECT_ID: &str = "0303030303030303";
+
+    /// Creates a destination with no backups. Its objects are not referred to by
+    /// any backup, so all of them are garbage.
+    fn create_destination(path: &Path) {
+        Destination::init(&path.to_string_easy()).unwrap();
+        let objects_path = path.join("Objects");
+        let mut store = ObjectStore::new(&objects_path.to_string_easy());
+        for id in NORMAL_OBJECT_IDS {
+            store.add(id, &b"normal".to_vec(), &Attributes::new("normal.txt", 0)).unwrap();
+        }
+
+        // Adding a large object needs 1 GiB of bytes, so it is placed directly.
+        let large_path = objects_path.join("l03").join("03").join("03").join("03");
+        fs::create_dir_all(&large_path).unwrap();
+        fs::write(large_path.join(LARGE_OBJECT_ID), "large").unwrap();
+        let attributes = serde_json::to_string(&Attributes::new("large.bin", 0)).unwrap();
+        fs::write(large_path.join(format!("{}.attributes", LARGE_OBJECT_ID)), attributes).unwrap();
+    }
+
+    fn object_exists(destination_path: &Path, id: &str) -> bool {
+        let store = ObjectStore::new(&destination_path.join("Objects").to_string_easy());
+        store.bytes(id).is_ok()
+    }
+
+    #[test]
+    fn garbage_objects_are_removed_without_termination() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        create_destination(&destination_path);
+
+        let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&destination_path.to_string_easy());
+        collector.execute().unwrap();
+
+        for id in NORMAL_OBJECT_IDS {
+            assert!(!object_exists(&destination_path, id));
+        }
+        assert!(!object_exists(&destination_path, LARGE_OBJECT_ID));
+        assert!(destination_path.join("state.json").exists());
+    }
+
+    #[test]
+    fn termination_stops_after_large_objects() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        create_destination(&destination_path);
+
+        let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&destination_path.to_string_easy());
+        collector.terminate();
+        collector.execute().unwrap();
+
+        // Processing the large objects is not interrupted.
+        assert!(!object_exists(&destination_path, LARGE_OBJECT_ID));
+        // The other objects are not processed.
+        for id in NORMAL_OBJECT_IDS {
+            assert!(object_exists(&destination_path, id));
+        }
+        // The state is not saved because no other objects are processed.
+        assert!(!destination_path.join("state.json").exists());
+    }
+
+    #[test]
+    fn termination_in_background_is_joinable() {
+        let temp_dir = TempDir::new("test").unwrap();
+        let destination_path = temp_dir.path().join("ntm");
+        create_destination(&destination_path);
+
+        let mut collector = GarbageCollector::new();
+        collector.set_destination_path(&destination_path.to_string_easy());
+        collector.execute_in_background().unwrap();
+        collector.terminate();
+        collector.join().unwrap();
+
+        // Scanning all units of the large objects takes far longer than calling
+        // terminate(), so the termination is requested before the other objects.
+        for id in NORMAL_OBJECT_IDS {
+            assert!(object_exists(&destination_path, id));
+        }
     }
 }
