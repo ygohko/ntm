@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Yasuaki Gohko
+ * Copyright (c) 2025 - 2026 Yasuaki Gohko
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,11 +28,13 @@ use serde_derive::Serialize;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
 
 use crate::attributes::Attributes;
 use crate::backup_store::BackupStore;
+use crate::commons::Notification;
 use crate::commons::OperatePath;
 use crate::entry::Entry;
 use crate::error::Error;
@@ -74,6 +76,7 @@ struct Private {
     processed_count: i64,
     removed_count: i64,
     count: i32,
+    notification_sender: Option<Sender<Notification>>,
     termination_requested: bool,
 }
 
@@ -89,6 +92,7 @@ impl Private {
             processed_count: 0,
             removed_count: 0,
             count: 0,
+            notification_sender: None,
             termination_requested: false,
         }
     }
@@ -242,6 +246,15 @@ impl GarbageCollector {
         private.limited_count = Some(count);
     }
 
+    /// Sets the notification sender.
+    ///
+    /// # Arguments
+    ///
+    /// * `sender` - The sender to use sending notifications.
+    pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
+        self.private.write().notification_sender = Some(sender);
+    }
+
     /// Requests the running garbage collection to terminate.
     ///
     /// This only sets a flag and returns immediately. The flag is checked after
@@ -269,13 +282,15 @@ impl GarbageCollector {
         {
             let mut private = self.private.write();
             private.object_store = Some(ObjectStore::new(&path.to_string_easy()));
-            if let Some(object_store) = private.object_store.as_mut() {
+            if let Some(ref mut object_store) = private.object_store {
                 if let Err(error) = object_store.load_cache() {
-                    println!("Loading existing IDs failed. error: {}", error);
+                    if let Some(ref sender) = private.notification_sender {
+                        let string = format!("Loading existing IDs failed. error: {}", error);
+                        let _ = sender.send(Notification::Error(string));
+                    }
                 }
             }
         }
-
         let mut backups_path = Utf8PathBuf::from(&destination_path);
         backups_path.push("Backups");
         let backup_store = BackupStore::new(&backups_path.to_string_easy());
@@ -310,7 +325,10 @@ impl GarbageCollector {
             let index1 = (i / 0x100) & 0xFF;
             let index2 = i & 0xFF;
             if let Err(error) = self.process_unit(index1, index2, true) {
-                println!("Warning: Processing unit failed. error: {}", error);
+                if let Some(ref sender) = self.private.read().notification_sender {
+                    let string = format!("Warning: Processing unit failed. error: {}", error);
+                    let _ = sender.send(Notification::Error(string));
+                }
             }
         }
         if self.private.read().termination_requested {
@@ -322,7 +340,10 @@ impl GarbageCollector {
             let index1 = (index / 0x100) & 0xFF;
             let index2 = index & 0xFF;
             if let Err(error) = self.process_unit(index1, index2, false) {
-                println!("Warning: Processing unit failed. error: {}", error);
+                if let Some(ref sender) = self.private.read().notification_sender {
+                    let string = format!("Warning: Processing unit failed. error: {}", error);
+                    let _ = sender.send(Notification::Error(string));
+                }
             }
 
             if (i & 0xFF) == 0 {
@@ -331,7 +352,10 @@ impl GarbageCollector {
                     let mut path = Utf8PathBuf::from(&destination_path);
                     path.push("state.json");
                     if let Err(_) = fs::write(&path, &serialized) {
-                        println!("Warning: Writing state failed.");
+                        if let Some(ref sender) = self.private.read().notification_sender {
+                            let string = format!("Warning: Writing state failed.");
+                            let _ = sender.send(Notification::Error(string));
+                        }
                     }
                 }
             }
@@ -348,9 +372,11 @@ impl GarbageCollector {
             }
         }
 
+        if let Some(ref sender) = self.private.read().notification_sender
         {
-            let private = self.private.read();
-            println!("{} object(s) removed.", private.removed_count);
+            let count = self.private.read().removed_count;
+            let string = format!("{} object(s) removed.", count);
+            let _ = sender.send(Notification::Progress(string));
         }
 
         Ok(())
@@ -487,7 +513,10 @@ impl GarbageCollector {
             let private = self.private.read();
             if let Some(object_store) = &private.object_store {
                 if let Err(_) = object_store.remove(&object_id) {
-                    println!("Warning: Removing object {} failed.", object_id);
+                    if let Some(ref sender) = self.private.read().notification_sender {
+                        let string = format!("Warning: Removing object {} failed.", object_id);
+                        let _ = sender.send(Notification::Error(string));
+                    }
                 }
             }
         }
