@@ -74,6 +74,7 @@ struct Private {
     processed_count: i64,
     removed_count: i64,
     count: i32,
+    termination_requested: bool,
 }
 
 impl Private {
@@ -88,6 +89,7 @@ impl Private {
             processed_count: 0,
             removed_count: 0,
             count: 0,
+            termination_requested: false,
         }
     }
 }
@@ -222,6 +224,11 @@ impl GarbageCollector {
         private.limited_count = Some(count);
     }
 
+    // TODO: Add doc comments.
+    pub fn terminate(&self) {
+        self.private.write().termination_requested = true;
+    }
+
     fn main(&self) -> Result<()> {
         let destination_path: String;
         {
@@ -277,6 +284,9 @@ impl GarbageCollector {
                 println!("Warning: Processing unit failed. error: {}", error);
             }
         }
+        if self.private.read().termination_requested {
+            return Ok(());
+        }
         
         for i in 0..65536 {
             let index = (i as i32) + offset;
@@ -302,6 +312,9 @@ impl GarbageCollector {
                     if private.processed_count >= count {
                         break;
                     }
+                }
+                if private.termination_requested {
+                    break;
                 }
             }
         }
