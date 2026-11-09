@@ -278,7 +278,7 @@ impl BackupRemover {
                 if let Err(error) = fs::remove_file(&removing_path) {
                     if let Some(ref sender) = self.private.read().notification_sender {
                         let string = format!("Removing file {} failed. error: {}", removing_path, error);
-                        let _ = sender.send(Notification::Progress(string));
+                        let _ = sender.send(Notification::Error(string));
                     }
                 }
                 {
