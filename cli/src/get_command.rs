@@ -63,6 +63,7 @@ impl Task for GetCommand {
             getter.set_notification_sender(sender);
             result = getter.execute();
         }
+
         let _ = handle.join();
 
         result

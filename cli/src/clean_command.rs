@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Yasuaki Gohko
+ * Copyright (c) 2025 - 2026 Yasuaki Gohko
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,7 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+use std::thread;
+
 use ntm_model::backup_remover::BackupRemover;
+use ntm_model::commons::Notification;
 use ntm_model::error::ErrorCode;
 use ntm_model::error::ErrorId;
 use ntm_model::error::Result;
@@ -49,30 +54,41 @@ impl Task for CleanCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        let mut remover: Option<BackupRemover> = None;
-        if !self.object_only {
-            remover = Some(BackupRemover::new());
-        }
-        if let Some(ref mut remover1) = remover {
-            remover1.set_destination_path(&self.destination_path);
-            remover1.execute_in_background()?;
-        }
+        let (sender, receiver) = mpsc::channel::<Notification>();
+        let handle = thread::spawn(move || {
+            Self::receive_notification(receiver);
+        });
 
-        let mut collector = GarbageCollector::new();
-        collector.set_destination_path(&self.destination_path);
-        if let Some(limited_count) = self.limited_count {
-            collector.set_limited_count(limited_count);
-        }
-        collector.execute_in_background()?;
+        {
+            let mut remover: Option<BackupRemover> = None;
+            if !self.object_only {
+                remover = Some(BackupRemover::new());
+            }
+            if let Some(ref mut remover1) = remover {
+                remover1.set_destination_path(&self.destination_path);
+                remover1.set_notification_sender(sender.clone());
+                remover1.execute_in_background()?;
+            }
 
-        if let Some(mut remover1) = remover {
-            if let Err(error) = remover1.join() {
-                println!("Removing backups failed. error {}", error);
+            let mut collector = GarbageCollector::new();
+            collector.set_destination_path(&self.destination_path);
+            if let Some(limited_count) = self.limited_count {
+                collector.set_limited_count(limited_count);
+            }
+            collector.set_notification_sender(sender);
+            collector.execute_in_background()?;
+
+            if let Some(mut remover1) = remover {
+                if let Err(error) = remover1.join() {
+                    println!("Removing backups failed. error {}", error);
+                }
+            }
+            if let Err(error) = collector.join() {
+                println!("Garbage collection failed. error {}", error);
             }
         }
-        if let Err(error) = collector.join() {
-            println!("Garbage collection failed. error {}", error);
-        }
+
+        let _ = handle.join();
 
         Ok(())
     }
@@ -117,6 +133,19 @@ impl CleanCommand {
     /// * `object_only` - Whether cleans object only.
     pub fn set_object_only(&mut self, object_only: bool) {
         self.object_only = object_only;
+    }
+
+    fn receive_notification(receiver: Receiver<Notification>) {
+        loop {
+            let notification = match receiver.recv() {
+                Ok(notification) => notification,
+                Err(_) => break,
+            };
+            match notification {
+                Notification::Error(string) => println!("Error: {}", string),
+                Notification::Progress(string) => println!("{}", string),
+            };
+        }
     }
 }
 

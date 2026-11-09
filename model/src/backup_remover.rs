@@ -25,6 +25,7 @@ use parking_lot::RwLock;
 use std::fs;
 use std::fs::DirEntry;
 use std::sync::Arc;
+use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
 
@@ -32,6 +33,7 @@ use crate::error::Error;
 use crate::error::ErrorCode;
 use crate::error::ErrorId;
 use crate::error::Result;
+use crate::commons::Notification;
 use crate::commons::OperatePath;
 use crate::file_path_producer;
 use crate::file_path_producer::FilePathProducer;
@@ -50,6 +52,7 @@ struct Private {
     destination_path: String,
     removed_count: i64,
     count: i32,
+    notification_sender: Option<Sender<Notification>>,
     termination_requested: bool,
 }
 
@@ -60,6 +63,7 @@ impl Private {
             destination_path: ".".to_string(),
             removed_count: 0,
             count: 0,
+            notification_sender: None,
             termination_requested: false,
         }
     }
@@ -180,6 +184,15 @@ impl BackupRemover {
         private.destination_path = path.to_string();
     }
 
+    /// Sets the notification sender.
+    ///
+    /// # Arguments
+    ///
+    /// * `sender` - The sender to use sending notifications.
+    pub fn set_notification_sender(&mut self, sender: Sender<Notification>) {
+        self.private.write().notification_sender = Some(sender);
+    }
+    
     /// Requests the running removal to terminate.
     ///
     /// This only sets a flag and returns immediately. The removal checks the flag
@@ -256,11 +269,17 @@ impl BackupRemover {
                 {
                     let private = self.private.read();
                     if private.count == 0 {
-                        println!("Removing ({}): {}", private.removed_count, removing_path);
+                        if let Some(ref sender) = self.private.read().notification_sender {
+                            let string = format!("Removing ({}): {}", private.removed_count, removing_path);
+                            let _ = sender.send(Notification::Progress(string));
+                        }
                     }
                 }
                 if let Err(error) = fs::remove_file(&removing_path) {
-                    println!("Removing file {} failed. error: {}", removing_path, error);
+                    if let Some(ref sender) = self.private.read().notification_sender {
+                        let string = format!("Removing file {} failed. error: {}", removing_path, error);
+                        let _ = sender.send(Notification::Error(string));
+                    }
                 }
                 {
                     let mut private = self.private.write();
@@ -275,7 +294,10 @@ impl BackupRemover {
         }
 
         if let Err(error) = fs::remove_dir_all(&path) {
-            println!("Removing directory {} failed. error: {}", path, error);
+            if let Some(ref sender) = self.private.read().notification_sender {
+                let string = format!("Removing directory {} failed. error: {}", path, error);
+                let _ = sender.send(Notification::Error(string));
+            }
         }
 
         Ok(())
