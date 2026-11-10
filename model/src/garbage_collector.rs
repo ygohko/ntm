@@ -425,10 +425,13 @@ impl GarbageCollector {
                     path.push(&directory2);
                     path.push(&produced_path);
                     if let Err(error) = self.process_object(&path.to_string_easy()) {
-                        println!(
-                            "Warning: error caused when processing objects. error: {}",
-                            error
-                        );
+                        if let Some(ref sender) = self.private.read().notification_sender {
+                            let string = format!(
+                                "Warning: error caused when processing objects. error: {}",
+                                error
+                            );
+                            let _ = sender.send(Notification::Error(string));
+                        }
                     }
                     {
                         let mut private = self.private.write();
@@ -447,10 +450,13 @@ impl GarbageCollector {
         {
             let private = self.private.read();
             if private.count == 0 {
-                println!(
-                    "Processing ({}, {}): {}",
-                    private.processed_count, private.removed_count, path
-                );
+                if let Some(ref sender) = private.notification_sender {
+                    let string = format!(
+                        "Processing ({}, {}): {}",
+                        private.processed_count, private.removed_count, path
+                    );
+                    let _ = sender.send(Notification::Progress(string));
+                }
             }
             backup_paths = private.backup_paths.clone();
         }
