@@ -34,6 +34,7 @@ pub const ERROR_ID: ErrorId = "destination";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_CREATING_FILE_FAILED: ErrorCode = 1;
 
 /// A task for initializing backup destination
 pub struct Destination {
@@ -78,6 +79,12 @@ impl Destination {
     /// A `Result` containing a new `Destination` instance, or an `Error` if the
     /// initialization fails.
     pub fn init(path: &str) -> Result<Self> {
+        let config: &str = r#"
+source_path = "/path/to/source"
+# excluded_directories = ["/path/to/excluded/directories",]
+# cache_size = 10
+"#.trim_start();
+
         let mut backup_path = Utf8PathBuf::from(&path);
         backup_path.push("Backups");
         match fs::create_dir_all(&backup_path) {
@@ -90,7 +97,12 @@ impl Destination {
             Ok(_) => (),
             Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_DIRECTORY_FAILED)),
         };
-        // TODO: Create ntm.toml.
+        let mut config_path = Utf8PathBuf::from(&path);
+        config_path.push("ntm.toml");
+        match fs::write(&config_path, config) {
+            Ok(_) => (),
+            Err(_) => return Err(Error::new(ERROR_ID, ERROR_CODE_CREATING_FILE_FAILED))
+        };
 
         let result = Self {
             path: path.to_string(),
