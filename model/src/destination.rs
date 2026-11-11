@@ -68,6 +68,7 @@ impl Destination {
     /// # Arguments
     ///
     /// * `path` - The path to the backup destination.
+    /// * `source_path` - The path to the backup source.
     ///
     /// # Errors
     ///
@@ -78,12 +79,19 @@ impl Destination {
     ///
     /// A `Result` containing a new `Destination` instance, or an `Error` if the
     /// initialization fails.
-    pub fn init(path: &str) -> Result<Self> {
-        let config: &str = r#"
-source_path = "/path/to/source"
+    pub fn init(path: &str, source_path: Option<String>) -> Result<Self> {
+        let config1: &str = r#"
+source_path = ""#.trim_start();
+        let config2: &str = r#"
+"
 # excluded_directories = ["/path/to/excluded/directories",]
 # cache_size = 10
 "#.trim_start();
+        let source_path = match source_path {
+            Some(source_path) => source_path,
+            None => "/path/to/source".to_string(),
+        };
+        let config = config1.to_string() + &source_path + config2;
 
         let mut backup_path = Utf8PathBuf::from(&path);
         backup_path.push("Backups");
