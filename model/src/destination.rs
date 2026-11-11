@@ -35,7 +35,7 @@ pub const ERROR_ID: ErrorId = "destination";
 #[allow(dead_code)]
 pub const ERROR_CODE_GENERAL: ErrorCode = 0;
 pub const ERROR_CODE_CREATING_DIRECTORY_FAILED: ErrorCode = 1;
-pub const ERROR_CODE_CREATING_FILE_FAILED: ErrorCode = 1;
+pub const ERROR_CODE_CREATING_FILE_FAILED: ErrorCode = 2;
 
 /// A task for initializing backup destination
 pub struct Destination {
