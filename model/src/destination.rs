@@ -21,6 +21,7 @@
  */
 
 use camino::Utf8PathBuf;
+use std::env::consts;
 use std::fs;
 
 use crate::backup_store::BackupStore;
@@ -87,10 +88,13 @@ source_path = ""#.trim_start();
 # excluded_directories = ["/path/to/excluded/directories",]
 # cache_size = 10
 "#.trim_start();
-        let source_path = match source_path {
+        let mut source_path = match source_path {
             Some(source_path) => source_path,
             None => "/path/to/source".to_string(),
         };
+        if consts::OS == "windows" {
+            source_path = source_path.replace("\\", "\\\\");
+        }
         let config = config1.to_string() + &source_path + config2;
 
         let mut backup_path = Utf8PathBuf::from(&path);
