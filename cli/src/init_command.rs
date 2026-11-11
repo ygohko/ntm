@@ -64,7 +64,7 @@ impl InitCommand {
     ///
     /// # Arguments
     ///
-    /// * `path` - The path to the destination directory.
+    /// * `path` - The path to the source directory.
     pub fn set_source_path(&mut self, path: &str) {
         self.source_path = Some(path.to_string());
     }
