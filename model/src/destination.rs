@@ -152,6 +152,6 @@ mod tests {
     #[test]
     fn is_initializable() {
         let temp_dir = TempDir::new("test").unwrap();
-        Destination::init(&temp_dir.path().to_string_easy()).unwrap();
+        Destination::init(&temp_dir.path().to_string_easy(), None).unwrap();
     }
 }
