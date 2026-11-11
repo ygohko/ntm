@@ -569,7 +569,7 @@ mod tests {
         let mut ntm_path = temp_path.clone();
         ntm_path.push("ntm");
         fs::create_dir_all(&ntm_path).unwrap();
-        Destination::init(&ntm_path.to_string_easy()).unwrap();
+        Destination::init(&ntm_path.to_string_easy(), None).unwrap();
 
         let mut config_path = ntm_path.clone();
         config_path.push("ntm.toml");
@@ -597,7 +597,7 @@ mod tests {
     /// Creates a destination with no backups. Its objects are not referred to by
     /// any backup, so all of them are garbage.
     fn create_destination(path: &Path) {
-        Destination::init(&path.to_string_easy()).unwrap();
+        Destination::init(&path.to_string_easy(), None).unwrap();
         let objects_path = path.join("Objects");
         let mut store = ObjectStore::new(&objects_path.to_string_easy());
         for id in NORMAL_OBJECT_IDS {

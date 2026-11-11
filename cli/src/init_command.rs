@@ -27,6 +27,7 @@ use ntm_model::task::Task;
 /// A command to initialize a backup destination.
 pub struct InitCommand {
     destination_path: String,
+    source_path: Option<String>,
 }
 
 impl Task for InitCommand {
@@ -38,7 +39,7 @@ impl Task for InitCommand {
     ///
     /// A `Result` indicating success or an `Error` if the operation fails.
     fn execute(&mut self) -> Result<()> {
-        if let Err(error) = Destination::init(&self.destination_path) {
+        if let Err(error) = Destination::init(&self.destination_path, self.source_path.clone()) {
             return Err(error);
         };
 
@@ -55,7 +56,17 @@ impl InitCommand {
     pub fn new() -> Self {
         InitCommand {
             destination_path: ".".to_string(),
+            source_path: None,
         }
+    }
+
+    /// Sets the source path for the initialization.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the source directory.
+    pub fn set_source_path(&mut self, path: &str) {
+        self.source_path = Some(path.to_string());
     }
 
     /// Sets the destination path for the initialization.

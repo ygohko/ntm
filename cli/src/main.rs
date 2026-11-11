@@ -41,6 +41,9 @@ use crate::init_command::InitCommand;
 
 #[derive(Parser, PartialEq)]
 struct InitArguments {
+    /// Source path that bound to this destnation
+    #[arg(short, long)]
+    source: Option<String>,
     /// Backup destnation that is initialized
     #[arg(short, long)]
     destination: Option<String>,
@@ -133,6 +136,9 @@ fn main() -> ExitCode {
     let started = SystemTime::now();
     if let CommandKind::Init(arguments) = command {
         let mut command = InitCommand::new();
+        if let Some(source) = arguments.source {
+            command.set_source_path(&source);
+        }
         if let Some(destination) = arguments.destination {
             command.set_destination_path(&destination);
         }
